@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Othello Premium Custom</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js" type="module"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --board-bg: #1b4d21;
+            --board-grid: #081a0a;
+            --flip-speed: 0.4s;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at center, #1a2a1a 0%, #0a0f0a 100%);
+            color: #e0e0e0;
+            overflow-x: hidden;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .board-container {
+            background: #0d2b10;
+            padding: 12px;
+            border-radius: 16px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 0 20px rgba(0,0,0,0.3);
+            position: relative;
+        }
+        .board-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            aspect-ratio: 1 / 1;
+            background-color: var(--board-grid);
+            gap: 2px;
+        }
+        .cell {
+            background-color: var(--board-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+            transition: background-color 0.2s;
+        }
+        .cell:hover {
+            filter: brightness(1.2);
+        }
+        
+        /* Piece Styles */
+        .piece {
+            width: 82%;
+            height: 82%;
+            border-radius: 50%;
+            transition: transform var(--flip-speed) cubic-bezier(0.4, 0, 0.2, 1), background-color var(--flip-speed);
+        }
+        /* Style: Real */
+        .style-real .piece-black { background: radial-gradient(circle at 30% 30%, #444, #000); box-shadow: 4px 4px 10px rgba(0,0,0,0.6); }
+        .style-real .piece-white { background: radial-gradient(circle at 30% 30%, #fff, #ccc); box-shadow: 4px 4px 10px rgba(0,0,0,0.3); }
+        /* Style: Flat */
+        .style-flat .piece-black { background: #000; border: 2px solid #333; }
+        .style-flat .piece-white { background: #fff; border: 2px solid #ddd; }
+        /* Style: Neon */
+        .style-neon .piece-black { background: #000; border: 2px solid #00ff00; box-shadow: 0 0 10px #00ff00; }
+        .style-neon .piece-white { background: #fff; border: 2px solid #00ffff; box-shadow: 0 0 10px #00ffff; }
+
+        .hint {
+            width: 30%;
+            height: 30%;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+        }
+        @keyframes flip {
+            0% { transform: rotateY(0deg) scale(1); }
+            50% { transform: rotateY(90deg) scale(1.1); }
+            100% { transform: rotateY(180deg) scale(1); }
+        }
+        .animate-flip { animation: flip var(--flip-speed) ease-in-out forwards; }
+        
+        .status-badge { transition: all 0.3s ease; }
+        .active-turn {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+            border-color: #22c55e;
+        }
+
+        .coord-label {
+            position: absolute;
+            font-size: 10px;
+            color: rgba(255,255,255,0.4);
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div id="app" class="w-full max-w-md relative">
+        
+        <!-- Setting Toggle Button -->
+        <button id="setting-toggle" onclick="toggleSettings(true)" class="fixed top-6 right-6 z-40 p-3 glass-panel rounded-full hover:bg-white/10 transition">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        </button>
+
+        <!-- Screens -->
+        <div id="screen-menu" class="glass-panel p-8 rounded-3xl space-y-8 text-center">
+            <div class="space-y-2">
+                <h1 class="text-5xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-green-400 to-emerald-600">OTHELLO</h1>
+                <p class="text-gray-400 text-sm tracking-widest uppercase">Premium Edition</p>
+            </div>
+            <div class="flex flex-col space-y-4">
+                <button onclick="startApp('screen-cpu-level')" class="group relative py-4 bg-gradient-to-r from-green-600 to-emerald-700 rounded-2xl font-bold text-white overflow-hidden transition-all hover:shadow-lg">CPU対戦</button>
+                <button onclick="startApp('screen-online-choice')" class="group relative py-4 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl font-bold text-white overflow-hidden transition-all hover:shadow-lg">オンライン対戦</button>
+            </div>
+        </div>
+
+        <div id="screen-cpu-level" class="hidden glass-panel p-8 rounded-3xl space-y-6 text-center">
+            <h2 class="text-2xl font-bold">難易度を選択</h2>
+            <div class="grid grid-cols-1 gap-3">
+                <button onclick="startCPUGame(1)" class="py-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition">初級</button>
+                <button onclick="startCPUGame(2)" class="py-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition">中級</button>
+                <button onclick="startCPUGame(3)" class="py-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition">上級</button>
+            </div>
+            <button onclick="showScreen('screen-menu')" class="text-gray-500 hover:text-white transition text-sm">戻る</button>
+        </div>
+
+        <div id="screen-online-choice" class="hidden glass-panel p-8 rounded-3xl space-y-6 text-center">
+            <h2 class="text-2xl font-bold">オンライン</h2>
+            <div class="grid grid-cols-1 gap-4">
+                <button onclick="createRoom()" class="py-4 bg-indigo-600 rounded-xl font-bold hover:bg-indigo-500 transition">部屋を作る</button>
+                <button onclick="showJoinInput()" class="py-4 bg-white/5 border border-white/10 rounded-xl font-bold hover:bg-white/10 transition">部屋を探す</button>
+            </div>
+            <button onclick="showScreen('screen-menu')" class="text-gray-500 hover:text-white transition text-sm">戻る</button>
+        </div>
+
+        <div id="screen-room-waiting" class="hidden glass-panel p-8 rounded-3xl space-y-8 text-center">
+            <h2 class="text-xl font-medium text-gray-400">待機中...</h2>
+            <div id="room-id-display" class="text-5xl font-black text-indigo-400 tracking-[0.5em] bg-black/40 py-6 rounded-2xl border border-indigo-500/30">-----</div>
+        </div>
+
+        <div id="screen-join-input" class="hidden glass-panel p-8 rounded-3xl space-y-6 text-center">
+            <h2 class="text-2xl font-bold">合言葉を入力</h2>
+            <input type="text" id="join-room-id" maxlength="5" class="w-full bg-black/40 text-center text-4xl font-black text-indigo-400 border-2 border-white/10 rounded-2xl py-5 focus:outline-none focus:border-indigo-500 transition uppercase" placeholder="*****">
+            <button onclick="joinRoom()" class="w-full py-4 bg-indigo-600 rounded-xl font-bold hover:bg-indigo-500 transition">入室する</button>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="screen-game" class="hidden space-y-6">
+            <div class="flex justify-between items-stretch gap-3 h-20">
+                <div id="badge-black" class="flex-1 glass-panel rounded-2xl flex items-center justify-between px-4 border-b-4 border-black status-badge">
+                    <div class="w-8 h-8 rounded-full piece-black"></div>
+                    <span id="score-black" class="text-2xl font-black text-white ml-2">2</span>
+                </div>
+                <div id="badge-white" class="flex-1 glass-panel rounded-2xl flex items-center justify-between px-4 border-b-4 border-white status-badge">
+                    <span id="score-white" class="text-2xl font-black text-white mr-2">2</span>
+                    <div class="w-8 h-8 rounded-full piece-white"></div>
+                </div>
+            </div>
+
+            <div id="game-container" class="board-container">
+                <div id="board" class="board-grid rounded-lg overflow-hidden"></div>
+            </div>
+
+            <div class="flex flex-col items-center gap-4">
+                <div id="game-info" class="text-center font-bold text-green-400 tracking-wide h-6"></div>
+                <button onclick="confirmExit()" class="px-6 py-2 bg-white/5 hover:bg-red-900/20 text-gray-500 hover:text-red-400 rounded-full text-xs transition uppercase tracking-widest">Quit Game</button>
+            </div>
+        </div>
+
+        <!-- Setting Panel -->
+        <div id="screen-settings" class="hidden fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-md">
+            <div class="glass-panel w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl">
+                <div class="bg-white/10 px-6 py-4 flex justify-between items-center border-b border-white/10">
+                    <h3 class="font-bold text-lg">Settings</h3>
+                    <button onclick="toggleSettings(false)" class="p-1 hover:bg-white/10 rounded-full">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <div class="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+                    <div class="space-y-3">
+                        <label class="text-xs text-gray-400 uppercase tracking-widest">Board Theme</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="updateSettings('theme', 'classic')" class="py-2 px-3 bg-green-900/40 border border-green-500/30 rounded-lg text-sm">Classic Green</button>
+                            <button onclick="updateSettings('theme', 'midnight')" class="py-2 px-3 bg-blue-900/40 border border-blue-500/30 rounded-lg text-sm">Midnight</button>
+                            <button onclick="updateSettings('theme', 'wood')" class="py-2 px-3 bg-amber-900/40 border border-amber-500/30 rounded-lg text-sm">Dark Wood</button>
+                            <button onclick="updateSettings('theme', 'mono')" class="py-2 px-3 bg-gray-800 border border-gray-600 rounded-lg text-sm">Monochrome</button>
+                        </div>
+                    </div>
+                    <div class="space-y-3">
+                        <label class="text-xs text-gray-400 uppercase tracking-widest">Piece Style</label>
+                        <select onchange="updateSettings('style', this.value)" id="set-style" class="w-full bg-black/40 border border-white/10 rounded-lg p-2 text-sm">
+                            <option value="style-real">Realistic 3D</option>
+                            <option value="style-flat">Modern Flat</option>
+                            <option value="style-neon">Glow Neon</option>
+                        </select>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm">Show Valid Moves (Hints)</span>
+                            <input type="checkbox" id="set-hints" checked onchange="updateSettings('hints', this.checked)" class="w-5 h-5 accent-green-500">
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm">Show Coordinates</span>
+                            <input type="checkbox" id="set-coords" checked onchange="updateSettings('coords', this.checked)" class="w-5 h-5 accent-green-500">
+                        </div>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="flex justify-between">
+                            <label class="text-xs text-gray-400 uppercase">Volume</label>
+                            <span id="vol-label" class="text-xs text-green-400">50%</span>
+                        </div>
+                        <input type="range" min="0" max="100" value="50" oninput="updateSettings('volume', this.value)" class="w-full accent-green-500">
+                    </div>
+                    <div class="space-y-3">
+                        <label class="text-xs text-gray-400 uppercase">Animation Speed</label>
+                        <div class="flex gap-2">
+                            <button onclick="updateSettings('speed', '0.2s')" class="flex-1 py-1 bg-white/5 rounded text-xs">Fast</button>
+                            <button onclick="updateSettings('speed', '0.4s')" class="flex-1 py-1 bg-white/5 rounded text-xs">Normal</button>
+                            <button onclick="updateSettings('speed', '0.8s')" class="flex-1 py-1 bg-white/5 rounded text-xs">Slow</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-6 pt-0">
+                    <button onclick="toggleSettings(false)" class="w-full py-3 bg-green-600 rounded-xl font-bold">Close Settings</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Result Screen -->
+        <div id="screen-result" class="hidden glass-panel fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-8 text-center">
+            <h3 class="text-gray-400 uppercase tracking-widest mb-2">Final Score</h3>
+            <div id="winner-text" class="text-5xl font-black mb-8 text-white">Winner!</div>
+            <div class="flex gap-8 mb-12">
+                <div class="text-center"><p class="text-gray-500 text-xs mb-1">BLACK</p><p id="final-black" class="text-4xl font-bold">0</p></div>
+                <div class="text-center"><p class="text-gray-500 text-xs mb-1">WHITE</p><p id="final-white" class="text-4xl font-bold">0</p></div>
+            </div>
+            <button onclick="location.reload()" class="px-12 py-4 bg-white text-black rounded-2xl font-black">BACK TO MENU</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Audio Logic ---
+        let audioCtx = null;
+        let masterVolume = 0.5;
+        function playTone(freq, type, duration, volume) {
+            if (!audioCtx || masterVolume === 0) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(volume * masterVolume, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + duration);
+        }
+        const sounds = {
+            place: () => playTone(600, 'sine', 0.1, 0.2),
+            flip: () => playTone(800, 'sine', 0.05, 0.1),
+            invalid: () => playTone(150, 'sawtooth', 0.2, 0.1),
+            win: () => {
+                playTone(523.25, 'triangle', 0.5, 0.2);
+                setTimeout(() => playTone(659.25, 'triangle', 0.5, 0.2), 150);
+                setTimeout(() => playTone(783.99, 'triangle', 0.8, 0.2), 300);
+            },
+            click: () => playTone(1200, 'sine', 0.05, 0.05)
+        };
+
+        // --- Game Logic ---
+        let board = Array(8).fill(0).map(() => Array(8).fill(0));
+        let turn = 1;
+        let gameMode = 'cpu';
+        let cpuLevel = 1;
+        let myColor = 1;
+        let isProcessing = false;
+        let isGameOver = false;
+        let config = { theme: 'classic', style: 'style-real', hints: true, coords: true, speed: '0.4s', volume: 50 };
+
+        window.toggleSettings = (show) => {
+            if (show) { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); sounds.click(); }
+            document.getElementById('screen-settings').classList.toggle('hidden', !show);
+        };
+
+        window.updateSettings = (key, value) => {
+            config[key] = value;
+            applyConfig();
+            sounds.click();
+        };
+
+        function applyConfig() {
+            const root = document.documentElement;
+            if (config.theme === 'classic') { root.style.setProperty('--board-bg', '#1b4d21'); root.style.setProperty('--board-grid', '#081a0a'); }
+            else if (config.theme === 'midnight') { root.style.setProperty('--board-bg', '#1e293b'); root.style.setProperty('--board-grid', '#0f172a'); }
+            else if (config.theme === 'wood') { root.style.setProperty('--board-bg', '#451a03'); root.style.setProperty('--board-grid', '#2d1102'); }
+            else if (config.theme === 'mono') { root.style.setProperty('--board-bg', '#333'); root.style.setProperty('--board-grid', '#111'); }
+            root.style.setProperty('--flip-speed', config.speed);
+            masterVolume = config.volume / 100;
+            const volLabel = document.getElementById('vol-label');
+            if (volLabel) volLabel.innerText = `${config.volume}%`;
+            renderBoard();
+        }
+
+        const DIRECTIONS = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+
+        function canFlip(r, c, color, targetBoard) {
+            if (targetBoard[r][c] !== 0) return false;
+            let flips = [];
+            const opponent = 3 - color;
+            for (let [dr, dc] of DIRECTIONS) {
+                let currR = r + dr, currC = c + dc, potentialFlips = [];
+                while (currR >= 0 && currR < 8 && currC >= 0 && currC < 8 && targetBoard[currR][currC] === opponent) {
+                    potentialFlips.push([currR, currC]); currR += dr; currC += dc;
+                }
+                if (currR >= 0 && currR < 8 && currC >= 0 && currC < 8 && targetBoard[currR][currC] === color && potentialFlips.length > 0) {
+                    flips = flips.concat(potentialFlips);
+                }
+            }
+            return flips.length > 0 ? flips : null;
+        }
+
+        function getValidMoves(color, targetBoard) {
+            let moves = [];
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) { if (canFlip(r, c, color, targetBoard)) moves.push([r, c]); }
+            }
+            return moves;
+        }
+
+        function renderBoard() {
+            const container = document.getElementById('board');
+            if (!container || isGameOver) return;
+            container.innerHTML = '';
+            container.className = `board-grid rounded-lg overflow-hidden ${config.style}`;
+            const validMoves = (gameMode === 'cpu' || (gameMode === 'online' && turn === myColor)) ? getValidMoves(turn, board) : [];
+            let counts = { 1: 0, 2: 0 };
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    if (board[r][c] !== 0) {
+                        counts[board[r][c]]++;
+                        const p = document.createElement('div');
+                        p.className = `piece ${board[r][c] === 1 ? 'piece-black' : 'piece-white'} animate-flip`;
+                        cell.appendChild(p);
+                    } else {
+                        const move = validMoves.find(m => m[0] === r && m[1] === c);
+                        if (move) {
+                            if (config.hints) { const h = document.createElement('div'); h.className = 'hint'; cell.appendChild(h); }
+                            cell.onclick = () => handleCellClick(r, c);
+                        }
+                    }
+                    if (config.coords) {
+                        if (r === 0) { const l = document.createElement('div'); l.className = 'coord-label top-1 left-1'; l.innerText = String.fromCharCode(65 + c); cell.appendChild(l); }
+                        if (c === 0) { const l = document.createElement('div'); l.className = 'coord-label bottom-1 right-1'; l.innerText = r + 1; cell.appendChild(l); }
+                    }
+                    container.appendChild(cell);
+                }
+            }
+            document.getElementById('score-black').innerText = counts[1];
+            document.getElementById('score-white').innerText = counts[2];
+            document.getElementById('badge-black').classList.toggle('active-turn', turn === 1);
+            document.getElementById('badge-white').classList.toggle('active-turn', turn === 2);
+        }
+
+        function checkGameEnd() {
+            if (getValidMoves(1, board).length === 0 && getValidMoves(2, board).length === 0) {
+                isGameOver = true;
+                let b = 0, w = 0;
+                board.forEach(row => row.forEach(cell => { if(cell===1) b++; if(cell===2) w++; }));
+                setTimeout(() => showResult(b, w), 1000);
+            }
+        }
+
+        function showResult(black, white) {
+            const screen = document.getElementById('screen-result');
+            const winText = document.getElementById('winner-text');
+            document.getElementById('final-black').innerText = black;
+            document.getElementById('final-white').innerText = white;
+            if (black > white) winText.innerText = "BLACK WINS";
+            else if (white > black) winText.innerText = "WHITE WINS";
+            else winText.innerText = "DRAW GAME";
+            sounds.win();
+            screen.classList.remove('hidden');
+        }
+
+        async function handleCellClick(r, c) {
+            if (isProcessing || isGameOver) return;
+            if (gameMode === 'online' && turn !== myColor) return;
+            const flips = canFlip(r, c, turn, board);
+            if (!flips) return;
+            isProcessing = true;
+            board[r][c] = turn;
+            sounds.place();
+            const speed = parseFloat(config.speed) * 1000;
+            flips.forEach(([fr, fc], idx) => {
+                setTimeout(() => { board[fr][fc] = turn; sounds.flip(); renderBoard(); }, (speed/4) + (idx * 30));
+            });
+            setTimeout(async () => {
+                const nextTurn = 3 - turn;
+                turn = getValidMoves(nextTurn, board).length === 0 ? turn : nextTurn;
+                if (gameMode === 'online' && gameRef) {
+                    await updateDoc(gameRef, { board: JSON.stringify(board), turn: turn });
+                } else {
+                    renderBoard();
+                    checkGameEnd();
+                    if (turn === 2 && gameMode === 'cpu' && !isGameOver) setTimeout(cpuTurn, 800);
+                }
+                isProcessing = false;
+            }, speed + (flips.length * 30));
+        }
+
+        function cpuTurn() {
+            if (turn !== 2 || isGameOver) return;
+            const moves = getValidMoves(2, board);
+            if (moves.length === 0) { turn = 1; renderBoard(); return; }
+            let bestMove;
+            const weights = [[100,-20,10,5,5,10,-20,100],[-20,-50,-2,-2,-2,-2,-50,-20],[10,-2,5,1,1,5,-2,10],[5,-2,1,0,0,1,-2,5],[5,-2,1,0,0,1,-2,5],[10,-2,5,1,1,5,-2,10],[-20,-50,-2,-2,-2,-2,-50,-20],[100,-20,10,5,5,10,-20,100]];
+            if (cpuLevel === 1) bestMove = moves[Math.floor(Math.random() * moves.length)];
+            else {
+                let bestScore = -Infinity;
+                moves.forEach(m => {
+                    let score = weights[m[0]][m[1]];
+                    if (cpuLevel === 3) score += canFlip(m[0], m[1], 2, board).length * 2;
+                    if (score > bestScore) { bestScore = score; bestMove = m; }
+                });
+            }
+            handleCellClick(bestMove[0], bestMove[1]);
+        }
+
+        // --- Auth & Room Management ---
+        const firebaseConfig = JSON.parse(window.__firebase_config || '{}');
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const getSafeAppId = () => (typeof window.__app_id !== 'undefined' ? window.__app_id : 'othello').replace(/\//g, '_');
+        let currentUser = null;
+        let gameRef = null;
+
+        window.showScreen = (id) => {
+            document.querySelectorAll('#app > div:not(#screen-settings)').forEach(div => div.classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+        };
+        window.startApp = (screen) => { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); sounds.click(); showScreen(screen); };
+        window.confirmExit = () => { if(confirm('終了しますか？')) location.reload(); };
+
+        window.startCPUGame = (level) => {
+            cpuLevel = level; gameMode = 'cpu'; isGameOver = false;
+            board = Array(8).fill(0).map(() => Array(8).fill(0));
+            board[3][3] = 2; board[4][4] = 2; board[3][4] = 1; board[4][3] = 1;
+            turn = 1; showScreen('screen-game'); renderBoard();
+        };
+
+        window.createRoom = async () => {
+            if (!currentUser) return;
+            const rid = Math.random().toString(36).substring(2, 7).toUpperCase();
+            document.getElementById('room-id-display').innerText = rid;
+            showScreen('screen-room-waiting');
+            gameRef = doc(db, 'artifacts', getSafeAppId(), 'public', 'data', rid);
+            board = Array(8).fill(0).map(() => Array(8).fill(0));
+            board[3][3] = 2; board[4][4] = 2; board[3][4] = 1; board[4][3] = 1;
+            await setDoc(gameRef, { status: 'waiting', board: JSON.stringify(board), turn: 1, p1: currentUser.uid });
+            onSnapshot(gameRef, (snap) => {
+                const data = snap.data();
+                if (data && data.p2 && data.status === 'waiting') {
+                    updateDoc(gameRef, { status: 'playing' });
+                    myColor = 1; gameMode = 'online'; isGameOver = false;
+                    showScreen('screen-game'); subscribeGame();
+                }
+            });
+        };
+
+        window.showJoinInput = () => { sounds.click(); showScreen('screen-join-input'); };
+        window.joinRoom = async () => {
+            const rid = document.getElementById('join-room-id').value.toUpperCase();
+            if (rid.length !== 5) return;
+            gameRef = doc(db, 'artifacts', getSafeAppId(), 'public', 'data', rid);
+            const snap = await getDoc(gameRef);
+            if (snap.exists() && snap.data().status === 'waiting') {
+                await updateDoc(gameRef, { p2: currentUser.uid, status: 'playing' });
+                myColor = 2; gameMode = 'online'; isGameOver = false;
+                showScreen('screen-game'); subscribeGame();
+            } else { alert('Room not found'); }
+        };
+
+        function subscribeGame() {
+            onSnapshot(gameRef, (snap) => {
+                const data = snap.data();
+                if (!data) return;
+                const newBoard = JSON.parse(data.board);
+                if (JSON.stringify(board) !== JSON.stringify(newBoard)) sounds.place();
+                board = newBoard; turn = data.turn;
+                renderBoard();
+                checkGameEnd();
+                const info = document.getElementById('game-info');
+                info.innerText = (turn === myColor) ? "YOUR TURN" : "OPPONENT'S TURN";
+                info.className = (turn === myColor) ? "text-center font-bold text-green-400 h-6" : "text-center font-bold text-gray-500 h-6";
+            });
+        }
+
+        onAuthStateChanged(auth, u => currentUser = u);
+        const initAuth = async () => {
+            if (window.__initial_auth_token) await signInWithCustomToken(auth, window.__initial_auth_token);
+            else await signInAnonymously(auth);
+        };
+        initAuth();
+    </script>
+</body>
+</html>
