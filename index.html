@@ -3,399 +3,380 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Othello Premium Custom</title>
+    <title>Othello Premium - Login & Stats</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js" type="module"></script>
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js" type="module"></script>
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js" type="module"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --board-bg: #1b4d21;
-            --board-grid: #081a0a;
-            --flip-speed: 0.4s;
-        }
-        body {
-            font-family: 'Inter', sans-serif;
-            background: radial-gradient(circle at center, #1a2a1a 0%, #0a0f0a 100%);
-            color: #e0e0e0;
-            overflow-x: hidden;
-        }
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .board-container {
-            background: #0d2b10;
-            padding: 12px;
-            border-radius: 16px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 0 20px rgba(0,0,0,0.3);
-            position: relative;
-        }
-        .board-grid {
-            display: grid;
-            grid-template-columns: repeat(8, 1fr);
-            aspect-ratio: 1 / 1;
-            background-color: var(--board-grid);
-            gap: 2px;
-        }
-        .cell {
-            background-color: var(--board-bg);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            position: relative;
-            transition: background-color 0.2s;
-        }
-        .cell:hover { filter: brightness(1.2); }
-        .piece { width: 82%; height: 82%; border-radius: 50%; transition: transform var(--flip-speed) cubic-bezier(0.4, 0, 0.2, 1), background-color var(--flip-speed); }
-        .style-real .piece-black { background: radial-gradient(circle at 30% 30%, #444, #000); box-shadow: 4px 4px 10px rgba(0,0,0,0.6); }
-        .style-real .piece-white { background: radial-gradient(circle at 30% 30%, #fff, #ccc); box-shadow: 4px 4px 10px rgba(0,0,0,0.3); }
-        .style-flat .piece-black { background: #000; border: 2px solid #333; }
-        .style-flat .piece-white { background: #fff; border: 2px solid #ddd; }
-        .style-neon .piece-black { background: #000; border: 2px solid #00ff00; box-shadow: 0 0 10px #00ff00; }
-        .style-neon .piece-white { background: #fff; border: 2px solid #00ffff; box-shadow: 0 0 10px #00ffff; }
-        .hint { width: 30%; height: 30%; border-radius: 50%; background-color: rgba(255, 255, 255, 0.15); }
-        @keyframes flip { 0% { transform: rotateY(0deg); } 100% { transform: rotateY(180deg); } }
-        .animate-flip { animation: flip var(--flip-speed) ease-in-out forwards; }
-        .status-badge { transition: all 0.3s ease; }
-        .active-turn { transform: scale(1.05); box-shadow: 0 0 20px rgba(34, 197, 94, 0.3); border-color: #22c55e; }
+        :root { --board-bg: #1b4d21; --board-grid: #081a0a; --flip-speed: 0.4s; }
+        body { font-family: 'Inter', sans-serif; background: radial-gradient(circle at center, #1a2a1a 0%, #0a0f0a 100%); color: #e0e0e0; overflow-x: hidden; }
+        .glass-panel { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .board-container { background: #0d2b10; padding: 12px; border-radius: 16px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        .board-grid { display: grid; grid-template-columns: repeat(8, 1fr); aspect-ratio: 1 / 1; background-color: var(--board-grid); gap: 2px; }
+        .cell { background-color: var(--board-bg); display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; }
+        .piece { width: 82%; height: 82%; border-radius: 50%; transition: transform var(--flip-speed) cubic-bezier(0.4, 0, 0.2, 1); }
+        .piece-black { background: radial-gradient(circle at 30% 30%, #444, #000); box-shadow: 2px 2px 5px rgba(0,0,0,0.5); }
+        .piece-white { background: radial-gradient(circle at 30% 30%, #fff, #ccc); box-shadow: 2px 2px 5px rgba(0,0,0,0.2); }
+        .hint { width: 30%; height: 30%; border-radius: 50%; background-color: rgba(255, 255, 255, 0.1); }
+        .active-turn { box-shadow: 0 0 15px rgba(34, 197, 94, 0.5); border: 2px solid #22c55e; }
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
 
-    <div id="app" class="w-full max-w-md relative">
-        <!-- Settings Button -->
-        <button id="setting-toggle" onclick="toggleSettings(true)" class="fixed top-6 right-6 z-40 p-3 glass-panel rounded-full hover:bg-white/10 transition">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-        </button>
-
-        <!-- Menu Screen -->
-        <div id="screen-menu" class="glass-panel p-8 rounded-3xl space-y-8 text-center">
-            <h1 class="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-br from-green-400 to-emerald-600">OTHELLO</h1>
-            <div class="flex flex-col space-y-4">
-                <button onclick="startApp('screen-cpu-level')" class="py-4 bg-green-600 rounded-2xl font-bold">CPU対戦</button>
-                <button onclick="handleOnlineClick()" class="py-4 bg-blue-600 rounded-2xl font-bold">オンライン対戦</button>
+    <div id="app" class="w-full max-w-md">
+        
+        <!-- Login Screen -->
+        <div id="screen-login" class="glass-panel p-8 rounded-3xl space-y-8 text-center">
+            <h1 class="text-4xl font-black text-green-400 tracking-tighter">OTHELLO</h1>
+            <p class="text-gray-400">オンライン対戦にはログインが必要です</p>
+            <div class="space-y-3">
+                <button onclick="login('google')" class="w-full py-3 bg-white text-black font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-gray-200 transition">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24"><path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                    Googleでログイン
+                </button>
+                <button onclick="login('github')" class="w-full py-3 bg-gray-800 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-gray-700 transition">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+                    GitHubでログイン
+                </button>
+                <button onclick="startGuest()" class="w-full py-3 bg-white/10 text-white rounded-xl hover:bg-white/20 transition">ゲストとして続行（オフラインのみ）</button>
             </div>
-            <p id="firebase-error-msg" class="text-xs text-red-400 hidden">※Firebaseの設定が未完了です</p>
         </div>
 
-        <!-- CPU Level Screen -->
-        <div id="screen-cpu-level" class="hidden glass-panel p-8 rounded-3xl space-y-6 text-center">
-            <h2 class="text-2xl font-bold">難易度</h2>
-            <div class="grid gap-3">
-                <button onclick="startCPUGame(1)" class="py-4 bg-white/5 rounded-xl">初級</button>
-                <button onclick="startCPUGame(2)" class="py-4 bg-white/5 rounded-xl">中級</button>
-                <button onclick="startCPUGame(3)" class="py-4 bg-white/5 rounded-xl">上級</button>
+        <!-- Nickname Setup Screen -->
+        <div id="screen-nickname" class="hidden glass-panel p-8 rounded-3xl space-y-6 text-center">
+            <h2 class="text-2xl font-bold">プロフィール設定</h2>
+            <p class="text-sm text-gray-400">対戦相手に表示される名前を決めてください</p>
+            <input type="text" id="nickname-input" maxlength="10" placeholder="ニックネーム（最大10文字）" class="w-full bg-black/40 text-center text-xl rounded-xl py-4 outline-none border border-white/20 focus:border-green-500 transition">
+            <p id="nickname-error" class="text-xs text-red-400 h-4"></p>
+            <button onclick="saveNickname()" class="w-full py-4 bg-green-600 rounded-xl font-bold hover:bg-green-500 transition">決定</button>
+        </div>
+
+        <!-- Main Menu -->
+        <div id="screen-menu" class="hidden glass-panel p-8 rounded-3xl space-y-8 text-center">
+            <div class="flex items-center justify-between mb-4">
+                <div class="text-left">
+                    <p class="text-xs text-gray-400">Player</p>
+                    <p id="user-display-name" class="font-bold text-green-400 text-lg">---</p>
+                </div>
+                <button onclick="logout()" class="text-xs text-red-400 hover:text-red-300 underline">ログアウト</button>
             </div>
-            <button onclick="showScreen('screen-menu')" class="text-gray-500">戻る</button>
+
+            <div id="stats-box" class="grid grid-cols-3 gap-2 bg-black/30 p-4 rounded-2xl text-sm border border-white/5">
+                <div><p class="text-gray-500 mb-1">Win</p><p id="stat-win" class="font-black text-white text-lg">0</p></div>
+                <div><p class="text-gray-500 mb-1">Lose</p><p id="stat-lose" class="font-black text-white text-lg">0</p></div>
+                <div><p class="text-gray-500 mb-1">Rate</p><p id="stat-rate" class="font-black text-green-400 text-lg">0%</p></div>
+            </div>
+
+            <div class="flex flex-col space-y-4">
+                <button onclick="showScreen('screen-cpu-level')" class="py-4 bg-white/5 border border-white/10 rounded-2xl font-bold hover:bg-white/10 transition">CPU対戦</button>
+                <div class="relative group">
+                    <button id="btn-online" onclick="showScreen('screen-online-choice')" class="w-full py-4 bg-blue-600 rounded-2xl font-bold disabled:opacity-30 disabled:cursor-not-allowed hover:bg-blue-500 transition">オンライン対戦</button>
+                    <p id="guest-notice" class="hidden text-[10px] text-red-400 mt-2">※ゲストはオンライン対戦不可</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Difficulty Selection -->
+        <div id="screen-cpu-level" class="hidden glass-panel p-8 rounded-3xl space-y-4 text-center">
+            <h2 class="text-xl font-bold">難易度選択</h2>
+            <button onclick="startCPUGame(1)" class="w-full py-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition">初級</button>
+            <button onclick="startCPUGame(2)" class="w-full py-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition">中級</button>
+            <button onclick="showScreen('screen-menu')" class="text-gray-500 text-sm hover:text-gray-300 pt-4 block">戻る</button>
         </div>
 
         <!-- Online Choice -->
-        <div id="screen-online-choice" class="hidden glass-panel p-8 rounded-3xl space-y-6 text-center">
-            <h2 class="text-2xl font-bold">オンライン</h2>
-            <div class="grid gap-4">
-                <button onclick="createRoom()" class="py-4 bg-indigo-600 rounded-xl font-bold">部屋を作る</button>
-                <button onclick="showJoinInput()" class="py-4 bg-white/5 rounded-xl font-bold">参加する</button>
-            </div>
-            <button onclick="showScreen('screen-menu')" class="text-gray-500">戻る</button>
+        <div id="screen-online-choice" class="hidden glass-panel p-8 rounded-3xl space-y-4 text-center">
+            <h2 class="text-xl font-bold">オンライン対戦</h2>
+            <button onclick="createRoom()" class="w-full py-4 bg-indigo-600 rounded-xl font-bold hover:bg-indigo-500 transition">部屋を作る</button>
+            <button onclick="showJoinInput()" class="w-full py-4 bg-white/5 border border-white/10 rounded-xl font-bold hover:bg-white/10 transition">参加する</button>
+            <button onclick="showScreen('screen-menu')" class="text-gray-500 text-sm hover:text-gray-300 pt-4 block">戻る</button>
         </div>
 
         <div id="screen-room-waiting" class="hidden glass-panel p-8 rounded-3xl space-y-8 text-center">
-            <h2 class="text-xl font-medium text-gray-400">待機中...</h2>
-            <div id="room-id-display" class="text-5xl font-black text-indigo-400 bg-black/40 py-6 rounded-2xl">-----</div>
+            <h2 class="text-gray-400">対戦相手を待っています...</h2>
+            <div id="room-id-display" class="text-5xl font-black text-indigo-400 tracking-widest bg-black/40 py-6 rounded-2xl border border-indigo-500/30">-----</div>
+            <button onclick="cancelRoom()" class="text-gray-500 hover:text-red-400 transition">キャンセル</button>
         </div>
 
-        <div id="screen-join-input" class="hidden glass-panel p-8 rounded-3xl space-y-6 text-center">
-            <h2 class="text-2xl font-bold">合言葉</h2>
-            <input type="text" id="join-room-id" maxlength="5" class="w-full bg-black/40 text-center text-4xl font-black text-indigo-400 rounded-2xl py-5 uppercase">
-            <button onclick="joinRoom()" class="w-full py-4 bg-indigo-600 rounded-xl font-bold">入室</button>
+        <div id="screen-join-input" class="hidden glass-panel p-8 rounded-3xl space-y-4 text-center">
+            <h2 class="text-xl font-bold">合言葉を入力</h2>
+            <input type="text" id="join-room-id" maxlength="5" placeholder="ROOM ID" class="w-full bg-black/40 text-center text-3xl py-4 rounded-xl uppercase outline-none border border-white/10 focus:border-indigo-500 transition">
+            <button onclick="joinRoom()" class="w-full py-4 bg-indigo-600 rounded-xl font-bold hover:bg-indigo-500 transition">入室</button>
+            <button onclick="showScreen('screen-online-choice')" class="text-gray-500 text-sm hover:text-gray-300 pt-4 block">戻る</button>
         </div>
 
-        <!-- Game Screen -->
+        <!-- Game Board Screen -->
         <div id="screen-game" class="hidden space-y-6">
-            <div class="flex justify-between gap-3 h-20">
-                <div id="badge-black" class="flex-1 glass-panel rounded-2xl flex items-center justify-between px-4 status-badge">
-                    <div class="w-8 h-8 rounded-full piece-black" style="background:black"></div>
-                    <span id="score-black" class="text-2xl font-black text-white">2</span>
+            <div class="flex justify-between gap-3">
+                <div id="badge-black" class="flex-1 glass-panel p-3 rounded-2xl flex items-center justify-between border-b-2 border-transparent transition-all">
+                    <div class="flex items-center gap-2">
+                        <div class="w-6 h-6 rounded-full piece-black"></div>
+                        <span id="player-black-name" class="text-[10px] text-gray-400">Player 1</span>
+                    </div>
+                    <span id="score-black" class="text-xl font-black">2</span>
                 </div>
-                <div id="badge-white" class="flex-1 glass-panel rounded-2xl flex items-center justify-between px-4 status-badge">
-                    <span id="score-white" class="text-2xl font-black text-white">2</span>
-                    <div class="w-8 h-8 rounded-full piece-white" style="background:white"></div>
+                <div id="badge-white" class="flex-1 glass-panel p-3 rounded-2xl flex items-center justify-between border-b-2 border-transparent transition-all">
+                    <span id="score-white" class="text-xl font-black">2</span>
+                    <div class="flex items-center gap-2">
+                        <span id="player-white-name" class="text-[10px] text-gray-400">Player 2</span>
+                        <div class="w-6 h-6 rounded-full piece-white"></div>
+                    </div>
                 </div>
             </div>
-            <div id="game-container" class="board-container">
+            <div class="board-container">
                 <div id="board" class="board-grid rounded-lg overflow-hidden"></div>
             </div>
-            <div id="game-info" class="text-center font-bold text-green-400 h-6"></div>
-            <button onclick="showScreen('screen-menu')" class="w-full py-2 text-gray-500 text-sm">タイトルへ戻る</button>
+            <div id="game-info" class="text-center text-sm font-bold text-green-400 h-4 tracking-widest uppercase"></div>
+            <button onclick="confirmExit()" class="w-full py-2 text-gray-500 text-[10px] hover:text-red-400 transition tracking-widest uppercase">Quit Match</button>
         </div>
 
-        <!-- Settings Panel -->
-        <div id="screen-settings" class="hidden fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-md">
-            <div class="glass-panel w-full max-w-sm rounded-3xl p-6 space-y-6">
-                <div class="flex justify-between items-center">
-                    <h3 class="font-bold text-lg">設定</h3>
-                    <button onclick="toggleSettings(false)">✕</button>
-                </div>
-                <div class="space-y-4">
-                    <div>
-                        <label class="text-xs text-gray-400">ボードテーマ</label>
-                        <select onchange="updateSettings('theme', this.value)" class="w-full bg-black/40 p-2 rounded">
-                            <option value="classic">クラシック・グリーン</option>
-                            <option value="midnight">ミッドナイト・ブルー</option>
-                            <option value="wood">ダーク・ウッド</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="text-xs text-gray-400">石のスタイル</label>
-                        <select onchange="updateSettings('style', this.value)" class="w-full bg-black/40 p-2 rounded">
-                            <option value="style-real">リアル</option>
-                            <option value="style-flat">フラット</option>
-                            <option value="style-neon">ネオン</option>
-                        </select>
-                    </div>
-                </div>
-                <button onclick="toggleSettings(false)" class="w-full py-3 bg-green-600 rounded-xl font-bold">閉じる</button>
-            </div>
-        </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, GithubAuthProvider, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, updateDoc, deleteDoc, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- Firebase 設定 (取得した値に更新しました) ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyAbZPrLSIygyIABnUGAHOigM9QmXdGRa8g",
-            authDomain: "othello-hrmk.firebaseapp.com",
-            projectId: "othello-hrmk",
-            storageBucket: "othello-hrmk.firebasestorage.app",
-            messagingSenderId: "804527745152",
-            appId: "1:804527745152:web:0ab51db1cc348000801e65",
-            measurementId: "G-ZJX6L6ZEFL"
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'othello-premium';
+
+        let currentUser = null;
+        let userData = null;
+        let board = [];
+        let turn = 1;
+        let myColor = 1;
+        let gameMode = 'cpu';
+        let gameRef = null;
+        let unsubRoom = null;
+
+        // --- Auth Logic ---
+        const NG_WORDS = ['admin', 'shit', 'baka', 'kill', 'death', 'sex', '運営'];
+
+        window.login = async (providerName) => {
+            const provider = providerName === 'google' ? new GoogleAuthProvider() : new GithubAuthProvider();
+            try { await signInWithPopup(auth, provider); } 
+            catch (e) { console.error(e); alert("ログインに失敗しました"); }
         };
 
-        let app, auth, db;
-        let isFirebaseReady = false;
+        window.startGuest = () => signInAnonymously(auth);
+        window.logout = () => signOut(auth);
 
-        try {
-            // Firebaseを初期化
-            app = initializeApp(firebaseConfig);
-            auth = getAuth(app);
-            db = getFirestore(app);
-            isFirebaseReady = true;
-            document.getElementById('firebase-error-msg').classList.add('hidden');
-        } catch (e) {
-            console.error("Firebase Initialization Error:", e);
-            document.getElementById('firebase-error-msg').classList.remove('hidden');
+        onAuthStateChanged(auth, async (user) => {
+            currentUser = user;
+            if (user) {
+                const userDoc = await getDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data'));
+                if (userDoc.exists()) {
+                    userData = userDoc.data();
+                    updateUIStats();
+                    showScreen('screen-menu');
+                } else {
+                    if (user.isAnonymous) {
+                        userData = { nickname: 'ゲスト', isGuest: true, wins: 0, loses: 0, draws: 0 };
+                        updateUIStats();
+                        showScreen('screen-menu');
+                    } else {
+                        showScreen('screen-nickname');
+                    }
+                }
+            } else {
+                showScreen('screen-login');
+            }
+        });
+
+        window.saveNickname = async () => {
+            const nick = document.getElementById('nickname-input').value.trim();
+            const err = document.getElementById('nickname-error');
+            if (nick.length < 2 || nick.length > 10) { err.innerText = "2〜10文字で入力してください"; return; }
+            if (NG_WORDS.some(w => nick.toLowerCase().includes(w))) { err.innerText = "不適切な名前です"; return; }
+            
+            userData = { nickname: nick, wins: 0, loses: 0, draws: 0, isGuest: false };
+            await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data'), userData);
+            updateUIStats();
+            showScreen('screen-menu');
+        };
+
+        function updateUIStats() {
+            document.getElementById('user-display-name').innerText = userData.nickname;
+            document.getElementById('stat-win').innerText = userData.wins || 0;
+            document.getElementById('stat-lose').innerText = userData.loses || 0;
+            const total = (userData.wins || 0) + (userData.loses || 0);
+            const rate = total === 0 ? 0 : Math.round((userData.wins / total) * 100);
+            document.getElementById('stat-rate').innerText = rate + '%';
+            
+            const isGuest = !!userData.isGuest;
+            document.getElementById('btn-online').disabled = isGuest;
+            document.getElementById('guest-notice').classList.toggle('hidden', !isGuest);
         }
 
         // --- Game Logic ---
-        let board = Array(8).fill(0).map(() => Array(8).fill(0));
-        let turn = 1;
-        let gameMode = 'cpu';
-        let cpuLevel = 1;
-        let myColor = 1;
-        let gameRef = null;
-        let currentUser = null;
-        let config = { theme: 'classic', style: 'style-real' };
-
-        window.toggleSettings = (s) => document.getElementById('screen-settings').classList.toggle('hidden', !s);
-        window.updateSettings = (k, v) => {
-            config[k] = v;
-            const root = document.documentElement;
-            if(v==='midnight'){ root.style.setProperty('--board-bg', '#1e293b'); }
-            else if(v==='wood'){ root.style.setProperty('--board-bg', '#451a03'); }
-            else { root.style.setProperty('--board-bg', '#1b4d21'); }
-            renderBoard();
+        window.showScreen = (id) => {
+            document.querySelectorAll('#app > div').forEach(d => d.classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
         };
 
-        window.handleOnlineClick = () => {
-            if (!isFirebaseReady) {
-                alert("Firebaseの接続に失敗しました。");
-                return;
-            }
-            showScreen('screen-online-choice');
-        };
+        function initBoard() {
+            board = Array(8).fill(0).map(() => Array(8).fill(0));
+            board[3][3] = 2; board[4][4] = 2; board[3][4] = 1; board[4][3] = 1;
+            turn = 1;
+        }
 
-        function getValidMoves(color, targetBoard) {
+        function renderBoard() {
+            const container = document.getElementById('board');
+            container.innerHTML = '';
+            const validMoves = (gameMode==='cpu' || turn === myColor) ? getValidMoves(turn, board) : [];
+            let counts = [0, 0, 0];
+            board.forEach((row, r) => row.forEach((val, c) => {
+                counts[val]++;
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                if (val !== 0) {
+                    const p = document.createElement('div');
+                    p.className = `piece ${val === 1 ? 'piece-black' : 'piece-white'}`;
+                    cell.appendChild(p);
+                } else if (validMoves.some(m => m[0] === r && m[1] === c)) {
+                    const h = document.createElement('div');
+                    h.className = 'hint';
+                    cell.appendChild(h);
+                    cell.onclick = () => handleMove(r, c);
+                }
+                container.appendChild(cell);
+            }));
+            document.getElementById('score-black').innerText = counts[1];
+            document.getElementById('score-white').innerText = counts[2];
+            document.getElementById('badge-black').classList.toggle('active-turn', turn === 1);
+            document.getElementById('badge-white').classList.toggle('active-turn', turn === 2);
+        }
+
+        function getValidMoves(color, b) {
             let moves = [];
             const dirs = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
-            for (let r = 0; r < 8; r++) {
-                for (let c = 0; c < 8; c++) {
-                    if (targetBoard[r][c] !== 0) continue;
-                    let found = false;
-                    for (let [dr, dc] of dirs) {
-                        let cr = r + dr, cc = c + dc, count = 0;
-                        while (cr>=0 && cr<8 && cc>=0 && cc<8 && targetBoard[cr][cc] === (3-color)) {
-                            cr += dr; cc += dc; count++;
-                        }
-                        if (count > 0 && cr>=0 && cr<8 && cc>=0 && cc<8 && targetBoard[cr][cc] === color) {
-                            found = true; break;
-                        }
-                    }
-                    if (found) moves.push([r, c]);
+            for(let r=0; r<8; r++) for(let c=0; c<8; c++) {
+                if(b[r][c]!==0) continue;
+                for(let [dr,dc] of dirs) {
+                    let cr=r+dr, cc=c+dc, count=0;
+                    while(cr>=0 && cr<8 && cc>=0 && cc<8 && b[cr][cc] === 3-color) { cr+=dr; cc+=dc; count++; }
+                    if(count>0 && cr>=0 && cr<8 && cc>=0 && cc<8 && b[cr][cc] === color) { moves.push([r,c]); break; }
                 }
             }
             return moves;
         }
 
-        function renderBoard() {
-            const container = document.getElementById('board');
-            if (!container) return;
-            container.innerHTML = '';
-            container.className = `board-grid ${config.style}`;
-            const validMoves = (gameMode==='cpu' || turn === myColor) ? getValidMoves(turn, board) : [];
-            let b=0, w=0;
-            for (let r = 0; r < 8; r++) {
-                for (let c = 0; c < 8; c++) {
-                    const cell = document.createElement('div');
-                    cell.className = 'cell';
-                    if (board[r][c] !== 0) {
-                        if(board[r][c]===1) b++; else w++;
-                        const p = document.createElement('div');
-                        p.className = `piece ${board[r][c] === 1 ? 'piece-black' : 'piece-white'}`;
-                        cell.appendChild(p);
-                    } else if (validMoves.some(m => m[0] === r && m[1] === c)) {
-                        const h = document.createElement('div');
-                        h.className = 'hint';
-                        cell.appendChild(h);
-                        cell.onclick = () => handleCellClick(r, c);
-                    }
-                    container.appendChild(cell);
-                }
-            }
-            document.getElementById('score-black').innerText = b;
-            document.getElementById('score-white').innerText = w;
-            document.getElementById('badge-black').classList.toggle('active-turn', turn === 1);
-            document.getElementById('badge-white').classList.toggle('active-turn', turn === 2);
-        }
-
-        async function handleCellClick(r, c) {
-            if(gameMode==='online' && turn !== myColor) return;
-            
+        async function handleMove(r, c) {
             const dirs = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
             board[r][c] = turn;
-            for (let [dr, dc] of dirs) {
-                let cr = r + dr, cc = c + dc, temp = [];
-                while (cr>=0 && cr<8 && cc>=0 && cc<8 && board[cr][cc] === (3-turn)) {
-                    temp.push([cr, cc]); cr += dr; cc += dc;
-                }
-                if (cr>=0 && cr<8 && cc>=0 && cc<8 && board[cr][cc] === turn) {
-                    temp.forEach(([tr, tc]) => board[tr][tc] = turn);
-                }
+            for(let [dr,dc] of dirs) {
+                let cr=r+dr, cc=c+dc, temp=[];
+                while(cr>=0 && cr<8 && cc>=0 && cc<8 && board[cr][cc] === 3-turn) { temp.push([cr,cc]); cr+=dr; cc+=dc; }
+                if(cr>=0 && cr<8 && cc>=0 && cc<8 && board[cr][cc] === turn) temp.forEach(([tr,tc])=>board[tr][tc]=turn);
             }
-            
-            const nextTurn = 3 - turn;
-            turn = getValidMoves(nextTurn, board).length > 0 ? nextTurn : (getValidMoves(turn, board).length > 0 ? turn : 0);
-            
-            if (gameMode === 'online' && gameRef) {
+            let nextTurn = 3 - turn;
+            if(getValidMoves(nextTurn, board).length === 0) {
+                nextTurn = getValidMoves(turn, board).length === 0 ? 0 : turn;
+            }
+            turn = nextTurn;
+
+            if(gameMode === 'online') {
                 await updateDoc(gameRef, { board: JSON.stringify(board), turn: turn });
             } else {
                 renderBoard();
-                if (turn === 2 && gameMode === 'cpu') {
-                    document.getElementById('game-info').innerText = "CPU思考中...";
-                    setTimeout(cpuTurn, 600);
-                } else if (turn === 0) {
-                    const b = document.getElementById('score-black').innerText;
-                    const w = document.getElementById('score-white').innerText;
-                    alert(`終局！ 黒:${b} 白:${w}`);
-                } else {
-                    document.getElementById('game-info').innerText = turn === 1 ? "黒の番です" : "白の番です";
-                }
+                if(turn === 2) setTimeout(cpuPlay, 600);
+                if(turn === 0) endGame();
             }
         }
 
-        function cpuTurn() {
+        function cpuPlay() {
             const moves = getValidMoves(2, board);
-            if(moves.length === 0) { turn = 1; renderBoard(); return; }
-            
-            const weights = [
-                [100, -20, 10,  5,  5, 10, -20, 100],
-                [-20, -50, -2, -2, -2, -2, -50, -20],
-                [ 10,  -2,  5,  1,  1,  5,  -2,  10],
-                [  5,  -2,  1,  0,  0,  1,  -2,   5],
-                [  5,  -2,  1,  0,  0,  1,  -2,   5],
-                [ 10,  -2,  5,  1,  1,  5,  -2,  10],
-                [-20, -50, -2, -2, -2, -2, -50, -20],
-                [100, -20, 10,  5,  5, 10, -20, 100]
-            ];
-            
-            moves.sort((a, b) => weights[b[0]][b[1]] - weights[a[0]][a[1]]);
-            const move = cpuLevel === 1 ? moves[Math.floor(Math.random()*moves.length)] : moves[0];
-            
-            handleCellClick(move[0], move[1]);
+            if(moves.length > 0) {
+                const m = moves[Math.floor(Math.random()*moves.length)];
+                handleMove(m[0], m[1]);
+            }
         }
 
-        window.showScreen = (id) => {
-            document.querySelectorAll('#app > div:not(#screen-settings)').forEach(div => div.classList.add('hidden'));
-            document.getElementById(id).classList.remove('hidden');
-        };
-        window.startApp = (s) => showScreen(s);
-        window.startCPUGame = (l) => {
-            gameMode = 'cpu'; cpuLevel = l; myColor = 1; turn = 1;
-            board = Array(8).fill(0).map(() => Array(8).fill(0));
-            board[3][3]=2; board[4][4]=2; board[3][4]=1; board[4][3]=1;
-            showScreen('screen-game');
-            document.getElementById('game-info').innerText = "あなたの番です（黒）";
-            renderBoard();
-        };
+        async function endGame() {
+            const b = parseInt(document.getElementById('score-black').innerText);
+            const w = parseInt(document.getElementById('score-white').innerText);
+            let result = (b === w) ? 'draw' : ( (myColor === 1 && b > w) || (myColor === 2 && w > b) ? 'win' : 'lose');
 
+            // 実績の更新（非ゲストのみ）
+            if(!userData.isGuest) {
+                const statKey = result === 'win' ? 'wins' : (result === 'lose' ? 'loses' : 'draws');
+                const profileRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data');
+                await updateDoc(profileRef, { [statKey]: increment(1) });
+                // ローカルデータも同期的に更新
+                const updatedDoc = await getDoc(profileRef);
+                userData = updatedDoc.data();
+                updateUIStats();
+            }
+            
+            setTimeout(() => {
+                alert(`対戦終了: ${result.toUpperCase()}\n黒 ${b} - 白 ${w}`);
+                showScreen('screen-menu');
+            }, 500);
+        }
+
+        // --- Online Functions ---
         window.createRoom = async () => {
-            if (!isFirebaseReady) return;
             const rid = Math.random().toString(36).substring(2, 7).toUpperCase();
             document.getElementById('room-id-display').innerText = rid;
             showScreen('screen-room-waiting');
-            gameRef = doc(db, 'rooms', rid);
-            board = Array(8).fill(0).map(() => Array(8).fill(0));
-            board[3][3]=2; board[4][4]=2; board[3][4]=1; board[4][3]=1;
-            await setDoc(gameRef, { status: 'waiting', board: JSON.stringify(board), turn: 1, p1: currentUser.uid });
-            onSnapshot(gameRef, (snap) => {
-                const d = snap.data();
-                if (d?.status === 'playing' && gameMode !== 'online') {
-                    myColor = 1; gameMode = 'online'; showScreen('screen-game'); subscribe();
+            initBoard();
+            gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', rid);
+            await setDoc(gameRef, { status:'waiting', board: JSON.stringify(board), turn:1, p1:currentUser.uid, p1Name:userData.nickname });
+            unsubRoom = onSnapshot(gameRef, (s) => {
+                const d = s.data();
+                if(d?.status === 'playing') {
+                    myColor = 1; gameMode = 'online'; 
+                    document.getElementById('player-black-name').innerText = d.p1Name;
+                    document.getElementById('player-white-name').innerText = d.p2Name;
+                    showScreen('screen-game'); subscribe();
                 }
-            });
+            }, (err) => console.error(err));
         };
 
-        window.showJoinInput = () => showScreen('screen-join-input');
         window.joinRoom = async () => {
-            if (!isFirebaseReady) return;
             const rid = document.getElementById('join-room-id').value.toUpperCase();
-            gameRef = doc(db, 'rooms', rid);
-            const snap = await getDoc(gameRef);
-            if (!snap.exists()) { alert("部屋が見つかりません"); return; }
-            await updateDoc(gameRef, { p2: currentUser.uid, status: 'playing' });
-            myColor = 2; gameMode = 'online'; showScreen('screen-game'); subscribe();
+            if(!rid) return;
+            gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', rid);
+            const s = await getDoc(gameRef);
+            if(s.exists() && s.data().status === 'waiting') {
+                await updateDoc(gameRef, { status:'playing', p2:currentUser.uid, p2Name:userData.nickname });
+                myColor = 2; gameMode = 'online'; 
+                const d = s.data();
+                document.getElementById('player-black-name').innerText = d.p1Name;
+                document.getElementById('player-white-name').innerText = userData.nickname;
+                showScreen('screen-game'); subscribe();
+            } else alert("部屋が見つからないか満員です");
         };
 
         function subscribe() {
-            onSnapshot(gameRef, (snap) => {
-                const data = snap.data();
-                if(!data) return;
-                board = JSON.parse(data.board);
-                turn = data.turn;
+            if(unsubRoom) unsubRoom();
+            unsubRoom = onSnapshot(gameRef, (s) => {
+                const d = s.data();
+                if(!d) return;
+                board = JSON.parse(d.board);
+                turn = d.turn;
                 renderBoard();
-                document.getElementById('game-info').innerText = turn === myColor ? "あなたの番です" : "相手が考えています...";
-                if (turn === 0) alert("対戦終了！");
-            });
+                const info = document.getElementById('game-info');
+                info.innerText = turn === 0 ? "GAME OVER" : (turn === myColor ? "YOUR TURN" : "WAITING...");
+                if(turn === 0) endGame();
+            }, (err) => console.error(err));
         }
 
-        // 初期化: 認証
-        if (isFirebaseReady) {
-            onAuthStateChanged(auth, u => {
-                currentUser = u;
-                if (!u) {
-                    signInAnonymously(auth).catch(e => {
-                        console.error("Auth Error:", e);
-                    });
-                }
-            });
-        }
+        window.startCPUGame = (l) => {
+            gameMode = 'cpu'; myColor = 1; initBoard(); 
+            document.getElementById('player-black-name').innerText = userData.nickname;
+            document.getElementById('player-white-name').innerText = "CPU (LV" + l + ")";
+            showScreen('screen-game'); renderBoard();
+        };
+
+        window.cancelRoom = async () => { if(gameRef) await deleteDoc(gameRef); showScreen('screen-menu'); };
+        window.confirmExit = () => { if(confirm("終了しますか？（現在の対戦は無効になります）")) location.reload(); };
+
     </script>
 </body>
 </html>
