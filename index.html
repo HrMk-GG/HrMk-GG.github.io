@@ -18,19 +18,19 @@ import {
   getDocs, 
   serverTimestamp 
 } from 'firebase/firestore';
-import { Camera, RefreshCw, Save, Trash2, AlertTriangle, User, LogIn, X } from 'lucide-react';
+import { Camera, RefreshCw, Save, Trash2, AlertTriangle, User, LogIn, X, ChevronRight } from 'lucide-react';
 
 // --- Firebase Configuration ---
 const firebaseConfig = JSON.parse(__firebase_config);
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'picture-swap-v1';
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'picture-swap-v2';
 
 export default function App() {
   const [user, setUser] = useState(null);
   const [nickname, setNickname] = useState('');
-  const [step, setStep] = useState('login'); // login, nickname, main, exchanged
+  const [step, setStep] = useState('loading'); // loading, login, nickname, main, exchanged
   const [capturedImage, setCapturedImage] = useState(null);
   const [receivedImage, setReceivedImage] = useState(null);
   const [savedImages, setSavedImages] = useState([]);
@@ -60,7 +60,6 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
-        // Check if nickname exists
         try {
           const userDoc = await getDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'info'));
           if (userDoc.exists()) {
@@ -80,64 +79,38 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // 2. Handle Login
-  const handleLogin = async () => {
-    setLoading(true);
-    try {
-      if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-        await signInWithCustomToken(auth, __initial_auth_token);
-      } else {
-        await signInAnonymously(auth);
-      }
-    } catch (err) {
-      setError("ログインに失敗しました。");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 3. Save Nickname
-  const saveNickname = async () => {
-    if (nickname.trim().length === 0 || nickname.length > 10) {
-      setError("ニックネームは1文字以上10文字以内で入力してください。");
-      return;
-    }
-    setLoading(true);
-    try {
-      if (!user) return;
-      await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), {
-        nickname: nickname,
-        createdAt: serverTimestamp()
-      });
-      setStep('main');
-    } catch (err) {
-      setError("ニックネームの保存に失敗しました。");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 4. Camera Controls
+  // 2. Camera Controls
   const startCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'user', width: { ideal: 1024 }, height: { ideal: 1024 } } 
+      });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
     } catch (err) {
-      setError("カメラの起動に失敗しました。カメラへのアクセスを許可してください。");
+      setError("カメラの起動に失敗しました。設定で許可してください。");
     }
   };
+
+  useEffect(() => {
+    if (step === 'main' && !capturedImage) {
+      startCamera();
+    }
+  }, [step, capturedImage]);
 
   const capturePhoto = () => {
     const canvas = canvasRef.current;
     const video = videoRef.current;
     if (canvas && video) {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      const size = Math.min(video.videoWidth, video.videoHeight);
+      canvas.width = size;
+      canvas.height = size;
       const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const dataUrl = canvas.toDataURL('image/jpeg');
+      const startX = (video.videoWidth - size) / 2;
+      const startY = (video.videoHeight - size) / 2;
+      ctx.drawImage(video, startX, startY, size, size, 0, 0, size, size);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
       setCapturedImage(dataUrl);
       
       const stream = video.srcObject;
@@ -147,7 +120,34 @@ export default function App() {
     }
   };
 
-  // 5. Exchange Logic
+  // 3. Actions
+  const handleLogin = async () => {
+    setLoading(true);
+    try {
+      await signInAnonymously(auth);
+    } catch (err) {
+      setError("ログインエラー");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveNickname = async () => {
+    if (!nickname.trim() || nickname.length > 10) return;
+    setLoading(true);
+    try {
+      await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), {
+        nickname: nickname,
+        createdAt: serverTimestamp()
+      });
+      setStep('main');
+    } catch (err) {
+      setError("名前の保存に失敗");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleExchange = async () => {
     if (!capturedImage || !user) return;
     setLoading(true);
@@ -171,7 +171,7 @@ export default function App() {
         setReceivedImage(othersImages[0]);
         setStep('exchanged');
       } else {
-        setError("まだ他の人の画像がありません。最初の投稿ありがとうございます！");
+        setError("まだ他の人の画像がありません。しばらくお待ちください！");
         setCapturedImage(null);
         setStep('main');
       }
@@ -182,24 +182,8 @@ export default function App() {
     }
   };
 
-  // 6. Post-Exchange Actions
-  const handleSave = () => {
-    setSavedImages(prev => [...prev, receivedImage.imageUrl]);
-    resetToMain();
-  };
-
-  const handleDiscard = () => {
-    resetToMain();
-  };
-
-  const resetToMain = () => {
-    setStep('main');
-    setCapturedImage(null);
-    setReceivedImage(null);
-  };
-
   const handleReport = async () => {
-    if (!reportReason || !user) return;
+    if (!reportReason.trim() || !user) return;
     setLoading(true);
     try {
       await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'reports'), {
@@ -209,70 +193,47 @@ export default function App() {
         timestamp: serverTimestamp()
       });
       setShowReportModal(false);
-      setReportReason('');
-      handleDiscard();
+      setStep('main');
+      setCapturedImage(null);
     } catch (err) {
-      setError("報告の送信に失敗しました。");
+      setError("送信失敗");
     } finally {
       setLoading(false);
     }
   };
 
-  // --- UI Rendereing ---
+  if (step === 'loading') return <div className="h-screen flex items-center justify-center bg-slate-50 font-bold">読み込み中...</div>;
 
   if (step === 'login') {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 p-6">
-        <div className="w-full max-w-sm text-center">
-          <div className="mb-8 flex justify-center">
-            <div className="w-20 h-20 bg-indigo-600 rounded-3xl flex items-center justify-center text-white shadow-xl">
-              <Camera size={40} />
-            </div>
-          </div>
-          <h1 className="text-4xl font-black text-slate-900 mb-2">Picture Swap</h1>
-          <p className="text-slate-500 mb-12 font-medium">撮った写真をだれかと交換しよう</p>
-          <div className="space-y-4">
-            <button 
-              onClick={handleLogin}
-              className="w-full flex items-center justify-center gap-3 bg-white border-2 border-slate-200 py-4 rounded-2xl font-bold text-slate-700 hover:bg-slate-50 transition-all active:scale-95 shadow-sm"
-            >
-              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-6 h-6" alt="Google" />
-              <span>Googleでログイン</span>
-            </button>
-            <button 
-              onClick={handleLogin}
-              className="w-full flex items-center justify-center gap-3 bg-slate-900 text-white py-4 rounded-2xl font-bold hover:bg-black transition-all active:scale-95 shadow-lg"
-            >
-              <LogIn size={20} />
-              <span>メールアドレスでログイン</span>
-            </button>
-          </div>
-          {loading && <div className="mt-8 text-indigo-600 font-bold animate-pulse">読み込み中...</div>}
+      <div className="h-screen flex flex-col items-center justify-center bg-slate-50 p-6 text-center">
+        <div className="w-20 h-20 bg-indigo-600 rounded-3xl flex items-center justify-center text-white mb-6 shadow-xl">
+          <Camera size={40} />
         </div>
+        <h1 className="text-4xl font-black text-slate-900 mb-2">Picture Swap</h1>
+        <p className="text-slate-500 mb-12">今この瞬間をだれかと交換しよう</p>
+        <button onClick={handleLogin} className="w-full max-w-xs bg-indigo-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-indigo-200">
+          はじめる
+        </button>
       </div>
     );
   }
 
   if (step === 'nickname') {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 p-6">
-        <div className="w-full max-w-sm bg-white rounded-[32px] shadow-xl p-8 border border-slate-100">
-          <h2 className="text-2xl font-bold mb-2 text-slate-900">ニックネームを決定</h2>
-          <p className="text-slate-500 mb-8 text-sm">交換した相手に表示されます（10文字以内）</p>
+      <div className="h-screen flex flex-col items-center justify-center bg-slate-50 p-6">
+        <div className="bg-white p-8 rounded-[32px] shadow-xl w-full max-w-sm">
+          <h2 className="text-2xl font-bold mb-6">ニックネームを入力</h2>
           <input 
             type="text" 
-            maxLength={10}
-            value={nickname}
-            onChange={(e) => setNickname(e.target.value)}
-            className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 mb-6 focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-50 outline-none transition-all text-lg font-bold"
-            placeholder="なまえを入力..."
+            maxLength={10} 
+            value={nickname} 
+            onChange={e => setNickname(e.target.value)}
+            className="w-full bg-slate-100 p-4 rounded-xl mb-6 outline-none focus:ring-2 ring-indigo-500 font-bold"
+            placeholder="なまえ"
           />
-          <button 
-            onClick={saveNickname}
-            disabled={loading || !nickname.trim()}
-            className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold text-lg hover:bg-indigo-700 disabled:opacity-50 shadow-lg shadow-indigo-100 transition-all active:scale-95"
-          >
-            {loading ? "保存中..." : "はじめる"}
+          <button onClick={saveNickname} className="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold">
+            決定
           </button>
         </div>
       </div>
@@ -280,87 +241,58 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center pb-20">
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center pb-24">
       {/* Header */}
-      <div className="w-full max-w-xl p-5 flex justify-between items-center bg-white/80 backdrop-blur-lg sticky top-0 z-40 border-b border-slate-100">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-600">
-            <User size={20} />
+      <div className="w-full max-w-lg p-5 flex justify-between items-center bg-white border-b sticky top-0 z-40">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-600 font-bold">
+            {nickname[0]}
           </div>
-          <span className="font-bold text-slate-800 text-lg">{nickname}</span>
+          <span className="font-bold">{nickname}</span>
         </div>
-        <button onClick={() => signOut(auth)} className="text-sm font-bold text-slate-400 hover:text-red-500 transition-colors">
-          ログアウト
-        </button>
+        <button onClick={() => signOut(auth)} className="text-xs text-slate-400 font-bold">ログアウト</button>
       </div>
 
-      <div className="w-full max-w-xl p-6 space-y-8">
-        {/* Main View Area */}
-        <div className="relative aspect-square w-full bg-white rounded-[48px] shadow-2xl border-[12px] border-white overflow-hidden flex items-center justify-center ring-1 ring-slate-100">
+      <div className="w-full max-w-lg p-6 space-y-8">
+        {/* Main Box A */}
+        <div className="relative aspect-square w-full bg-white rounded-[40px] shadow-2xl overflow-hidden border-[10px] border-white">
           {!capturedImage ? (
-            <div className="w-full h-full bg-slate-100 relative">
-              <video 
-                ref={videoRef} 
-                autoPlay 
-                playsInline 
-                className="w-full h-full object-cover"
-                onLoadedMetadata={() => startCamera()}
-              />
-              <div className="absolute inset-0 pointer-events-none border-2 border-dashed border-white/40 m-8 rounded-[32px]" />
-            </div>
+            <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover bg-slate-200" />
           ) : (
-            <img src={capturedImage} className="w-full h-full object-cover" alt="Captured" />
+            <img src={capturedImage} className="w-full h-full object-cover" />
           )}
         </div>
 
-        {/* Action Buttons */}
+        {/* Buttons */}
         <div className="px-2">
           {!capturedImage ? (
-            <button 
-              onClick={capturePhoto}
-              className="w-full flex items-center justify-center gap-3 bg-indigo-600 text-white py-5 rounded-[28px] shadow-xl shadow-indigo-200 text-xl font-black hover:bg-indigo-700 transition-all active:scale-95"
-            >
-              <Camera size={28} strokeWidth={3} />
-              <span>カメラで撮る</span>
+            <button onClick={capturePhoto} className="w-full bg-indigo-600 text-white py-5 rounded-3xl font-black text-xl flex items-center justify-center gap-3 shadow-xl">
+              <Camera size={24} /> カメラで撮る
             </button>
           ) : (
-            <div className="flex flex-col gap-4">
-              <button 
-                onClick={handleExchange}
-                disabled={loading}
-                className="w-full flex items-center justify-center gap-4 bg-orange-500 text-white py-5 rounded-[28px] shadow-xl shadow-orange-200 text-xl font-black hover:bg-orange-600 transition-all active:scale-95 disabled:opacity-50"
-              >
-                <RefreshCw size={28} strokeWidth={3} className={loading ? "animate-spin" : ""} />
-                <span>{loading ? "交換中..." : "交換する"}</span>
+            <div className="flex flex-col gap-3">
+              <button onClick={handleExchange} disabled={loading} className="w-full bg-orange-500 text-white py-5 rounded-3xl font-black text-xl flex items-center justify-center gap-3 shadow-xl">
+                <RefreshCw size={24} className={loading ? "animate-spin" : ""} /> {loading ? "交換中..." : "交換する"}
               </button>
-              <button 
-                onClick={() => { setCapturedImage(null); startCamera(); }}
-                className="text-slate-400 font-bold py-2 hover:text-slate-600 transition-colors"
-              >
-                撮り直す
-              </button>
+              <button onClick={() => { setCapturedImage(null); startCamera(); }} className="text-slate-400 font-bold py-2">撮り直す</button>
             </div>
           )}
         </div>
 
-        {/* History Area */}
-        <div className="mt-12">
-          <h3 className="text-slate-900 font-black text-xl mb-6 px-2 flex items-center gap-2">
-            <Save size={24} className="text-indigo-600" />
-            保存された画像
+        {/* History Box B */}
+        <div className="pt-4">
+          <h3 className="font-black text-slate-900 mb-4 flex items-center gap-2">
+            <Save size={20} className="text-indigo-600" /> 保存した画像
           </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 px-2">
+          <div className="grid grid-cols-3 gap-3">
             {savedImages.length === 0 ? (
-              <div className="col-span-full h-40 bg-white rounded-[32px] border-4 border-dashed border-slate-100 flex flex-col items-center justify-center text-slate-300 gap-2">
-                <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center">
-                  <Save size={24} />
-                </div>
-                <span className="font-bold">まだ保存していません</span>
+              <div className="col-span-3 h-32 border-2 border-dashed rounded-3xl flex items-center justify-center text-slate-300 font-bold">
+                まだありません
               </div>
             ) : (
               savedImages.map((img, i) => (
-                <div key={i} className="aspect-square rounded-[24px] overflow-hidden shadow-md border-4 border-white transition-transform hover:scale-105">
-                  <img src={img} className="w-full h-full object-cover" alt={`Saved ${i}`} />
+                <div key={i} className="aspect-square rounded-2xl overflow-hidden bg-white shadow-sm border-2 border-white">
+                  <img src={img} className="w-full h-full object-cover" />
                 </div>
               ))
             )}
@@ -368,73 +300,54 @@ export default function App() {
         </div>
       </div>
 
-      {/* Exchange Result Modal */}
+      {/* Result Modal */}
       {step === 'exchanged' && receivedImage && (
-        <div className="fixed inset-0 z-50 bg-slate-900/95 flex flex-col items-center justify-center p-6 backdrop-blur-md">
-          <div className="w-full max-w-md animate-in fade-in zoom-in duration-300">
-            <div className="text-white text-3xl font-black mb-8 text-center">
-              交換できました！✨
+        <div className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center p-6">
+          <h2 className="text-white text-3xl font-black mb-8">交換成功！</h2>
+          <div className="bg-white rounded-[40px] overflow-hidden w-full max-w-sm mb-10 shadow-2xl">
+            <img src={receivedImage.imageUrl} className="w-full h-auto max-h-[50vh] object-contain bg-slate-50" />
+            <div className="p-4 bg-slate-100 flex items-center gap-2 font-bold text-slate-600">
+              <User size={16} /> {receivedImage.senderName} さんの写真
             </div>
-            
-            <div className="bg-white rounded-[40px] overflow-hidden shadow-2xl mb-10 border-[8px] border-white">
-              <img src={receivedImage.imageUrl} className="w-full h-auto max-h-[55vh] object-contain bg-slate-100" alt="Received" />
-              <div className="p-5 flex items-center gap-3 bg-slate-50">
-                <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold text-xs uppercase">
-                  {receivedImage.senderName?.[0]}
-                </div>
-                <span className="font-bold text-slate-700">{receivedImage.senderName} さんの写真</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <button onClick={handleSave} className="flex flex-col items-center justify-center gap-2 bg-emerald-500 text-white p-4 rounded-3xl shadow-lg hover:bg-emerald-600 active:scale-95 transition-all">
-                <Save size={24} /><span className="text-xs font-black">保存</span>
-              </button>
-              <button onClick={handleDiscard} className="flex flex-col items-center justify-center gap-2 bg-slate-700 text-white p-4 rounded-3xl shadow-lg hover:bg-slate-800 active:scale-95 transition-all">
-                <Trash2 size={24} /><span className="text-xs font-black">消す</span>
-              </button>
-              <button onClick={() => setShowReportModal(true)} className="flex flex-col items-center justify-center gap-2 bg-red-500 text-white p-4 rounded-3xl shadow-lg hover:bg-red-600 active:scale-95 transition-all">
-                <AlertTriangle size={24} /><span className="text-xs font-black">報告</span>
-              </button>
-            </div>
+          </div>
+          <div className="flex gap-4 w-full max-w-sm">
+            <button onClick={() => { setSavedImages([...savedImages, receivedImage.imageUrl]); setStep('main'); setCapturedImage(null); }} className="flex-1 bg-green-500 text-white py-5 rounded-3xl font-bold flex flex-col items-center gap-1 shadow-lg shadow-green-900/40">
+              <Save size={24} /> 保存
+            </button>
+            <button onClick={() => { setStep('main'); setCapturedImage(null); }} className="flex-1 bg-slate-700 text-white py-5 rounded-3xl font-bold flex flex-col items-center gap-1">
+              <Trash2 size={24} /> 削除
+            </button>
+            <button onClick={() => setShowReportModal(true)} className="flex-1 bg-red-500 text-white py-5 rounded-3xl font-bold flex flex-col items-center gap-1 shadow-lg shadow-red-900/40">
+              <AlertTriangle size={24} /> 報告
+            </button>
           </div>
         </div>
       )}
 
       {/* Report Modal */}
       {showReportModal && (
-        <div className="fixed inset-0 z-[60] bg-slate-900/80 flex items-center justify-center p-6 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
-            <div className="flex justify-between items-start mb-4">
-              <h3 className="text-2xl font-black text-slate-900">報告する</h3>
-              <button onClick={() => setShowReportModal(false)} className="text-slate-400 hover:text-slate-600"><X size={24} /></button>
-            </div>
-            <p className="text-slate-500 text-sm mb-6">不適切な内容が含まれている理由を教えてください。</p>
+        <div className="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center p-6 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-sm rounded-[32px] p-8">
+            <h3 className="text-2xl font-black mb-4">報告する</h3>
             <textarea 
-              className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 h-32 mb-6 focus:border-red-500 focus:bg-white focus:ring-4 focus:ring-red-50 outline-none transition-all font-medium"
-              placeholder="例：公序良俗に反する、など"
-              value={reportReason}
-              onChange={(e) => setReportReason(e.target.value)}
+              value={reportReason} 
+              onChange={e => setReportReason(e.target.value)}
+              className="w-full bg-slate-100 p-4 rounded-xl h-32 mb-6 outline-none"
+              placeholder="理由を入力してください..."
             />
-            <button 
-              onClick={handleReport}
-              disabled={!reportReason.trim() || loading}
-              className="w-full bg-red-500 text-white py-4 rounded-2xl font-black shadow-lg shadow-red-100 disabled:opacity-50 transition-all active:scale-95"
-            >
-              {loading ? "送信中..." : "報告を送信"}
-            </button>
+            <div className="flex gap-4">
+              <button onClick={() => setShowReportModal(false)} className="flex-1 font-bold text-slate-400">閉じる</button>
+              <button onClick={handleReport} className="flex-[2] bg-red-500 text-white py-4 rounded-xl font-bold">送信</button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Error Message */}
+      {/* Error Toast */}
       {error && (
-        <div className="fixed bottom-10 left-6 right-6 z-[100] flex justify-center">
-          <div className="bg-slate-900 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 max-w-md w-full animate-in slide-in-from-bottom-10">
-            <AlertTriangle className="text-orange-400" size={20} />
-            <span className="font-bold flex-1 text-sm">{error}</span>
-            <button onClick={() => setError(null)} className="text-white/40 hover:text-white"><X size={20} /></button>
-          </div>
+        <div className="fixed bottom-6 left-6 right-6 z-[100] bg-slate-900 text-white p-4 rounded-2xl flex items-center justify-between font-bold animate-bounce shadow-2xl">
+          <span>{error}</span>
+          <button onClick={() => setError(null)}><X /></button>
         </div>
       )}
 
