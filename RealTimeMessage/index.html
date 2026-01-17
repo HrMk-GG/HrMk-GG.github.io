@@ -1,0 +1,101 @@
+<style>
+    /* 入力エリアのレイアウト調整 */
+    .chat-input-area {
+        position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+        display: flex; align-items: center; gap: 15px; z-index: 20; 
+        background: rgba(255, 255, 255, 0.9);
+        padding: 10px 25px; border-radius: 50px; 
+        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        backdrop-filter: blur(5px);
+    }
+
+    /* カラーピッカーとスライダーの見た目 */
+    .control-group { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .control-label { font-size: 10px; color: #888; font-weight: bold; }
+    #chat-color { border: none; width: 30px; height: 30px; cursor: pointer; background: none; }
+    #chat-size { cursor: pointer; width: 80px; }
+
+    #chat-msg { border: 1px solid #ddd; padding: 10px 15px; border-radius: 20px; width: 200px; outline: none; }
+    #send-btn { background: var(--main-red); color: white; border: none; padding: 10px 25px; border-radius: 20px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+    #send-btn:hover { background: #ff2a00; transform: scale(1.05); }
+
+    /* 弾幕の文字スタイル（動的に変えるので基本形だけ） */
+    .comment {
+        position: absolute; white-space: nowrap; font-weight: bold;
+        text-shadow: 1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff;
+        animation: flow linear;
+        pointer-events: none;
+    }
+</style>
+
+<div class="chat-input-area">
+    <div class="control-group">
+        <span class="control-label">COLOR</span>
+        <input type="color" id="chat-color" value="#333333">
+    </div>
+    
+    <div class="control-group">
+        <span class="control-label">SIZE</span>
+        <input type="range" id="chat-size" min="20" max="80" value="32">
+    </div>
+
+    <input type="text" id="chat-msg" placeholder="コメントを流す...">
+    <button id="send-btn">流す</button>
+</div>
+
+<script>
+// --- 弾幕を生成する関数（色とサイズに対応） ---
+function createComment(text, color, size) {
+    const container = document.getElementById('danmaku-container');
+    const el = document.createElement('div');
+    el.className = 'comment';
+    el.innerText = text;
+    
+    // スタイル適用
+    el.style.color = color || "#333";
+    el.style.fontSize = (size || 32) + "px";
+    
+    // ランダムな高さ（サイズを考慮してはみ出さないように計算）
+    const top = Math.random() * 80 + 5;
+    el.style.top = top + "%";
+    
+    // 速度 (4s〜8s)
+    const duration = Math.random() * 4 + 4;
+    el.style.animationDuration = duration + "s";
+    
+    container.appendChild(el);
+    setTimeout(() => el.remove(), duration * 1000);
+}
+
+// 送信ボタンの処理
+document.getElementById('send-btn').onclick = async () => {
+    const msg = document.getElementById('chat-msg').value.trim();
+    const color = document.getElementById('chat-color').value;
+    const size = document.getElementById('chat-size').value;
+
+    if (!msg) return;
+    
+    // Firestoreに色とサイズも保存するぜ！
+    await db.collection("comments").add({
+        text: msg,
+        color: color,
+        size: parseInt(size),
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    
+    document.getElementById('chat-msg').value = "";
+};
+
+// リアルタイム受信
+db.collection("comments").orderBy("createdAt", "desc").limit(1).onSnapshot(snapshot => {
+    snapshot.docChanges().forEach(change => {
+        if (change.type === "added") {
+            const data = change.doc.data();
+            if (data.text) {
+                // 受信したデータの色とサイズを使って表示
+                createComment(data.text, data.color, data.size);
+            }
+        }
+    });
+});
+</script>
