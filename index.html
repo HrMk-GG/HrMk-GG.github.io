@@ -37,7 +37,7 @@
             background-size: 300%; animation: rainbow-move 3s linear infinite;
         }
 
-        /* --- メインコンテンツ --- */
+        /* --- メイン装飾 --- */
         .marquee-top { width: 100%; background: #000; color: #00ff00; padding: 10px; font-size: 22px; border-bottom: 2px solid #fff; }
         .dots-line { display: flex; justify-content: space-around; width: 100%; padding: 10px 0; background: rgba(0, 0, 0, 0.2); }
         .dot { width: 25px; height: 25px; border-radius: 50%; border: 2px solid #000; }
@@ -54,7 +54,7 @@
             text-shadow: 2px 2px 0 black; margin-bottom: 20px;
         }
 
-        /* 吹き出しと男の画像 */
+        /* キャラクターと吹き出し */
         .uni-speech {
             background: #ff0000; color: #0000ff; padding: 50px 30px;
             margin: 20px auto; width: fit-content;
@@ -64,17 +64,22 @@
         }
         .thumbs-up-man { width: 300px; border: 5px solid white; box-shadow: 10px 10px 0px black; margin: 20px; }
 
-        /* リンクボタン */
-        .btn-container { display: flex; flex-direction: column; gap: 20px; width: 90%; max-width: 550px; margin-bottom: 50px; }
+        /* ボタン */
+        .btn-container { display: flex; flex-direction: column; gap: 20px; width: 90%; max-width: 550px; margin-bottom: 50px; z-index: 10; }
         .ultra-link {
             text-decoration: none; padding: 25px; font-size: 30px; font-weight: bold;
             color: #fff; background: linear-gradient(45deg, #ff00ff, #00ffff);
             border: 10px outset #ff00ff; border-radius: 20px; text-shadow: 4px 4px 0 #000;
             animation: vibe 0.15s infinite; text-align: center;
         }
-        .ultra-link:hover { filter: hue-rotate(180deg); transform: scale(1.05); border-style: inset; }
 
-        /* 右下の操作パネル */
+        /* IndiHome画像用レイヤー */
+        .indihome {
+            position: fixed; width: 250px; z-index: 5; /* 背景(0)より上、コンテンツ(10)より下 */
+            pointer-events: none; animation: vibe 0.1s infinite;
+        }
+
+        /* 操作パネル */
         #music-panel {
             position: fixed; bottom: 20px; right: 20px;
             background: rgba(0, 0, 0, 0.8); border: 2px solid #00ffff; padding: 15px;
@@ -94,13 +99,13 @@
     <div id="overlay">
         <div id="dialog">
             <h1>ぶち上げますか？</h1>
-            <button class="yes-btn" onclick="startBgm()">はい</button>
-            <button class="yes-btn" onclick="startBgm()">はい</button>
+            <button class="yes-btn" onclick="startEverything()">はい</button>
+            <button class="yes-btn" onclick="startEverything()">はい</button>
         </div>
     </div>
 
     <div class="marquee-top">
-        <marquee scrollamount="12">最強サイトにようこそ！あなたは 1000000 人目の訪問者です！！（嘘）</marquee>
+        <marquee scrollamount="12">最強サイトにようこそ！あなたは 1000000 人目の訪問者です！！✨🎉</marquee>
     </div>
 
     <div class="dots-line">
@@ -123,14 +128,14 @@
         <a href="https://hrmk-gg.github.io/MomentSwap" class="ultra-link" style="filter: hue-rotate(300deg);">【刹那】MomentSwap</a>
     </div>
 
-    <div style="display: flex; align-items: center; justify-content: center; flex-wrap: wrap;">
+    <div style="display: flex; align-items: center; justify-content: center; flex-wrap: wrap; position: relative; z-index: 10;">
         <img src="https://thumb.photo-ac.com/04/0400eb32702cf80735dee9e7084f085f_t.jpeg" alt="👍" class="thumbs-up-man">
         <div class="uni-speech">ゆっくりし<br>ていってね！</div>
     </div>
 
     <div id="music-panel" style="display: none;">
-        <b style="color:#00ffff; font-size:10px;">BGM CONTROL</b>
-        <button onclick="togglePlay()" style="background:transparent; color:#ff00ff; border:1px solid #ff00ff; cursor:pointer;">STOP/PLAY</button>
+        <b style="color:#00ffff; font-size:10px; font-family: monospace;">BGM CONTROL</b>
+        <button onclick="togglePlay()" style="background:transparent; color:#ff00ff; border:1px solid #ff00ff; cursor:pointer; font-weight:bold; margin-bottom:5px;">STOP/PLAY</button>
         <input type="range" id="vol-slider" min="0" max="1" step="0.1" value="0.5" oninput="changeVol(this.value)">
     </div>
 
@@ -141,11 +146,25 @@
         const overlay = document.getElementById('overlay');
         const panel = document.getElementById('music-panel');
 
-        function startBgm() {
-            audio.play();
+        function startEverything() {
+            audio.play().catch(e => console.log("再生エラー:", e));
             overlay.style.display = 'none';
             panel.style.display = 'flex';
+
+            // 1分0.5秒（60500ms）後にIndiHomeを10個召喚
+            setTimeout(() => {
+                for (let i = 0; i < 10; i++) {
+                    const img = document.createElement('img');
+                    img.src = 'indihome.png';
+                    img.className = 'indihome';
+                    img.style.top = Math.random() * 80 + '%';
+                    img.style.left = Math.random() * 80 + '%';
+                    img.style.transform = `rotate(${Math.random() * 360}deg)`;
+                    document.body.appendChild(img);
+                }
+            }, 60500);
         }
+
         function togglePlay() { audio.paused ? audio.play() : audio.pause(); }
         function changeVol(val) { audio.volume = val; }
     </script>
