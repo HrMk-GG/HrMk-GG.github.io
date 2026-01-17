@@ -2,95 +2,46 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>極・オセロオンライン</title>
-    
-    <script src="https://www.gstatic.com/firebasejs/9.1.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.1.1/firebase-database-compat.js"></script>
-
     <style>
         :root { --bg-color: #2c3e50; --board-color: #27ae60; }
-        body { background-color: var(--bg-color); color: white; font-family: 'Hiragino Sans', sans-serif; text-align: center; margin: 0; }
-        .hidden { display: none; }
-        .screen { padding: 20px; min-height: 80vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        button { background: #ecf0f1; border: none; padding: 12px 24px; margin: 8px; font-size: 18px; cursor: pointer; border-radius: 8px; font-weight: bold; }
-        input[type="text"] { padding: 12px; font-size: 18px; border-radius: 8px; border: none; width: 240px; text-align: center; margin: 10px; }
-        .board { display: grid; grid-template-columns: repeat(8, 40px); grid-template-rows: repeat(8, 40px); gap: 2px; background: #34495e; border: 5px solid #34495e; margin: 20px auto; width: 336px; }
-        .cell { background: var(--board-color); display: flex; align-items: center; justify-content: center; cursor: pointer; }
-        .stone { width: 34px; height: 34px; border-radius: 50%; display: none; }
-        .black { display: block; background: #000; }
-        .white { display: block; background: #fff; }
+        body { background-color: var(--bg-color); color: white; font-family: sans-serif; text-align: center; }
+        .hidden { display: none !important; }
+        .screen { padding: 50px; }
+        button { padding: 15px 30px; font-size: 20px; cursor: pointer; margin: 10px; }
+        input { padding: 10px; font-size: 20px; }
     </style>
 </head>
 <body>
 
     <div id="screen-nick" class="screen">
         <h1>⚪️ 極・オセロ ⚫️</h1>
-        <p>名前を決めてね (10文字以内)</p>
-        <input type="text" id="nick-input" maxlength="10" placeholder="なまえ">
+        <input type="text" id="nick-input" placeholder="なまえ">
         <button onclick="goToMenu()">決定！</button>
     </div>
 
     <div id="screen-menu" class="screen hidden">
         <h2>ようこそ、<span id="name-display"></span> さん！</h2>
-        <button onclick="showScreen('screen-cpu-lv')">CPU対戦</button>
-        <button onclick="showScreen('screen-online')">オンライン対戦</button>
-        <button onclick="showScreen('screen-settings')">設定</button>
-    </div>
-
-    <div id="screen-cpu-lv" class="screen hidden">
-        <h2>CPUレベル選択</h2>
-        <button onclick="alert('開発中！')">弱い</button>
-        <button onclick="showScreen('screen-menu')">もどる</button>
-    </div>
-
-    <div id="screen-online" class="screen hidden">
-        <h2>オンライン対戦</h2>
-        <button onclick="alert('コード送信中...')">部屋を作る</button>
-        <button onclick="showScreen('screen-menu')">もどる</button>
-    </div>
-
-    <div id="screen-settings" class="screen hidden">
-        <h2>設定</h2>
-        <button onclick="showScreen('screen-menu')">もどる</button>
+        <button onclick="alert('CPU戦開始！')">CPU対戦</button>
+        <button onclick="alert('オンライン開始！')">オンライン対戦</button>
+        <button onclick="location.reload()">最初に戻る</button>
     </div>
 
     <script>
-        // --- Firebase設定 ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyBYb9uXyjA7XJdRiYjcA3VBlSVgLh0C1fw",
-            authDomain: "hrmk-othello.firebaseapp.com",
-            projectId: "hrmk-othello",
-            storageBucket: "hrmk-othello.firebasestorage.app",
-            messagingSenderId: "91127278693",
-            appId: "1:91127278693:web:89d6cdbbcabac60a172a8c",
-            databaseURL: "https://hrmk-othello-default-rtdb.firebaseio.com"
-        };
-
-        // Firebase初期化（古い書き方だけどブラウザ互換性が高い）
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-
-        // --- 基本ロジック ---
-        function showScreen(id) {
-            // 全画面を隠す
-            document.getElementById('screen-nick').classList.add('hidden');
-            document.getElementById('screen-menu').classList.add('hidden');
-            document.getElementById('screen-cpu-lv').classList.add('hidden');
-            document.getElementById('screen-online').classList.add('hidden');
-            document.getElementById('screen-settings').classList.add('hidden');
-            // 指定の画面だけ出す
-            document.getElementById(id).classList.remove('hidden');
-        }
-
         function goToMenu() {
             const nick = document.getElementById('nick-input').value;
+            console.log("ボタンが押されたよ！名前:", nick); // ブラウザのF12で見れるよ
+            
             if (nick.trim() === "") {
-                alert("名前を入力してね！");
+                alert("名前を入れてね！");
                 return;
             }
+            
             document.getElementById('name-display').innerText = nick;
-            showScreen('screen-menu');
+            
+            // 画面を切り替える
+            document.getElementById('screen-nick').classList.add('hidden');
+            document.getElementById('screen-menu').classList.remove('hidden');
         }
     </script>
 </body>
