@@ -3,130 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Moment Swap - Starry Night Edition</title>
+    <title>Moment Swap - Final Starry Night</title>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
     <style>
-        /* 星空の背景アニメーション */
-        body {
-            background: radial-gradient(ellipse at bottom, #1B2735 0%, #090A0F 100%);
-            color: #E2E2E2;
-            font-family: 'Segoe UI', sans-serif;
-            margin: 0;
-            padding-bottom: 50px;
-            overflow-x: hidden;
-            min-height: 100vh;
-        }
-
-        /* 瞬く星の生成（CSSアニメーション） */
-        body::before {
-            content: "";
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: transparent url('https://s3-us-west-2.amazonaws.com/s.cdpn.io/123163/stars.png') repeat;
-            z-index: -1;
-            opacity: 0.5;
-            animation: move-stars 200s linear infinite;
-        }
-
-        @keyframes move-stars {
-            from { background-position: 0 0; }
-            to { background-position: 10000px 5000px; }
-        }
-
-        h1 {
-            font-size: 2.5rem;
-            color: #fff;
-            text-shadow: 0 0 20px #4fc3f7;
-            margin-top: 30px;
-        }
-
-        .hidden { display: none; }
-
-        /* カメラとプレビューの枠を光らせる */
-        video, canvas {
-            width: 90%;
-            max-width: 400px;
-            border: 2px solid rgba(79, 195, 247, 0.5);
-            border-radius: 25px;
-            margin-top: 20px;
-            box-shadow: 0 0 30px rgba(79, 195, 247, 0.3);
-            background: rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(5px);
-        }
-
-        /* 幻想的なボタン */
-        .btn {
-            background: linear-gradient(45deg, #4fc3f7, #9575cd);
-            color: white;
-            padding: 18px 45px;
-            border-radius: 50px;
-            font-weight: bold;
-            border: none;
-            margin: 20px;
-            cursor: pointer;
-            font-size: 1.2rem;
-            box-shadow: 0 5px 15px rgba(149, 117, 205, 0.4);
-            transition: 0.3s;
-        }
-
-        .btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(149, 117, 205, 0.6);
-        }
-
-        .btn:disabled {
-            background: #444;
-            box-shadow: none;
-        }
-
-        /* 履歴のカードを透明感のあるガラス風に */
-        .card {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 20px;
-            border-radius: 20px;
-            width: 85%;
-            max-width: 380px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-        }
-
-        .card img {
-            width: 100%;
-            border-radius: 12px;
-            margin-top: 15px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .name {
-            color: #4fc3f7;
-            font-weight: bold;
-            font-size: 1.2rem;
-            display: block;
-        }
-
-        /* ログイン・名前登録のオーバーレイ */
-        #overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle at center, #1B2735 0%, #000 100%);
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            z-index: 1000;
-        }
-
-        input {
-            padding: 15px;
-            border-radius: 15px;
-            border: 2px solid #4fc3f7;
-            background: rgba(0, 0, 0, 0.5);
-            color: white;
-            width: 70%;
-            font-size: 1.1rem;
-            outline: none;
-            text-align: center;
-        }
+        /* 背景デザインはさっきの星空を継承 */
+        body { background: radial-gradient(ellipse at bottom, #1B2735 0%, #090A0F 100%); color: #E2E2E2; font-family: sans-serif; margin: 0; padding-bottom: 50px; min-height: 100vh; text-align: center; }
+        .hidden { display: none !important; }
+        #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
+        .btn { background: linear-gradient(45deg, #4fc3f7, #9575cd); color: white; padding: 18px 45px; border-radius: 50px; font-weight: bold; border: none; cursor: pointer; font-size: 1.2rem; box-shadow: 0 5px 15px rgba(149,117,205,0.4); }
+        video { width: 90%; max-width: 400px; border-radius: 25px; border: 2px solid #4fc3f7; margin-top: 20px; }
+        .card { background: rgba(255,255,255,0.05); padding: 20px; border-radius: 20px; width: 85%; max-width: 380px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px); margin: 10px auto; }
+        .card img { width: 100%; border-radius: 12px; }
     </style>
 </head>
 <body>
@@ -134,13 +23,14 @@
 <div id="overlay">
     <div id="login-ui">
         <h1>Moment Swap</h1>
-        <p style="color: #4fc3f7;">星降る夜に、今を交換しよう</p>
-        <button class="btn" onclick="login()">Googleでログイン</button>
+        <p style="color: #4fc3f7;">星空の下で写真を交換</p>
+        <button id="google-login-btn" class="btn">Googleでログイン</button>
+        <p id="login-status" style="font-size: 0.8rem; margin-top: 10px;"></p>
     </div>
     <div id="name-ui" class="hidden">
-        <h2>宇宙での名前を決めてね</h2>
-        <input type="text" id="nickname" maxlength="10" placeholder="ニックネーム">
-        <br>
+        <h2>ニックネームを決めてね</h2>
+        <input type="text" id="nickname" maxlength="10" style="padding:15px; border-radius:10px; text-align:center;">
+        <br><br>
         <button class="btn" onclick="registerName()">銀河へ出発！</button>
     </div>
 </div>
@@ -149,17 +39,13 @@
     <h1>Moment Swap</h1>
     <video id="camera" autoplay playsinline></video>
     <canvas id="output" class="hidden"></canvas>
-    <p id="user-info" style="color: #9575cd;"></p>
+    <p id="user-info"></p>
     <button id="swap-btn" class="btn">🌟 今を撮って交換する</button>
-    <p id="status">星空を観測中...</p>
-    
-    <div id="history">
-        <h3 style="margin-top: 40px; border-bottom: 2px solid rgba(79, 195, 247, 0.3); padding-bottom: 10px; width: 80%;">受信した星座</h3>
-    </div>
+    <p id="status">準備中...</p>
+    <div id="history"><h3>受信した星座</h3></div>
 </div>
 
 <script>
-// --- 君のFirebase設定（以前のやつをそのまま使うよ！） ---
 const firebaseConfig = {
   apiKey: "AIzaSyAWVuyKmGKY04Xnpia_2ehtG8fVW5rLX3s",
   authDomain: "photo-share-9405d.firebaseapp.com",
@@ -172,24 +58,26 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-let myName = "";
-const camera = document.getElementById('camera');
-const swapBtn = document.getElementById('swap-btn');
-const status = document.getElementById('status');
-
-// --- 修正版：ログイン処理 ---
-
-// 1. ログインボタンを押した時
-async function login() {
+// ログインボタンの処理
+document.getElementById('google-login-btn').onclick = () => {
+    document.getElementById('login-status').innerText = "ログイン画面へ移動中...";
     const provider = new firebase.auth.GoogleAuthProvider();
-    // ポップアップじゃなくて「リダイレクト」を使うぜ！
-    await auth.signInWithRedirect(provider);
-}
+    // ここでRedirectを使う！
+    auth.signInWithRedirect(provider);
+};
 
-// 2. ログイン状態の監視（リダイレクトから戻ってきた時の処理を追加）
+// ログイン状態のチェック
+auth.getRedirectResult().then((result) => {
+    if (result.user) {
+        console.log("Redirectログイン成功:", result.user);
+    }
+}).catch((error) => {
+    console.error("ログインエラー:", error);
+    document.getElementById('login-status').innerText = "エラー: " + error.message;
+});
+
 auth.onAuthStateChanged(async (user) => {
     if (user) {
-        // ログイン成功時
         const doc = await db.collection("users").doc(user.uid).get();
         if (doc.exists()) {
             myName = doc.data().nickname;
@@ -198,22 +86,18 @@ auth.onAuthStateChanged(async (user) => {
             document.getElementById('login-ui').classList.add('hidden');
             document.getElementById('name-ui').classList.remove('hidden');
         }
-    } else {
-        // リダイレクト後のログイン結果をチェック（これが必要！）
-        try {
-            const result = await auth.getRedirectResult();
-            if (result.user) {
-                // ここでもしログイン直後なら、上の(user)の処理が走るからOK
-            }
-        } catch (error) {
-            console.error("ログインエラー:", error);
-        }
     }
 });
 
+// 以降、前回のニックネーム登録・カメラ・交換ロジックを継承
+let myName = "";
+const camera = document.getElementById('camera');
+const swapBtn = document.getElementById('swap-btn');
+const status = document.getElementById('status');
+
 async function registerName() {
     const name = document.getElementById('nickname').value;
-    if (!name) return alert("名前を入力してね！");
+    if (!name) return alert("名前を入れてね！");
     await db.collection("users").doc(auth.currentUser.uid).set({ nickname: name });
     myName = name;
     startApp();
@@ -223,53 +107,44 @@ async function startApp() {
     document.getElementById('overlay').classList.add('hidden');
     document.getElementById('main').classList.remove('hidden');
     document.getElementById('user-info').innerText = `✨ Explorer: ${myName}`;
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-    camera.srcObject = stream;
-    status.innerText = "交信準備完了";
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        camera.srcObject = stream;
+        status.innerText = "交信準備完了";
+    } catch(e) {
+        status.innerText = "カメラを許可してね！";
+    }
 }
 
 swapBtn.onclick = async () => {
     swapBtn.disabled = true;
-    status.innerText = "写真を現像中...";
-
+    status.innerText = "撮影中...";
     const canvas = document.getElementById('output');
-    canvas.width = 300; 
-    canvas.height = 400;
+    canvas.width = 300; canvas.height = 400;
     canvas.getContext('2d').drawImage(camera, 0, 0, 300, 400);
     const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
 
-    status.innerText = "銀河の向こう側を探しています...";
-    
+    status.innerText = "誰かを探しています...";
     const waitingRooms = await db.collection("waiting").limit(1).get();
 
     if (waitingRooms.empty) {
         await db.collection("waiting").doc(auth.currentUser.uid).set({
-            uid: auth.currentUser.uid,
-            nickname: myName,
-            photoData: dataUrl,
-            time: Date.now()
+            uid: auth.currentUser.uid, nickname: myName, photoData: dataUrl, time: Date.now()
         });
-        
-        const unsubscribe = db.collection("swaps").doc(auth.currentUser.uid)
-            .onSnapshot((doc) => {
-                if (doc.exists()) {
-                    const data = doc.data();
-                    addHistory(data.partnerName, data.partnerPhoto);
-                    status.innerText = "交信成功！";
-                    swapBtn.disabled = false;
-                    unsubscribe();
-                }
-            });
-        status.innerText = "誰もいないようです... 信号を送信し続けています...";
+        const unsubscribe = db.collection("swaps").doc(auth.currentUser.uid).onSnapshot((doc) => {
+            if (doc.exists()) {
+                const data = doc.data();
+                addHistory(data.partnerName, data.partnerPhoto);
+                status.innerText = "交信成功！";
+                swapBtn.disabled = false;
+                unsubscribe();
+            }
+        });
+        status.innerText = "待機中... 誰かが撮るのを待っています";
     } else {
         const partner = waitingRooms.docs[0].data();
         await db.collection("waiting").doc(partner.uid).delete();
-
-        await db.collection("swaps").doc(partner.uid).set({
-            partnerName: myName,
-            partnerPhoto: dataUrl
-        });
-
+        await db.collection("swaps").doc(partner.uid).set({ partnerName: myName, partnerPhoto: dataUrl });
         addHistory(partner.nickname, partner.photoData);
         status.innerText = "交信成功！";
         swapBtn.disabled = false;
