@@ -34,7 +34,7 @@
 
         /* 3. ワードアート風タイトル */
         .word-art {
-            font-size: clamp(40px, 8vw, 80px); /* 画面サイズで調整 */
+            font-size: clamp(40px, 8vw, 80px);
             font-weight: bold;
             color: #ffff00;
             -webkit-text-stroke: 3px #0000ff;
@@ -62,16 +62,16 @@
         .uni-speech {
             background: #ff0000;
             color: #0000ff;
-            padding: 60px 40px;
-            margin: 40px auto;
+            padding: 50px 30px;
+            margin: 20px auto;
             width: fit-content;
-            /* ギザギザを増やした「うに」の形 */
             clip-path: polygon(50% 0%, 60% 20%, 85% 5%, 75% 35%, 100% 30%, 85% 50%, 95% 75%, 70% 65%, 75% 95%, 50% 80%, 25% 95%, 30% 65%, 5% 75%, 15% 50%, 0% 30%, 25% 35%, 15% 5%, 40% 20%);
             animation: slow-float 4s ease-in-out infinite;
-            font-size: 35px;
+            font-size: 28px;
             font-weight: bold;
             text-align: center;
-            line-height: 1.1;
+            line-height: 1.2;
+            z-index: 10;
         }
 
         @keyframes slow-float {
@@ -79,7 +79,15 @@
             50% { transform: scale(1.1) rotate(3deg); }
         }
 
-        /* 6. marquee（電光掲示板） */
+        /* 6. 外国人画像（サムズアップ） */
+        .thumbs-up-man {
+            width: 250px;
+            border: 5px solid #fff;
+            box-shadow: 10px 10px 0 rgba(0,0,0,0.5);
+            margin: 20px;
+        }
+
+        /* 7. marquee（電光掲示板） */
         .marquee-top {
             width: 100%;
             background: #000;
@@ -87,14 +95,6 @@
             padding: 10px;
             font-size: 22px;
             border-bottom: 2px solid #fff;
-        }
-
-        .footer-text {
-            color: #ffff00;
-            font-size: 24px;
-            background: rgba(0,0,255,0.7);
-            padding: 10px;
-            margin-top: 20px;
         }
     </style>
 </head>
@@ -124,12 +124,12 @@
         ★★★ おもてなしいたします ★★★
     </div>
 
-    <div class="uni-speech">
-        ゆっくりし<br>ていってね！
-    </div>
-
-    <div class="footer-text">
-        オススメは GitHub Pages(ぺーじ)♪
+    <div style="display: flex; align-items: center; justify-content: center; flex-wrap: wrap;">
+        <img src="http://googleusercontent.com/image_collection/image_retrieval/16292450142173699142_0" alt="👍" class="thumbs-up-man">
+        
+        <div class="uni-speech">
+            ゆっくりし<br>ていってね！
+        </div>
     </div>
 
     <div class="dots-line" style="margin-top: auto;">
