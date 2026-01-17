@@ -13,93 +13,80 @@
             min-height: 100vh; overflow-x: hidden;
         }
 
-        /* 虹色ネオンダイアログのオーバーレイ */
+        /* --- 虹色ネオンダイアログ --- */
         #overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.95); z-index: 10000;
             display: flex; justify-content: center; align-items: center;
         }
-
-        /* 虹色ネオンダイアログ本体 */
         #dialog {
-            background: #000;
-            padding: 60px;
-            text-align: center;
+            background: #000; padding: 60px; text-align: center;
             border: 10px solid;
-            /* 枠を虹色にする魔法 */
             border-image: linear-gradient(45deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff) 1;
             box-shadow: 0 0 50px rgba(255, 0, 255, 0.8);
             animation: glow-pulse 2s infinite alternate;
         }
-
         #dialog h1 {
-            color: #fff;
-            font-size: 50px;
-            margin-bottom: 40px;
-            text-shadow: 0 0 10px #fff, 0 0 20px #ff00ff, 0 0 40px #ff00ff, 0 0 80px #ff00ff;
-            letter-spacing: 5px;
+            color: #fff; font-size: 50px; margin-bottom: 40px;
+            text-shadow: 0 0 10px #fff, 0 0 20px #ff00ff, 0 0 40px #ff00ff;
         }
-
-        /* 「はい」しかない虹色ボタン */
         .yes-btn {
-            font-size: 35px;
-            font-weight: bold;
-            padding: 20px 60px;
-            color: #fff;
-            cursor: pointer;
-            margin: 15px;
-            border: 4px solid #fff;
-            border-radius: 50px;
+            font-size: 35px; font-weight: bold; padding: 20px 60px; color: #fff;
+            cursor: pointer; margin: 15px; border: 4px solid #fff; border-radius: 50px;
             background: linear-gradient(90deg, #ff0000, #00ff00, #0000ff, #ff0000);
-            background-size: 300%;
-            animation: rainbow-move 3s linear infinite;
-            text-shadow: 2px 2px 4px #000;
-            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
-            transition: transform 0.2s;
+            background-size: 300%; animation: rainbow-move 3s linear infinite;
         }
 
-        .yes-btn:hover { transform: scale(1.2); filter: brightness(1.3); }
+        /* --- メインコンテンツ --- */
+        .marquee-top { width: 100%; background: #000; color: #00ff00; padding: 10px; font-size: 22px; border-bottom: 2px solid #fff; }
+        .dots-line { display: flex; justify-content: space-around; width: 100%; padding: 10px 0; background: rgba(0, 0, 0, 0.2); }
+        .dot { width: 25px; height: 25px; border-radius: 50%; border: 2px solid #000; }
+        
+        .word-art {
+            font-size: clamp(40px, 8vw, 80px); font-weight: bold; color: #ffff00;
+            -webkit-text-stroke: 3px #0000ff; text-shadow: 6px 6px 0px #000000;
+            margin: 30px 0; display: block; transform: scaleY(1.3); text-align: center;
+        }
 
-        /* 右下の操作パネル（ネオン版） */
+        .banner {
+            background: yellow; color: #ff0000; font-size: 32px; font-weight: bold;
+            padding: 10px 40px; border: 4px solid red; display: inline-block;
+            text-shadow: 2px 2px 0 black; margin-bottom: 20px;
+        }
+
+        /* 吹き出しと男の画像 */
+        .uni-speech {
+            background: #ff0000; color: #0000ff; padding: 50px 30px;
+            margin: 20px auto; width: fit-content;
+            clip-path: polygon(50% 0%, 60% 20%, 85% 5%, 75% 35%, 100% 30%, 85% 50%, 95% 75%, 70% 65%, 75% 95%, 50% 80%, 25% 95%, 30% 65%, 5% 75%, 15% 50%, 0% 30%, 25% 35%, 15% 5%, 40% 20%);
+            animation: slow-float 4s ease-in-out infinite;
+            font-size: 28px; font-weight: bold; text-align: center;
+        }
+        .thumbs-up-man { width: 300px; border: 5px solid white; box-shadow: 10px 10px 0px black; margin: 20px; }
+
+        /* リンクボタン */
+        .btn-container { display: flex; flex-direction: column; gap: 20px; width: 90%; max-width: 550px; margin-bottom: 50px; }
+        .ultra-link {
+            text-decoration: none; padding: 25px; font-size: 30px; font-weight: bold;
+            color: #fff; background: linear-gradient(45deg, #ff00ff, #00ffff);
+            border: 10px outset #ff00ff; border-radius: 20px; text-shadow: 4px 4px 0 #000;
+            animation: vibe 0.15s infinite; text-align: center;
+        }
+        .ultra-link:hover { filter: hue-rotate(180deg); transform: scale(1.05); border-style: inset; }
+
+        /* 右下の操作パネル */
         #music-panel {
             position: fixed; bottom: 20px; right: 20px;
             background: rgba(0, 0, 0, 0.8); border: 2px solid #00ffff; padding: 15px;
             display: flex; flex-direction: column; align-items: center;
-            box-shadow: 0 0 15px #00ffff; z-index: 9999;
-            border-radius: 15px; color: #00ffff; font-family: monospace;
+            box-shadow: 0 0 15px #00ffff; z-index: 9999; border-radius: 15px;
         }
 
-        #vol-slider { cursor: pointer; accent-color: #00ffff; }
-        #stop-btn { 
-            background: transparent; color: #ff00ff; border: 1px solid #ff00ff;
-            cursor: pointer; font-weight: bold; margin-bottom: 10px; padding: 5px 10px;
-            box-shadow: 0 0 5px #ff00ff;
-        }
-
-        /* アニメーション設定 */
-        @keyframes glow-pulse {
-            from { box-shadow: 0 0 30px rgba(255, 0, 255, 0.6); }
-            to { box-shadow: 0 0 70px rgba(0, 255, 255, 0.9); }
-        }
-        @keyframes rainbow-move {
-            0% { background-position: 0%; }
-            100% { background-position: 300%; }
-        }
-
-        /* メインコンテンツ用の既存デザイン（一部） */
-        .word-art {
-            font-size: 60px; font-weight: bold; color: #ffff00;
-            -webkit-text-stroke: 2px #000; text-shadow: 4px 4px 0 #000;
-            margin: 40px 0; text-align: center;
-        }
-        .btn-container { display: flex; flex-direction: column; gap: 20px; width: 90%; max-width: 500px; }
-        .ultra-link {
-            text-decoration: none; padding: 20px; font-size: 28px; font-weight: bold;
-            color: #fff; background: linear-gradient(45deg, #ff00ff, #00ffff);
-            border: 8px outset #ff00ff; border-radius: 20px; text-align: center;
-            animation: vibe 0.15s infinite;
-        }
-        @keyframes vibe { 0% { transform: translate(0,0); } 33% { transform: translate(2px, -1px); } 100% { transform: translate(0,0); } }
+        /* アニメーション */
+        @keyframes glow-pulse { from { box-shadow: 0 0 30px rgba(255, 0, 255, 0.6); } to { box-shadow: 0 0 70px rgba(0, 255, 255, 0.9); } }
+        @keyframes rainbow-move { 0% { background-position: 0%; } 100% { background-position: 300%; } }
+        @keyframes vibe { 0% { transform: translate(0,0); } 33% { transform: translate(3px, -2px); } 100% { transform: translate(0,0); } }
+        @keyframes slow-float { 0%, 100% { transform: scale(1) rotate(-3deg); } 50% { transform: scale(1.1) rotate(3deg); } }
     </style>
 </head>
 <body>
@@ -112,23 +99,42 @@
         </div>
     </div>
 
+    <div class="marquee-top">
+        <marquee scrollamount="12">最強サイトにようこそ！あなたは 1000000 人目の訪問者です！！（嘘）</marquee>
+    </div>
+
+    <div class="dots-line">
+        <div class="dot" style="background: red;"></div>
+        <div class="dot" style="background: blue;"></div>
+        <div class="dot" style="background: yellow;"></div>
+        <div class="dot" style="background: green;"></div>
+        <div class="dot" style="background: purple;"></div>
+    </div>
+
+    <span class="word-art">最強サイトへ<br>ようこそ！！</span>
+
+    <div class="banner">★☆ 自作ゲームコーナー ☆★</div>
+
+    <div class="btn-container">
+        <a href="https://hrmk-gg.github.io/RealTimeMessage" class="ultra-link">【極・弾幕】RealTimeMessage</a>
+        <a href="https://hrmk-gg.github.io/othello/" class="ultra-link" style="filter: hue-rotate(120deg);">【極・オセロ】ONLINE対応</a>
+        <a href="https://hrmk-gg.github.io/tetris" class="ultra-link" style="filter: hue-rotate(60deg);">【テトリス】簡単な操作</a>
+        <a href="https://hrmk-gg.github.io/button" class="ultra-link" style="filter: hue-rotate(240deg);">【連打】伝説の赤いボタン</a>
+        <a href="https://hrmk-gg.github.io/MomentSwap" class="ultra-link" style="filter: hue-rotate(300deg);">【刹那】MomentSwap</a>
+    </div>
+
+    <div style="display: flex; align-items: center; justify-content: center; flex-wrap: wrap;">
+        <img src="https://thumb.photo-ac.com/04/0400eb32702cf80735dee9e7084f085f_t.jpeg" alt="👍" class="thumbs-up-man">
+        <div class="uni-speech">ゆっくりし<br>ていってね！</div>
+    </div>
+
     <div id="music-panel" style="display: none;">
-        <b>BGM CONTROL</b>
-        <button id="stop-btn" onclick="togglePlay()">STOP/PLAY</button>
+        <b style="color:#00ffff; font-size:10px;">BGM CONTROL</b>
+        <button onclick="togglePlay()" style="background:transparent; color:#ff00ff; border:1px solid #ff00ff; cursor:pointer;">STOP/PLAY</button>
         <input type="range" id="vol-slider" min="0" max="1" step="0.1" value="0.5" oninput="changeVol(this.value)">
     </div>
 
     <audio id="bgm" src="bgm.mp3" loop></audio>
-
-    <span class="word-art">最強ポータルサイト<br>爆誕！！</span>
-    
-    <div class="btn-container">
-        <a href="https://hrmk-gg.github.io/RealTimeMessage" class="ultra-link">【極・弾幕】RealTimeMessage</a>
-        <a href="https://hrmk-gg.github.io/MomentSwap" class="ultra-link" style="filter: hue-rotate(280deg);">【刹那】MomentSwap</a>
-        <a href="https://hrmk-gg.github.io/button" class="ultra-link" style="filter: hue-rotate(240deg);">【連打】伝説の赤いボタン</a>
-        <a href="https://hrmk-gg.github.io/othello/" class="ultra-link" style="filter: hue-rotate(120deg);">【極・オセロ】ONLINE対応</a>
-        <a href="https://hrmk-gg.github.io/tetris" class="ultra-link" style="filter: hue-rotate(60deg);">【神・テトリス】超快感</a>
-    </div>
 
     <script>
         const audio = document.getElementById('bgm');
@@ -136,19 +142,12 @@
         const panel = document.getElementById('music-panel');
 
         function startBgm() {
-            audio.play().catch(e => console.log("再生エラー:", e));
+            audio.play();
             overlay.style.display = 'none';
             panel.style.display = 'flex';
         }
-
-        function togglePlay() {
-            if (audio.paused) audio.play();
-            else audio.pause();
-        }
-
-        function changeVol(val) {
-            audio.volume = val;
-        }
+        function togglePlay() { audio.paused ? audio.play() : audio.pause(); }
+        function changeVol(val) { audio.volume = val; }
     </script>
 </body>
 </html>
