@@ -1,101 +1,199 @@
-<style>
-    /* 入力エリアのレイアウト調整 */
-    .chat-input-area {
-        position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-        display: flex; align-items: center; gap: 15px; z-index: 20; 
-        background: rgba(255, 255, 255, 0.9);
-        padding: 10px 25px; border-radius: 50px; 
-        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-        backdrop-filter: blur(5px);
-    }
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Red Button - Ultimate Edition</title>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+    <style>
+        :root { --main-red: #ff4b2b; }
+        body { margin: 0; display: flex; height: 100vh; background: #fff; font-family: 'Helvetica Neue', Arial, sans-serif; overflow: hidden; }
+        
+        /* 弾幕エリア */
+        #danmaku-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+        .comment { position: absolute; white-space: nowrap; font-weight: bold; text-shadow: 1px 1px 0 #fff, -1px -1px 0 #fff; animation: flow linear forwards; }
+        @keyframes flow { from { transform: translateX(100vw); } to { transform: translateX(-100%); } }
 
-    /* カラーピッカーとスライダーの見た目 */
-    .control-group { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-    .control-label { font-size: 10px; color: #888; font-weight: bold; }
-    #chat-color { border: none; width: 30px; height: 30px; cursor: pointer; background: none; }
-    #chat-size { cursor: pointer; width: 80px; }
+        /* サイドバー */
+        .sidebar { width: 260px; background: #f9f9f9; border-right: 1px solid #eee; display: flex; flex-direction: column; padding: 20px; z-index: 10; }
+        .tab-btn { background: none; border: none; padding: 12px; text-align: left; cursor: pointer; border-radius: 8px; margin-bottom: 5px; font-weight: bold; color: #666; }
+        .tab-btn.active { background: var(--main-red); color: white; }
 
-    #chat-msg { border: 1px solid #ddd; padding: 10px 15px; border-radius: 20px; width: 200px; outline: none; }
-    #send-btn { background: var(--main-red); color: white; border: none; padding: 10px 25px; border-radius: 20px; cursor: pointer; font-weight: bold; transition: 0.2s; }
-    #send-btn:hover { background: #ff2a00; transform: scale(1.05); }
+        /* 左下のユーザー管理 */
+        .user-control { position: absolute; bottom: 20px; left: 20px; display: flex; flex-direction: column; gap: 10px; width: 220px; }
+        #display-name { font-weight: bold; font-size: 0.9rem; color: #333; }
+        .logout-btn { background: #eee; border: 1px solid #ddd; padding: 8px; border-radius: 5px; cursor: pointer; }
 
-    /* 弾幕の文字スタイル（動的に変えるので基本形だけ） */
-    .comment {
-        position: absolute; white-space: nowrap; font-weight: bold;
-        text-shadow: 1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff;
-        animation: flow linear;
-        pointer-events: none;
-    }
-</style>
+        /* メインコンテンツ */
+        .main-content { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 5; }
+        #total-counter { font-size: 6rem; font-weight: 900; margin-bottom: 20px; }
+        #red-button { width: 200px; height: 200px; background: linear-gradient(145deg, #ff4b2b, #ff416c); border: none; border-radius: 50%; cursor: pointer; box-shadow: 0 12px #b32d15; transition: 0.1s; }
+        #red-button:active { transform: translateY(8px); box-shadow: 0 4px #b32d15; }
+        #red-button:disabled { background: #ccc; box-shadow: 0 12px #999; }
 
-<div class="chat-input-area">
-    <div class="control-group">
-        <span class="control-label">COLOR</span>
-        <input type="color" id="chat-color" value="#333333">
+        /* 下部入力エリア */
+        .chat-input-area { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 15px; z-index: 20; background: rgba(255,255,255,0.9); padding: 10px 20px; border-radius: 50px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .control-group { display: flex; flex-direction: column; align-items: center; font-size: 10px; color: #888; }
+        #chat-msg { border: 1px solid #ddd; padding: 10px; border-radius: 20px; width: 180px; outline: none; }
+        #send-btn { background: var(--main-red); color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; font-weight: bold; }
+
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div id="danmaku-container"></div>
+
+    <div id="login-layer" class="overlay">
+        <h1>The Red Button</h1>
+        <button onclick="auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())" style="padding:15px 30px; cursor:pointer;">Googleでログイン</button>
     </div>
-    
-    <div class="control-group">
-        <span class="control-label">SIZE</span>
-        <input type="range" id="chat-size" min="20" max="80" value="32">
+
+    <div id="nickname-layer" class="overlay hidden">
+        <div style="text-align:center;">
+            <h2>名前を決めてね</h2>
+            <input type="text" id="nickname-input" maxlength="10" style="padding:10px; font-size:1.2rem;"><br><br>
+            <button id="save-nickname-btn" style="padding:10px 20px; background:var(--main-red); color:#fff; border:none; border-radius:10px; cursor:pointer;">開始する</button>
+        </div>
     </div>
 
-    <input type="text" id="chat-msg" placeholder="コメントを流す...">
-    <button id="send-btn">流す</button>
-</div>
+    <div class="sidebar">
+        <h2>RANKINGS</h2>
+        <div id="rank-list">読み込み中...</div>
+        <div class="user-control">
+            <span id="display-name">---</span>
+            <button class="logout-btn" onclick="auth.signOut().then(()=>location.reload())">ログアウト</button>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div id="total-counter">0</div>
+        <button id="red-button" disabled></button>
+    </div>
+
+    <div class="chat-input-area">
+        <div class="control-group"><span>COLOR</span><input type="color" id="chat-color" value="#ff4b2b"></div>
+        <div class="control-group"><span>SIZE</span><input type="range" id="chat-size" min="20" max="80" value="32"></div>
+        <input type="text" id="chat-msg" placeholder="コメントを流す...">
+        <button id="send-btn">流す</button>
+    </div>
 
 <script>
-// --- 弾幕を生成する関数（色とサイズに対応） ---
-function createComment(text, color, size) {
-    const container = document.getElementById('danmaku-container');
-    const el = document.createElement('div');
-    el.className = 'comment';
-    el.innerText = text;
-    
-    // スタイル適用
-    el.style.color = color || "#333";
-    el.style.fontSize = (size || 32) + "px";
-    
-    // ランダムな高さ（サイズを考慮してはみ出さないように計算）
-    const top = Math.random() * 80 + 5;
-    el.style.top = top + "%";
-    
-    // 速度 (4s〜8s)
-    const duration = Math.random() * 4 + 4;
-    el.style.animationDuration = duration + "s";
-    
-    container.appendChild(el);
-    setTimeout(() => el.remove(), duration * 1000);
+// --- 新しいプロジェクト設定反映済み！ ---
+const firebaseConfig = {
+  apiKey: "AIzaSyCxexufR8PjjXe_AjkObG2bwvAxYgd6P4U",
+  authDomain: "realtimemessage-754ef.firebaseapp.com",
+  projectId: "realtimemessage-754ef",
+  storageBucket: "realtimemessage-754ef.firebasestorage.app",
+  messagingSenderId: "727350340778",
+  appId: "1:727350340778:web:5b271891c83c7e5400b4d3",
+  measurementId: "G-M7G5MQ90CK"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const auth = firebase.auth();
+
+let myNickname = "";
+
+// 音源生成 (Web Audio API)
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playClickSound() {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.1);
 }
 
-// 送信ボタンの処理
+// 認証監視
+auth.onAuthStateChanged(async user => {
+    if (user) {
+        document.getElementById('login-layer').classList.add('hidden');
+        const userDoc = await db.collection("users").doc(user.uid).get();
+        if (userDoc.exists && userDoc.data().nickname) {
+            myNickname = userDoc.data().nickname;
+            document.getElementById('display-name').innerText = "Player: " + myNickname;
+            document.getElementById('nickname-layer').classList.add('hidden');
+            document.getElementById('red-button').disabled = false;
+        } else {
+            document.getElementById('nickname-layer').classList.remove('hidden');
+        }
+    } else {
+        document.getElementById('login-layer').classList.remove('hidden');
+    }
+});
+
+// ニックネーム保存
+document.getElementById('save-nickname-btn').onclick = async () => {
+    const val = document.getElementById('nickname-input').value.trim();
+    if (!val) return;
+    await db.collection("users").doc(auth.currentUser.uid).set({ nickname: val });
+    location.reload();
+};
+
+// ボタンクリック
+document.getElementById('red-button').onclick = () => {
+    playClickSound();
+    db.collection("global").doc("counter").update({ count: firebase.firestore.FieldValue.increment(1) });
+    if (myNickname) {
+        db.collection("rankings").doc(myNickname).set({
+            name: myNickname, clicks: firebase.firestore.FieldValue.increment(1)
+        }, { merge: true });
+    }
+};
+
+// カウント監視
+db.collection("global").doc("counter").onSnapshot(doc => {
+    if (doc.exists) document.getElementById('total-counter').innerText = doc.data().count.toLocaleString();
+});
+
+// 弾幕送信
 document.getElementById('send-btn').onclick = async () => {
     const msg = document.getElementById('chat-msg').value.trim();
     const color = document.getElementById('chat-color').value;
     const size = document.getElementById('chat-size').value;
-
     if (!msg) return;
-    
-    // Firestoreに色とサイズも保存するぜ！
     await db.collection("comments").add({
-        text: msg,
-        color: color,
-        size: parseInt(size),
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        text: msg, color: color, size: parseInt(size), createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
-    
     document.getElementById('chat-msg').value = "";
 };
 
-// リアルタイム受信
-db.collection("comments").orderBy("createdAt", "desc").limit(1).onSnapshot(snapshot => {
-    snapshot.docChanges().forEach(change => {
+// 弾幕受信
+db.collection("comments").orderBy("createdAt", "desc").limit(1).onSnapshot(snap => {
+    snap.docChanges().forEach(change => {
         if (change.type === "added") {
             const data = change.doc.data();
-            if (data.text) {
-                // 受信したデータの色とサイズを使って表示
-                createComment(data.text, data.color, data.size);
-            }
+            const el = document.createElement('div');
+            el.className = 'comment';
+            el.innerText = data.text;
+            el.style.color = data.color;
+            el.style.fontSize = data.size + "px";
+            el.style.top = (Math.random() * 80 + 5) + "%";
+            el.style.animationDuration = (Math.random() * 4 + 4) + "s";
+            document.getElementById('danmaku-container').appendChild(el);
+            setTimeout(() => el.remove(), 8000);
         }
     });
 });
+
+// ランキング表示
+async function fetchRank() {
+    const snap = await db.collection("rankings").orderBy("clicks", "desc").limit(10).get();
+    const list = document.getElementById('rank-list');
+    list.innerHTML = "";
+    snap.forEach(doc => {
+        const d = doc.data();
+        list.innerHTML += `<div style="display:flex; justify-content:space-between; padding:5px; border-bottom:1px solid #eee;"><span>${d.name}</span><b>${d.clicks}</b></div>`;
+    });
+}
+setInterval(fetchRank, 5000); fetchRank();
 </script>
+</body>
+</html>
