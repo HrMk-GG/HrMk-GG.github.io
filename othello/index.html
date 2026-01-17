@@ -3,45 +3,102 @@
 <head>
     <meta charset="UTF-8">
     <title>極・オセロオンライン</title>
+    <script src="https://www.gstatic.com/firebasejs/9.1.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.1/firebase-database-compat.js"></script>
     <style>
         :root { --bg-color: #2c3e50; --board-color: #27ae60; }
-        body { background-color: var(--bg-color); color: white; font-family: sans-serif; text-align: center; }
+        body { background-color: var(--bg-color); color: white; font-family: sans-serif; text-align: center; margin: 0; }
         .hidden { display: none !important; }
-        .screen { padding: 50px; }
-        button { padding: 15px 30px; font-size: 20px; cursor: pointer; margin: 10px; }
-        input { padding: 10px; font-size: 20px; }
+        .screen { padding: 30px; min-height: 80vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        button { padding: 12px 24px; font-size: 18px; cursor: pointer; margin: 8px; border-radius: 8px; border: none; background: #ecf0f1; font-weight: bold; }
+        button:hover { background: #bdc3c7; }
+        input { padding: 10px; font-size: 18px; border-radius: 8px; border: none; text-align: center; }
+        
+        /* オセロ盤面 */
+        .board { display: grid; grid-template-columns: repeat(8, 40px); grid-template-rows: repeat(8, 40px); gap: 2px; background: #34495e; border: 5px solid #34495e; margin: 20px auto; }
+        .cell { background: var(--board-color); display: flex; align-items: center; justify-content: center; cursor: pointer; width: 40px; height: 40px; }
+        .stone { width: 34px; height: 34px; border-radius: 50%; display: none; }
+        .black { display: block; background: #000; }
+        .white { display: block; background: #fff; }
     </style>
 </head>
 <body>
 
     <div id="screen-nick" class="screen">
         <h1>⚪️ 極・オセロ ⚫️</h1>
-        <input type="text" id="nick-input" placeholder="なまえ">
+        <input type="text" id="nick-input" maxlength="10" placeholder="なまえ">
         <button onclick="goToMenu()">決定！</button>
     </div>
 
     <div id="screen-menu" class="screen hidden">
-        <h2>ようこそ、<span id="name-display"></span> さん！</h2>
-        <button onclick="alert('CPU戦開始！')">CPU対戦</button>
-        <button onclick="alert('オンライン開始！')">オンライン対戦</button>
-        <button onclick="location.reload()">最初に戻る</button>
+        <h2>ようこそ、 <span id="name-display"></span> さん！</h2>
+        <button onclick="showScreen('screen-cpu-lv')">CPU対戦</button>
+        <button onclick="showScreen('screen-online')">オンライン対戦</button>
+        <button onclick="showScreen('screen-settings')">設定</button>
+    </div>
+
+    <div id="screen-cpu-lv" class="screen hidden">
+        <h2>レベルを選んでね</h2>
+        <button onclick="startGame('cpu', 'weak')">弱い</button>
+        <button onclick="startGame('cpu', 'normal')">普通</button>
+        <button onclick="startGame('cpu', 'strong')">強い</button>
+        <button onclick="showScreen('screen-menu')">もどる</button>
+    </div>
+
+    <div id="screen-online" class="screen hidden">
+        <h2>オンライン対戦</h2>
+        <button onclick="alert('部屋を作成中...')">部屋を作成</button>
+        <input type="text" id="room-input" maxlength="5" placeholder="5桁コード">
+        <button onclick="alert('参加中...')">部屋に参加</button>
+        <button onclick="showScreen('screen-menu')">もどる</button>
+    </div>
+
+    <div id="screen-game" class="screen hidden">
+        <h3 id="turn-info">黒の番です</h3>
+        <div id="board" class="board"></div>
+        <button onclick="showScreen('screen-menu')">メニューへ</button>
+    </div>
+
+    <div id="screen-settings" class="screen hidden">
+        <h2>設定</h2>
+        <p>色のテーマ: <input type="color" id="color-picker" value="#27ae60" onchange="changeColor()"></p>
+        <button onclick="showScreen('screen-menu')">保存して戻る</button>
     </div>
 
     <script>
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+        }
+
         function goToMenu() {
             const nick = document.getElementById('nick-input').value;
-            console.log("ボタンが押されたよ！名前:", nick); // ブラウザのF12で見れるよ
-            
-            if (nick.trim() === "") {
-                alert("名前を入れてね！");
-                return;
-            }
-            
+            if (!nick.trim()) return alert("名前を入れてね！");
             document.getElementById('name-display').innerText = nick;
-            
-            // 画面を切り替える
-            document.getElementById('screen-nick').classList.add('hidden');
-            document.getElementById('screen-menu').classList.remove('hidden');
+            showScreen('screen-menu');
+        }
+
+        function changeColor() {
+            const color = document.getElementById('color-picker').value;
+            document.documentElement.style.setProperty('--board-color', color);
+        }
+
+        function startGame(mode, level) {
+            showScreen('screen-game');
+            const boardEl = document.getElementById('board');
+            boardEl.innerHTML = "";
+            // 盤面 8x8 を作成
+            for (let i = 0; i < 64; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                const stone = document.createElement('div');
+                stone.className = 'stone';
+                // 初期配置 (27, 28, 35, 36番目)
+                if (i === 27 || i === 36) stone.classList.add('white');
+                if (i === 28 || i === 35) stone.classList.add('black');
+                cell.appendChild(stone);
+                boardEl.appendChild(cell);
+            }
         }
     </script>
 </body>
