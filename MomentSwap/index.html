@@ -177,13 +177,19 @@ const camera = document.getElementById('camera');
 const swapBtn = document.getElementById('swap-btn');
 const status = document.getElementById('status');
 
+// --- 修正版：ログイン処理 ---
+
+// 1. ログインボタンを押した時
 async function login() {
     const provider = new firebase.auth.GoogleAuthProvider();
-    await auth.signInWithPopup(provider);
+    // ポップアップじゃなくて「リダイレクト」を使うぜ！
+    await auth.signInWithRedirect(provider);
 }
 
+// 2. ログイン状態の監視（リダイレクトから戻ってきた時の処理を追加）
 auth.onAuthStateChanged(async (user) => {
     if (user) {
+        // ログイン成功時
         const doc = await db.collection("users").doc(user.uid).get();
         if (doc.exists()) {
             myName = doc.data().nickname;
@@ -191,6 +197,16 @@ auth.onAuthStateChanged(async (user) => {
         } else {
             document.getElementById('login-ui').classList.add('hidden');
             document.getElementById('name-ui').classList.remove('hidden');
+        }
+    } else {
+        // リダイレクト後のログイン結果をチェック（これが必要！）
+        try {
+            const result = await auth.getRedirectResult();
+            if (result.user) {
+                // ここでもしログイン直後なら、上の(user)の処理が走るからOK
+            }
+        } catch (error) {
+            console.error("ログインエラー:", error);
         }
     }
 });
