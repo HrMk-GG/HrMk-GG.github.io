@@ -1,430 +1,96 @@
-<script src="https://cdn.tailwindcss.com"></script>
-import React, { useState, useEffect, useRef } from 'react';
-import { initializeApp } from 'firebase/app';
-import { 
-  getAuth, 
-  signInAnonymously, 
-  signInWithCustomToken, 
-  onAuthStateChanged,
-  signOut 
-} from 'firebase/auth';
-import { 
-  getFirestore, 
-  collection, 
-  doc, 
-  setDoc, 
-  getDoc, 
-  addDoc, 
-  query, 
-  getDocs, 
-  serverTimestamp 
-} from 'firebase/firestore';
-import { Camera, RefreshCw, Save, Trash2, AlertTriangle, User, LogIn, X, Image as ImageIcon } from 'lucide-react';
-
-// --- Firebase Configuration ---
-const firebaseConfig = JSON.parse(__firebase_config);
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'picture-swap-v2';
-
-export default function App() {
-  const [user, setUser] = useState(null);
-  const [nickname, setNickname] = useState('');
-  const [step, setStep] = useState('loading'); // loading, login, nickname, main, exchanged
-  const [capturedImage, setCapturedImage] = useState(null);
-  const [receivedImage, setReceivedImage] = useState(null);
-  const [savedImages, setSavedImages] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [reportReason, setReportReason] = useState('');
-  const [showReportModal, setShowReportModal] = useState(false);
-
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
-
-  // 1. Auth Initialization
-  useEffect(() => {
-    const initAuth = async () => {
-      try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-          await signInAnonymously(auth);
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>★☆最強サイト紹介ポータル☆★</title>
+    <style>
+        /* 1. 虹色グラデーション背景（目がチカチカするやつ） */
+        body {
+            background: linear-gradient(90deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);
+            background-size: 200% 200%;
+            animation: rainbow 3s linear infinite;
+            font-family: "MS PMincho", "MS P明朝", serif; /* 絶妙な明朝体 */
+            color: #ffffff;
+            text-shadow: 3px 3px 0px #ff00ff; /* 読みづらい影 */
+            margin: 0;
+            overflow-x: hidden;
         }
-      } catch (err) {
-        console.error("Auth error:", err);
-      }
-    };
-    initAuth();
 
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-        try {
-          const userDoc = await getDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'info'));
-          if (userDoc.exists()) {
-            setNickname(userDoc.data().nickname);
-            setStep('main');
-          } else {
-            setStep('nickname');
-          }
-        } catch (e) {
-          setStep('nickname');
+        @keyframes rainbow {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 100% 50%; }
         }
-      } else {
-        setUser(null);
-        setStep('login');
-      }
-    });
-    return () => unsubscribe();
-  }, []);
 
-  // 2. Camera Controls
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'user', width: { ideal: 1024 }, height: { ideal: 1024 } } 
-      });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-    } catch (err) {
-      setError("カメラの起動に失敗しました。設定でブラウザのアクセスを許可してください。");
-    }
-  };
+        /* 2. とげとげ吹き出し風のタイトル */
+        .title-box {
+            background: yellow;
+            color: red;
+            padding: 20px;
+            margin: 50px auto;
+            width: 80%;
+            clip-path: polygon(0% 15%, 15% 15%, 15% 0%, 85% 0%, 85% 15%, 100% 15%, 100% 85%, 85% 85%, 85% 100%, 15% 100%, 15% 85%, 0% 85%);
+            animation: shake 0.5s infinite;
+        }
 
-  useEffect(() => {
-    if (step === 'main' && !capturedImage) {
-      startCamera();
-    }
-  }, [step, capturedImage]);
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10px { transform: translate(-1px, -2px) rotate(-1deg); }
+            20px { transform: translate(-3px, 0px) rotate(1deg); }
+        }
 
-  const capturePhoto = () => {
-    const canvas = canvasRef.current;
-    const video = videoRef.current;
-    if (canvas && video) {
-      const size = Math.min(video.videoWidth, video.videoHeight);
-      canvas.width = size;
-      canvas.height = size;
-      const ctx = canvas.getContext('2d');
-      const startX = (video.videoWidth - size) / 2;
-      const startY = (video.videoHeight - size) / 2;
-      ctx.drawImage(video, startX, startY, size, size, 0, 0, size, size);
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-      setCapturedImage(dataUrl);
-      
-      const stream = video.srcObject;
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-    }
-  };
+        /* 3. 謎のワードアート風リンク */
+        .word-art-link {
+            display: inline-block;
+            font-size: 40px;
+            font-weight: bold;
+            background: linear-gradient(to bottom, #00ffff 0%, #0000ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-decoration: none;
+            border: 5px double white;
+            padding: 10px;
+            margin: 20px;
+            transform: skew(-20deg); /* 無駄な斜体 */
+        }
 
-  // 3. Actions
-  const handleLogin = async () => {
-    setLoading(true);
-    try {
-      await signInAnonymously(auth);
-    } catch (err) {
-      setError("ログインエラーが発生しました。");
-    } finally {
-      setLoading(false);
-    }
-  };
+        .word-art-link:hover {
+            animation: flash 0.1s infinite;
+        }
 
-  const saveNickname = async () => {
-    if (!nickname.trim() || nickname.length > 10) return;
-    setLoading(true);
-    try {
-      await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), {
-        nickname: nickname,
-        createdAt: serverTimestamp()
-      });
-      setStep('main');
-    } catch (err) {
-      setError("名前の保存に失敗しました。");
-    } finally {
-      setLoading(false);
-    }
-  };
+        @keyframes flash {
+            0% { opacity: 1; }
+            50% { opacity: 0; }
+        }
 
-  const handleExchange = async () => {
-    if (!capturedImage || !user) return;
-    setLoading(true);
-    try {
-      await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'swaps'), {
-        imageUrl: capturedImage,
-        senderId: user.uid,
-        senderName: nickname,
-        timestamp: serverTimestamp()
-      });
+        /* 4. 流れる文字（marquee）の再現 */
+        .scrolling-text {
+            background: black;
+            color: #00ff00;
+            padding: 10px;
+            font-size: 24px;
+        }
+    </style>
+</head>
+<body>
 
-      const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'swaps'));
-      const querySnapshot = await getDocs(q);
-      
-      const othersImages = querySnapshot.docs
-        .map(d => d.data())
-        .filter(item => item.senderId !== user.uid)
-        .sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
-
-      if (othersImages.length > 0) {
-        setReceivedImage(othersImages[0]);
-        setStep('exchanged');
-      } else {
-        setError("まだ他の人の画像がありません。最初の投稿をありがとうございます！");
-        setCapturedImage(null);
-        setStep('main');
-      }
-    } catch (err) {
-      setError("交換中にエラーが発生しました。");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleReport = async () => {
-    if (!reportReason.trim() || !user) return;
-    setLoading(true);
-    try {
-      await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'reports'), {
-        reportedImageUrl: receivedImage.imageUrl,
-        reason: reportReason,
-        reporterId: user.uid,
-        timestamp: serverTimestamp()
-      });
-      setShowReportModal(false);
-      setStep('main');
-      setCapturedImage(null);
-    } catch (err) {
-      setError("送信に失敗しました。");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (step === 'loading') {
-    return (
-      <div className="h-screen flex flex-col items-center justify-center bg-slate-50 gap-4">
-        <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-        <p className="font-bold text-slate-400">読み込み中...</p>
-      </div>
-    );
-  }
-
-  if (step === 'login') {
-    return (
-      <div className="h-screen flex flex-col items-center justify-center bg-slate-50 p-6 text-center">
-        <div className="w-24 h-24 bg-indigo-600 rounded-[32px] flex items-center justify-center text-white mb-8 shadow-2xl shadow-indigo-200">
-          <Camera size={48} />
-        </div>
-        <h1 className="text-5xl font-black text-slate-900 mb-3 tracking-tight">Picture Swap</h1>
-        <p className="text-slate-500 mb-12 text-lg font-medium">撮った写真を、世界の誰かと交換しよう。</p>
-        <button 
-          onClick={handleLogin} 
-          disabled={loading}
-          className="w-full max-w-xs bg-slate-900 text-white py-5 rounded-[24px] font-bold text-xl shadow-xl hover:bg-black transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3"
-        >
-          {loading ? "接続中..." : <><LogIn size={24} /> ログインして始める</>}
-        </button>
-      </div>
-    );
-  }
-
-  if (step === 'nickname') {
-    return (
-      <div className="h-screen flex flex-col items-center justify-center bg-slate-50 p-6">
-        <div className="bg-white p-10 rounded-[40px] shadow-2xl w-full max-w-sm border border-slate-100">
-          <h2 className="text-3xl font-black mb-2 text-slate-900">なまえを決める</h2>
-          <p className="text-slate-400 mb-8 font-medium">交換相手に表示されます（10文字以内）</p>
-          <input 
-            type="text" 
-            maxLength={10} 
-            value={nickname} 
-            onChange={e => setNickname(e.target.value)}
-            className="w-full bg-slate-50 border-2 border-slate-100 p-5 rounded-2xl mb-8 outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-50 font-bold text-xl transition-all"
-            placeholder="ニックネーム"
-          />
-          <button 
-            onClick={saveNickname} 
-            disabled={loading || !nickname.trim()}
-            className="w-full bg-indigo-600 text-white py-5 rounded-2xl font-bold text-xl shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-50"
-          >
-            {loading ? "保存中..." : "はじめる"}
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center pb-24 font-sans text-slate-900">
-      {/* Header */}
-      <header className="w-full max-w-xl p-5 flex justify-between items-center bg-white/80 backdrop-blur-xl border-b border-slate-100 sticky top-0 z-40">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold shadow-lg shadow-indigo-100">
-            {nickname[0]}
-          </div>
-          <span className="font-black text-slate-800 text-lg">{nickname}</span>
-        </div>
-        <button onClick={() => signOut(auth)} className="text-xs text-slate-400 font-bold hover:text-red-500 transition-colors uppercase tracking-widest">Sign Out</button>
-      </header>
-
-      <main className="w-full max-w-xl p-6 space-y-10">
-        {/* Main Preview Card */}
-        <section className="relative aspect-square w-full bg-white rounded-[56px] shadow-2xl overflow-hidden border-[12px] border-white ring-1 ring-slate-100 group">
-          {!capturedImage ? (
-            <>
-              <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover bg-slate-200" />
-              <div className="absolute inset-0 pointer-events-none border-2 border-dashed border-white/40 m-10 rounded-[32px] group-hover:border-white/60 transition-colors" />
-              <div className="absolute top-6 left-1/2 -translate-x-1/2 bg-black/20 backdrop-blur-md text-white/80 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest">
-                Live Camera
-              </div>
-            </>
-          ) : (
-            <img src={capturedImage} className="w-full h-full object-cover animate-in zoom-in-95 duration-300" alt="captured" />
-          )}
-        </section>
-
-        {/* Buttons Section */}
-        <section className="px-2">
-          {!capturedImage ? (
-            <button 
-              onClick={capturePhoto} 
-              className="w-full bg-indigo-600 text-white py-6 rounded-[32px] font-black text-2xl flex items-center justify-center gap-4 shadow-2xl shadow-indigo-200 hover:bg-indigo-700 hover:-translate-y-1 transition-all active:translate-y-0 active:scale-95"
-            >
-              <Camera size={32} strokeWidth={2.5} /> 写真を撮る
-            </button>
-          ) : (
-            <div className="flex flex-col gap-4">
-              <button 
-                onClick={handleExchange} 
-                disabled={loading} 
-                className="w-full bg-orange-500 text-white py-6 rounded-[32px] font-black text-2xl flex items-center justify-center gap-4 shadow-2xl shadow-orange-200 hover:bg-orange-600 transition-all active:scale-95 disabled:opacity-50"
-              >
-                <RefreshCw size={32} strokeWidth={2.5} className={loading ? "animate-spin" : ""} /> 
-                {loading ? "交換中..." : "今すぐ交換する"}
-              </button>
-              <button 
-                onClick={() => { setCapturedImage(null); startCamera(); }} 
-                className="text-slate-400 font-bold py-2 hover:text-slate-600 transition-colors text-center"
-              >
-                撮り直す
-              </button>
-            </div>
-          )}
-        </section>
-
-        {/* Gallery Area */}
-        <section className="pt-6 px-2">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="font-black text-slate-900 text-2xl flex items-center gap-3">
-              <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600"><Save size={24} /></div>
-              コレクション
-            </h3>
-            <span className="bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-sm font-bold">{savedImages.length}</span>
-          </div>
-          
-          <div className="grid grid-cols-3 gap-4">
-            {savedImages.length === 0 ? (
-              <div className="col-span-3 py-16 border-4 border-dashed border-slate-100 rounded-[40px] flex flex-col items-center justify-center text-slate-300 gap-3 group hover:border-indigo-100 transition-colors">
-                <ImageIcon size={48} strokeWidth={1.5} className="group-hover:scale-110 transition-transform" />
-                <span className="font-black">まだ交換した写真がありません</span>
-              </div>
-            ) : (
-              savedImages.map((img, i) => (
-                <div key={i} className="aspect-square rounded-[24px] overflow-hidden bg-white shadow-lg border-4 border-white transition-all hover:scale-105 hover:rotate-2">
-                  <img src={img} className="w-full h-full object-cover" alt={`saved-${i}`} />
-                </div>
-              ))
-            )}
-          </div>
-        </section>
-      </main>
-
-      {/* Result Fullscreen Modal */}
-      {step === 'exchanged' && receivedImage && (
-        <div className="fixed inset-0 z-50 bg-slate-900/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 animate-in fade-in duration-300">
-          <div className="w-full max-w-md">
-            <h2 className="text-white text-4xl font-black mb-8 text-center tracking-tighter">New Picture! ✨</h2>
-            
-            <div className="bg-white rounded-[48px] overflow-hidden shadow-2xl border-[12px] border-white mb-10">
-              <img src={receivedImage.imageUrl} className="w-full h-auto max-h-[55vh] object-contain bg-slate-50" alt="received" />
-              <div className="p-6 bg-slate-50 border-t flex items-center gap-4">
-                <div className="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600 font-black text-xl">
-                  {receivedImage.senderName?.[0]}
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Sender</p>
-                  <p className="font-black text-slate-800 text-lg">{receivedImage.senderName}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-5 px-2">
-              <button 
-                onClick={() => { setSavedImages([...savedImages, receivedImage.imageUrl]); setStep('main'); setCapturedImage(null); }} 
-                className="flex flex-col items-center justify-center gap-3 bg-emerald-500 text-white py-6 rounded-[32px] font-black shadow-xl hover:bg-emerald-600 active:scale-95 transition-all"
-              >
-                <Save size={28} /> <span className="text-xs">保存</span>
-              </button>
-              <button 
-                onClick={() => { setStep('main'); setCapturedImage(null); }} 
-                className="flex flex-col items-center justify-center gap-3 bg-slate-700 text-white py-6 rounded-[32px] font-black shadow-xl hover:bg-slate-800 active:scale-95 transition-all"
-              >
-                <Trash2 size={28} /> <span className="text-xs">破棄</span>
-              </button>
-              <button 
-                onClick={() => setShowReportModal(true)} 
-                className="flex flex-col items-center justify-center gap-3 bg-red-500 text-white py-6 rounded-[32px] font-black shadow-xl hover:bg-red-600 active:scale-95 transition-all"
-              >
-                <AlertTriangle size={28} /> <span className="text-xs">報告</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Report Form Overlay */}
-      {showReportModal && (
-        <div className="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center p-6 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="bg-white w-full max-w-sm rounded-[40px] p-10 shadow-2xl">
-            <h3 className="text-3xl font-black mb-3 text-slate-900 text-center">不適切な内容</h3>
-            <p className="text-slate-400 font-medium mb-8 text-center">報告する理由を入力してください。</p>
-            <textarea 
-              value={reportReason} 
-              onChange={e => setReportReason(e.target.value)}
-              className="w-full bg-slate-50 border-2 border-slate-100 p-5 rounded-2xl h-36 mb-8 outline-none focus:border-red-500 focus:bg-white focus:ring-4 focus:ring-red-50 transition-all font-medium"
-              placeholder="理由を詳しく..."
-            />
-            <div className="flex gap-4">
-              <button onClick={() => setShowReportModal(false)} className="flex-1 font-bold text-slate-400 hover:text-slate-600">キャンセル</button>
-              <button 
-                onClick={handleReport} 
-                disabled={!reportReason.trim() || loading}
-                className="flex-[2] bg-red-500 text-white py-5 rounded-2xl font-black shadow-xl disabled:opacity-50 hover:bg-red-600 transition-all active:scale-95"
-              >
-                {loading ? "送信中..." : "報告を送信"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Error Toast */}
-      {error && (
-        <div className="fixed bottom-10 left-6 right-6 z-[100] flex justify-center">
-          <div className="bg-slate-900 text-white px-8 py-5 rounded-[24px] shadow-2xl flex items-center justify-between gap-6 max-w-md w-full animate-in slide-in-from-bottom-10">
-            <div className="flex items-center gap-3">
-              <AlertTriangle className="text-orange-400" size={24} />
-              <span className="font-bold text-sm">{error}</span>
-            </div>
-            <button onClick={() => setError(null)} className="p-1 hover:bg-white/10 rounded-lg transition-colors"><X size={20} /></button>
-          </div>
-        </div>
-      )}
-
-      <canvas ref={canvasRef} className="hidden" />
+    <div class="scrolling-text">
+        <marquee>ようこそ！HrMk-GGの爆速サイト紹介コーナーへ！最新情報をチェックしてね！</marquee>
     </div>
-  );
-}
+
+    <div class="title-box">
+        <h1>💥 俺の最強ウェブサイト群 💥</h1>
+    </div>
+
+    <p style="font-size: 30px; background: blue;">↓ ここをクリックして別世界へ行こう ↓</p>
+
+    <a href="./sample" class="word-art-link">✨サンプルサイト入口✨</a>
+    <br>
+    <a href="./next-project" class="word-art-link">🚀次のプロジェクト(予定)🚀</a>
+
+    <div style="margin-top: 100px;">
+        <img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJmZzJ4ZzR4ZzR4ZzR4ZzR4ZzR4ZzR4ZzR4ZzR4ZzR4ZzR4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKMGpxX6LzJ9L3y/giphy.gif" width="200">
+        <p>工事中...🚧</p>
+    </div>
+
+</body>
+</html>
