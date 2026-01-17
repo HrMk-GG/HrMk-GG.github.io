@@ -3,51 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anonymous Danmaku Chat</title>
+    <title>Liquid Glass Danmaku</title>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
     <style>
-        body { margin: 0; padding: 0; background: #000; font-family: "Helvetica Neue", Arial, sans-serif; overflow: hidden; height: 100vh; }
-
-        /* 弾幕が流れるステージ */
-        #danmaku-stage {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; z-index: 1;
+        body { 
+            margin: 0; padding: 0; 
+            /* 液体感のあるグラデーション背景 */
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            font-family: "Helvetica Neue", Arial, sans-serif; 
+            overflow: hidden; height: 100vh; 
         }
 
+        #danmaku-stage { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+
         .comment {
-            position: absolute; white-space: nowrap; font-weight: bold;
-            text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000;
+            position: absolute; white-space: nowrap; font-weight: 800;
+            /* 文字も少し発光させて液体感を出す */
+            text-shadow: 0 0 10px rgba(255,255,255,0.5);
             animation: flow linear forwards;
             will-change: transform;
         }
 
-        @keyframes flow {
-            from { transform: translateX(100vw); }
-            to { transform: translateX(-100%); }
-        }
+        @keyframes flow { from { transform: translateX(100vw); } to { transform: translateX(-100%); } }
 
-        /* 下部の操作パネル */
+        /* Liquid Glass 操作パネル */
         .ui-panel {
-            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-            z-index: 100; background: rgba(255, 255, 255, 0.9);
-            padding: 15px 25px; border-radius: 50px;
-            display: flex; align-items: center; gap: 15px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-            backdrop-filter: blur(10px);
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            z-index: 100; 
+            /* グラスモーフィズムの核！ */
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px); 
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 25px;
+            padding: 15px 30px;
+            display: flex; align-items: center; gap: 20px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            /* ガラスの反射光 */
+            background-image: linear-gradient(120deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 50%);
         }
 
-        .input-group { display: flex; flex-direction: column; align-items: center; font-size: 10px; color: #666; font-weight: bold; }
+        .input-group { display: flex; flex-direction: column; align-items: center; font-size: 10px; color: rgba(255,255,255,0.7); letter-spacing: 1px; }
         
-        input[type="text"] { border: 1px solid #ccc; padding: 10px; border-radius: 20px; outline: none; }
-        #nickname { width: 80px; }
-        #message { width: 250px; }
+        input[type="text"] { 
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white; padding: 10px 15px; border-radius: 15px; outline: none; 
+        }
+        input[type="text"]::placeholder { color: rgba(255,255,255,0.4); }
+        
+        #nickname { width: 70px; }
+        #message { width: 220px; }
         
         #send-btn {
-            background: #ff4b2b; color: white; border: none; padding: 10px 25px;
-            border-radius: 20px; cursor: pointer; font-weight: bold; transition: 0.2s;
+            background: rgba(255, 255, 255, 0.9); color: #1e293b; border: none; 
+            padding: 10px 25px; border-radius: 15px; cursor: pointer; font-weight: 900; 
+            transition: all 0.3s ease;
         }
-        #send-btn:hover { background: #ff2a00; transform: scale(1.05); }
+        #send-btn:hover { background: #fff; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(255,255,255,0.3); }
+
+        input[type="color"] { border: none; width: 25px; height: 25px; cursor: pointer; background: none; }
+        input[type="range"] { width: 70px; accent-color: #fff; }
     </style>
 </head>
 <body>
@@ -55,28 +72,15 @@
     <div id="danmaku-stage"></div>
 
     <div class="ui-panel">
-        <div class="input-group">
-            <span>NAME</span>
-            <input type="text" id="nickname" placeholder="名無し" maxlength="10">
-        </div>
-        
-        <div class="input-group">
-            <span>COLOR</span>
-            <input type="color" id="color" value="#ffffff">
-        </div>
-
-        <div class="input-group">
-            <span>SIZE</span>
-            <input type="range" id="size" min="20" max="100" value="40">
-        </div>
-
-        <input type="text" id="message" placeholder="何かメッセージを打ってね！" maxlength="50">
-        
-        <button id="send-btn">流す！</button>
+        <div class="input-group"><span>NAME</span><input type="text" id="nickname" placeholder="Name" maxlength="10"></div>
+        <div class="input-group"><span>COLOR</span><input type="color" id="color" value="#ffffff"></div>
+        <div class="input-group"><span>SIZE</span><input type="range" id="size" min="20" max="100" value="40"></div>
+        <input type="text" id="message" placeholder="Message..." maxlength="50">
+        <button id="send-btn">SEND</button>
     </div>
 
 <script>
-// --- 君のFirebase設定（反映済み！） ---
+// --- 君のFirebase設定（そのまま！） ---
 const firebaseConfig = {
   apiKey: "AIzaSyCxexufR8PjjXe_AjkObG2bwvAxYgd6P4U",
   authDomain: "realtimemessage-754ef.firebaseapp.com",
@@ -89,7 +93,6 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// 弾幕を表示させる関数
 function launch(text, color, size) {
     const stage = document.getElementById('danmaku-stage');
     const div = document.createElement('div');
@@ -97,57 +100,33 @@ function launch(text, color, size) {
     div.innerText = text;
     div.style.color = color;
     div.style.fontSize = size + "px";
-    
-    // 重ならないようにランダムな高さに配置（上部5%〜90%の間）
     div.style.top = (Math.random() * 85 + 5) + "%";
-    
-    // 文字数に応じて流れる速度を調整（短いと速く、長いと遅く）
-    const speed = Math.random() * 3 + 4; // 4s〜7s
+    const speed = Math.random() * 3 + 5;
     div.style.animationDuration = speed + "s";
-    
     stage.appendChild(div);
-    
-    // 流れ終わったらDOMから消す（メモリ節約！）
     setTimeout(() => div.remove(), speed * 1000);
 }
 
-// 送信ボタンクリック
 document.getElementById('send-btn').onclick = async () => {
     const msg = document.getElementById('message').value.trim();
-    const name = document.getElementById('nickname').value || "名無し";
-    const color = document.getElementById('color').value;
-    const size = document.getElementById('size').value;
-
+    const name = document.getElementById('nickname').value || "Guest";
     if (!msg) return;
-
-    // Firestoreにデータを追加
     await db.collection("comments").add({
         content: `[${name}] ${msg}`,
-        color: color,
-        size: parseInt(size),
+        color: document.getElementById('color').value,
+        size: parseInt(document.getElementById('size').value),
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
-
-    document.getElementById('message').value = ""; // 入力欄を空に
+    document.getElementById('message').value = "";
 };
 
-// Enterキーでも送信できるように
-document.getElementById('message').addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') document.getElementById('send-btn').click();
-});
+document.getElementById('message').addEventListener('keypress', (e) => { if (e.key === 'Enter') document.getElementById('send-btn').click(); });
 
-// リアルタイムでデータを監視（ここが肝！）
-db.collection("comments")
-  .orderBy("createdAt", "desc")
-  .limit(1)
-  .onSnapshot(snapshot => {
+db.collection("comments").orderBy("createdAt", "desc").limit(1).onSnapshot(snapshot => {
     snapshot.docChanges().forEach(change => {
         if (change.type === "added") {
             const data = change.doc.data();
-            // サーバーからデータが届いたら画面に流す
-            if (data.content) {
-                launch(data.content, data.color, data.size);
-            }
+            if (data.content) launch(data.content, data.color, data.size);
         }
     });
 });
