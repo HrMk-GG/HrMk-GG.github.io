@@ -13,43 +13,93 @@
             min-height: 100vh; overflow-x: hidden;
         }
 
-        /* ぶち上げダイアログのスタイル */
+        /* 虹色ネオンダイアログのオーバーレイ */
         #overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9); z-index: 10000;
+            background: rgba(0,0,0,0.95); z-index: 10000;
             display: flex; justify-content: center; align-items: center;
         }
-        #dialog {
-            background: #fff; border: 10px outset #ff00ff; padding: 40px;
-            text-align: center; box-shadow: 20px 20px 0px #000;
-        }
-        #dialog h1 { color: #000; font-size: 36px; margin-bottom: 30px; }
-        .yes-btn {
-            font-size: 30px; font-weight: bold; padding: 15px 50px;
-            background: linear-gradient(to bottom, #ff00ff, #00ffff);
-            border: 5px outset #fff; cursor: pointer; margin: 10px;
-        }
-        .yes-btn:active { border-style: inset; }
 
-        /* 右下の音楽操作パネル */
+        /* 虹色ネオンダイアログ本体 */
+        #dialog {
+            background: #000;
+            padding: 60px;
+            text-align: center;
+            border: 10px solid;
+            /* 枠を虹色にする魔法 */
+            border-image: linear-gradient(45deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff) 1;
+            box-shadow: 0 0 50px rgba(255, 0, 255, 0.8);
+            animation: glow-pulse 2s infinite alternate;
+        }
+
+        #dialog h1 {
+            color: #fff;
+            font-size: 50px;
+            margin-bottom: 40px;
+            text-shadow: 0 0 10px #fff, 0 0 20px #ff00ff, 0 0 40px #ff00ff, 0 0 80px #ff00ff;
+            letter-spacing: 5px;
+        }
+
+        /* 「はい」しかない虹色ボタン */
+        .yes-btn {
+            font-size: 35px;
+            font-weight: bold;
+            padding: 20px 60px;
+            color: #fff;
+            cursor: pointer;
+            margin: 15px;
+            border: 4px solid #fff;
+            border-radius: 50px;
+            background: linear-gradient(90deg, #ff0000, #00ff00, #0000ff, #ff0000);
+            background-size: 300%;
+            animation: rainbow-move 3s linear infinite;
+            text-shadow: 2px 2px 4px #000;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+            transition: transform 0.2s;
+        }
+
+        .yes-btn:hover { transform: scale(1.2); filter: brightness(1.3); }
+
+        /* 右下の操作パネル（ネオン版） */
         #music-panel {
             position: fixed; bottom: 20px; right: 20px;
-            background: #ccc; border: 4px outset #eee; padding: 15px;
+            background: rgba(0, 0, 0, 0.8); border: 2px solid #00ffff; padding: 15px;
             display: flex; flex-direction: column; align-items: center;
-            box-shadow: 5px 5px 0px #000; z-index: 9999;
-            font-family: monospace;
+            box-shadow: 0 0 15px #00ffff; z-index: 9999;
+            border-radius: 15px; color: #00ffff; font-family: monospace;
         }
-        #music-panel b { color: #000; font-size: 12px; margin-bottom: 10px; }
-        .control-btns { display: flex; align-items: center; gap: 10px; }
-        #stop-btn { background: red; color: white; font-weight: bold; cursor: pointer; border: 2px outset #f99; }
-        #vol-slider { cursor: pointer; accent-color: #ff00ff; }
 
-        /* 元のコンテンツ用のスタイル */
+        #vol-slider { cursor: pointer; accent-color: #00ffff; }
+        #stop-btn { 
+            background: transparent; color: #ff00ff; border: 1px solid #ff00ff;
+            cursor: pointer; font-weight: bold; margin-bottom: 10px; padding: 5px 10px;
+            box-shadow: 0 0 5px #ff00ff;
+        }
+
+        /* アニメーション設定 */
+        @keyframes glow-pulse {
+            from { box-shadow: 0 0 30px rgba(255, 0, 255, 0.6); }
+            to { box-shadow: 0 0 70px rgba(0, 255, 255, 0.9); }
+        }
+        @keyframes rainbow-move {
+            0% { background-position: 0%; }
+            100% { background-position: 300%; }
+        }
+
+        /* メインコンテンツ用の既存デザイン（一部） */
         .word-art {
             font-size: 60px; font-weight: bold; color: #ffff00;
             -webkit-text-stroke: 2px #000; text-shadow: 4px 4px 0 #000;
             margin: 40px 0; text-align: center;
         }
+        .btn-container { display: flex; flex-direction: column; gap: 20px; width: 90%; max-width: 500px; }
+        .ultra-link {
+            text-decoration: none; padding: 20px; font-size: 28px; font-weight: bold;
+            color: #fff; background: linear-gradient(45deg, #ff00ff, #00ffff);
+            border: 8px outset #ff00ff; border-radius: 20px; text-align: center;
+            animation: vibe 0.15s infinite;
+        }
+        @keyframes vibe { 0% { transform: translate(0,0); } 33% { transform: translate(2px, -1px); } 100% { transform: translate(0,0); } }
     </style>
 </head>
 <body>
@@ -64,32 +114,36 @@
 
     <div id="music-panel" style="display: none;">
         <b>BGM CONTROL</b>
-        <div class="control-btns">
-            <button id="stop-btn" onclick="togglePlay()">STOP/PLAY</button>
-            <input type="range" id="vol-slider" min="0" max="1" step="0.1" value="0.5" oninput="changeVol(this.value)">
-        </div>
+        <button id="stop-btn" onclick="togglePlay()">STOP/PLAY</button>
+        <input type="range" id="vol-slider" min="0" max="1" step="0.1" value="0.5" oninput="changeVol(this.value)">
     </div>
 
     <audio id="bgm" src="bgm.mp3" loop></audio>
 
     <span class="word-art">最強ポータルサイト<br>爆誕！！</span>
+    
+    <div class="btn-container">
+        <a href="https://hrmk-gg.github.io/RealTimeMessage" class="ultra-link">【極・弾幕】RealTimeMessage</a>
+        <a href="https://hrmk-gg.github.io/MomentSwap" class="ultra-link" style="filter: hue-rotate(280deg);">【刹那】MomentSwap</a>
+        <a href="https://hrmk-gg.github.io/button" class="ultra-link" style="filter: hue-rotate(240deg);">【連打】伝説の赤いボタン</a>
+        <a href="https://hrmk-gg.github.io/othello/" class="ultra-link" style="filter: hue-rotate(120deg);">【極・オセロ】ONLINE対応</a>
+        <a href="https://hrmk-gg.github.io/tetris" class="ultra-link" style="filter: hue-rotate(60deg);">【神・テトリス】超快感</a>
+    </div>
+
     <script>
         const audio = document.getElementById('bgm');
         const overlay = document.getElementById('overlay');
         const panel = document.getElementById('music-panel');
 
         function startBgm() {
-            audio.play();
-            overlay.style.display = 'none'; // ダイアログを消す
-            panel.style.display = 'flex';   // パネルを出す
+            audio.play().catch(e => console.log("再生エラー:", e));
+            overlay.style.display = 'none';
+            panel.style.display = 'flex';
         }
 
         function togglePlay() {
-            if (audio.paused) {
-                audio.play();
-            } else {
-                audio.pause();
-            }
+            if (audio.paused) audio.play();
+            else audio.pause();
         }
 
         function changeVol(val) {
