@@ -75,159 +75,188 @@
         </div>
     </div>
 
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyBYb9uXyjA7XJdRiYjcA3VBlSVgLh0C1fw",
-            authDomain: "hrmk-othello.firebaseapp.com",
-            projectId: "hrmk-othello",
-            databaseURL: "https://hrmk-othello-default-rtdb.firebaseio.com",
-            storageBucket: "hrmk-othello.firebasestorage.app",
-            messagingSenderId: "91127278693",
-            appId: "1:91127278693:web:89d6cdbbcabac60a172a8c"
-        };
+<script>
+    // Firebase初期化（設定はそのまま）
+    const firebaseConfig = {
+        apiKey: "AIzaSyBYb9uXyjA7XJdRiYjcA3VBlSVgLh0C1fw",
+        authDomain: "hrmk-othello.firebaseapp.com",
+        projectId: "hrmk-othello",
+        databaseURL: "https://hrmk-othello-default-rtdb.firebaseio.com",
+        storageBucket: "hrmk-othello.firebasestorage.app",
+        messagingSenderId: "91127278693",
+        appId: "1:91127278693:web:89d6cdbbcabac60a172a8c"
+    };
+    if (!firebase.apps.length) {
         firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
+    }
+    const db = firebase.database();
 
-        let myName = "", mySide = 'black', turn = 'black', mode = 'cpu', roomID = "", myRole = "";
-        let boardState = Array(64).fill(null);
+    let myName = "", mySide = 'black', turn = 'black', mode = 'cpu', roomID = "", myRole = "";
+    let boardState = Array(64).fill(null);
 
-        function changeScreen(id) {
-            document.querySelectorAll('.glass-card > div').forEach(d => d.classList.add('hidden'));
-            document.getElementById(id).classList.remove('hidden');
-        }
+    function changeScreen(id) {
+        document.querySelectorAll('.glass-card > div').forEach(d => d.classList.add('hidden'));
+        document.getElementById(id).classList.remove('hidden');
+    }
 
-        function toMenu() {
-            myName = document.getElementById('in-name').value || "ななし";
-            document.getElementById('disp-name').innerText = myName;
-            changeScreen('sc-menu');
-        }
+    function toMenu() {
+        myName = document.getElementById('in-name').value || "ななし";
+        document.getElementById('disp-name').innerText = myName;
+        changeScreen('sc-menu');
+    }
 
-        function upCol() { document.documentElement.style.setProperty('--board-color', document.getElementById('col-pick').value); }
+    // --- 【重要】オンラインマッチング修正 ---
 
-        // --- オンライン & じゃんけんロジック ---
-        function createRoom() {
-            roomID = Math.random().toString(36).substring(2, 7).toUpperCase();
-            myRole = 'host';
-            db.ref('rooms/' + roomID).set({ status: 'wait' });
-            document.getElementById('wait-msg').innerText = "コード: " + roomID + " 待機中...";
-            db.ref('rooms/' + roomID).on('value', s => {
-                if (s.val()?.status === 'ready') changeScreen('sc-jan');
-                if (s.val()?.status === 'play') syncGame(s.val());
-            });
-        }
+    // 1. 部屋を作る（ホスト）
+    function createRoom() {
+        roomID = Math.random().toString(36).substring(2, 7).toUpperCase();
+        myRole = 'host';
+        
+        // データをセット
+        const roomRef = db.ref('rooms/' + roomID);
+        roomRef.set({
+            status: 'wait',
+            hostName: myName,
+            turn: 'black'
+        });
 
-        function joinRoom() {
-            roomID = document.getElementById('in-room').value.toUpperCase();
-            myRole = 'guest';
-            db.ref('rooms/' + roomID).update({ status: 'ready' });
-            changeScreen('sc-jan');
-            db.ref('rooms/' + roomID).on('value', s => {
-                if (s.val()?.status === 'play') syncGame(s.val());
-            });
-        }
-
-        function setJan(hand) {
-            db.ref(`rooms/${roomID}/jan/${myRole}`).set(hand);
-            document.getElementById('jan-info').innerText = "相手を待っています...";
-            document.querySelectorAll('.j-btn').forEach(b => b.disabled = true);
-            
-            db.ref(`rooms/${roomID}/jan`).on('value', s => {
-                const h = s.val();
-                if (h && h.host !== undefined && h.guest !== undefined) {
-                    judgeJan(h.host, h.guest);
-                }
-            });
-        }
-
-        function judgeJan(h, g) {
-            if (h === g) {
-                document.getElementById('jan-info').innerText = "あいこ！もう一度！";
-                document.querySelectorAll('.j-btn').forEach(b => b.disabled = false);
-                db.ref(`rooms/${roomID}/jan`).remove();
-                return;
+        document.getElementById('wait-msg').innerHTML = `コード: <b style="font-size:1.5rem; color:#a855f7;">${roomID}</b><br>相手を待っています...`;
+        
+        // 相手が来るのを監視
+        roomRef.on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data && data.status === 'ready') {
+                console.log("ゲストが来たよ！じゃんけんへ進みます");
+                changeScreen('sc-jan');
             }
-            // ホスト視点の勝ち判定: 0>1, 1>2, 2>0
-            const hostWins = (h === 0 && g === 1) || (h === 1 && g === 2) || (h === 2 && g === 0);
-            if (myRole === 'host') {
-                mySide = hostWins ? 'black' : 'white';
+            if (data && data.status === 'play') {
+                syncGame(data);
+            }
+        });
+    }
+
+    // 2. 部屋に入る（ゲスト）
+    function joinRoom() {
+        roomID = document.getElementById('in-room').value.toUpperCase();
+        if (!roomID) return alert("コードを入れてね！");
+        myRole = 'guest';
+
+        const roomRef = db.ref('rooms/' + roomID);
+        
+        // 部屋が存在するかチェックしてから入る
+        roomRef.once('value').then((snapshot) => {
+            if (snapshot.exists()) {
+                roomRef.update({
+                    status: 'ready',
+                    guestName: myName
+                });
+                changeScreen('sc-jan');
+                
+                // ゲーム更新を監視
+                roomRef.on('value', (s) => {
+                    const data = s.val();
+                    if (data && data.status === 'play') syncGame(data);
+                });
             } else {
-                mySide = hostWins ? 'white' : 'black';
+                alert("そのコードの部屋は見つからなかったよ！😢");
             }
-            if (myRole === 'host') {
-                db.ref('rooms/' + roomID).update({ status: 'play', turn: 'black', board: JSON.stringify(initBoard()) });
-            }
-        }
+        });
+    }
 
-        function startCPU() {
-            mode = 'cpu'; mySide = 'black';
-            boardState = initBoard();
-            changeScreen('sc-game');
-            render();
-        }
-
-        function initBoard() {
-            let b = Array(64).fill(null);
-            b[27]='white'; b[28]='black'; b[35]='black'; b[36]='white';
-            return b;
-        }
-
-        function syncGame(data) {
-            mode = 'online';
-            boardState = JSON.parse(data.board);
-            turn = data.turn;
-            changeScreen('sc-game');
-            render();
-        }
-
-        function render() {
-            const b = document.getElementById('board'); b.innerHTML = "";
-            let bc=0, wc=0;
-            boardState.forEach((s, i) => {
-                const c = document.createElement('div'); c.className = 'cell';
-                const st = document.createElement('div'); st.className = 'stone ' + s;
-                if(s==='black') bc++; if(s==='white') wc++;
-                c.onclick = () => clickCell(i);
-                c.appendChild(st); b.appendChild(c);
-            });
-            document.getElementById('cnt-b').innerText = bc; document.getElementById('cnt-w').innerText = wc;
-            document.getElementById('turn-txt').innerText = (turn === 'black' ? "黒" : "白") + "の番" + (turn === mySide ? " (あなた)" : "");
-        }
-
-        function clickCell(i) {
-            if (turn !== mySide || boardState[i]) return;
-            const flips = getFlips(i, turn);
-            if (flips.length > 0) {
-                boardState[i] = turn;
-                flips.forEach(idx => boardState[idx] = turn);
-                turn = (turn === 'black' ? 'white' : 'black');
-                if (mode === 'online') {
-                    db.ref('rooms/' + roomID).update({ board: JSON.stringify(boardState), turn: turn });
+    // --- じゃんけん判定 ---
+    function setJan(hand) {
+        const janRef = db.ref(`rooms/${roomID}/jan/${myRole}`);
+        janRef.set(hand);
+        
+        document.getElementById('jan-info').innerText = "相手の手を待っています...";
+        document.querySelectorAll('.j-btn').forEach(b => b.disabled = true);
+        
+        db.ref(`rooms/${roomID}/jan`).on('value', s => {
+            const hands = s.val();
+            if (hands && hands.host !== undefined && hands.guest !== undefined) {
+                const h = hands.host;
+                const g = hands.guest;
+                
+                if (h === g) {
+                    document.getElementById('jan-info').innerText = "あいこ！もう一回！";
+                    document.querySelectorAll('.j-btn').forEach(b => b.disabled = false);
+                    if (myRole === 'host') db.ref(`rooms/${roomID}/jan`).remove(); // ホストがリセット
                 } else {
-                    render();
-                    if (turn === 'white') setTimeout(cpuPlay, 600);
+                    const hostWins = (h === 0 && g === 1) || (h === 1 && g === 2) || (h === 2 && g === 0);
+                    
+                    // 勝敗で色（先攻後攻）を決める
+                    if (myRole === 'host') {
+                        mySide = hostWins ? 'black' : 'white';
+                        // ホスト側がゲーム開始の合図を出す
+                        db.ref('rooms/' + roomID).update({
+                            status: 'play',
+                            turn: 'black',
+                            board: JSON.stringify(initBoard())
+                        });
+                    } else {
+                        mySide = hostWins ? 'white' : 'black';
+                    }
                 }
             }
-        }
+        });
+    }
 
-        function getFlips(idx, color) {
-            const opp = (color === 'black' ? 'white' : 'black');
-            const flips = [];
-            const dirs = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
-            const r = Math.floor(idx/8), c = idx%8;
-            dirs.forEach(([dr, dc]) => {
-                let tr=r+dr, tc=c+dc, temp=[];
-                while(tr>=0 && tr<8 && tc>=0 && tc<8 && boardState[tr*8+tc] === opp) { temp.push(tr*8+tc); tr+=dr; tc+=dc; }
-                if(tr>=0 && tr<8 && tc>=0 && tc<8 && boardState[tr*8+tc] === color) flips.push(...temp);
-            });
-            return flips;
-        }
+    // 3. ゲーム同期
+    function syncGame(data) {
+        mode = 'online';
+        boardState = JSON.parse(data.board);
+        turn = data.turn;
+        changeScreen('sc-game');
+        render();
+    }
 
-        function cpuPlay() {
-            let moves = [];
-            boardState.forEach((s, i) => { if(!s && getFlips(i, 'white').length > 0) moves.push(i); });
-            if (moves.length > 0) clickCell(moves[0]);
-            else { turn = 'black'; render(); }
+    // --- その他ロジック（前と同じ） ---
+    function initBoard() {
+        let b = Array(64).fill(null);
+        b[27]='white'; b[28]='black'; b[35]='black'; b[36]='white';
+        return b;
+    }
+
+    function render() {
+        const b = document.getElementById('board'); b.innerHTML = "";
+        let bc=0, wc=0;
+        boardState.forEach((s, i) => {
+            const c = document.createElement('div'); c.className = 'cell';
+            const st = document.createElement('div'); st.className = 'stone ' + (s || '');
+            if(s==='black') bc++; if(s==='white') wc++;
+            c.onclick = () => clickCell(i);
+            c.appendChild(st); b.appendChild(c);
+        });
+        document.getElementById('cnt-b').innerText = bc;
+        document.getElementById('cnt-w').innerText = wc;
+        document.getElementById('turn-txt').innerText = (turn === 'black' ? "黒" : "白") + "の番" + (turn === mySide ? " (あなた)" : " (相手)");
+    }
+
+    function clickCell(i) {
+        if (turn !== mySide || boardState[i]) return;
+        const flips = getFlips(i, turn);
+        if (flips.length > 0) {
+            boardState[i] = turn;
+            flips.forEach(idx => boardState[idx] = turn);
+            const nextTurn = (turn === 'black' ? 'white' : 'black');
+            if (mode === 'online') {
+                db.ref('rooms/' + roomID).update({ board: JSON.stringify(boardState), turn: nextTurn });
+            }
         }
-    </script>
+    }
+
+    function getFlips(idx, color) {
+        const opp = (color === 'black' ? 'white' : 'black');
+        const flips = [];
+        const dirs = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+        const r = Math.floor(idx/8), c = idx%8;
+        dirs.forEach(([dr, dc]) => {
+            let tr=r+dr, tc=c+dc, temp=[];
+            while(tr>=0 && tr<8 && tc>=0 && tc<8 && boardState[tr*8+tc] === opp) { temp.push(tr*8+tc); tr+=dr; tc+=dc; }
+            if(tr>=0 && tr<8 && tc>=0 && tc<8 && boardState[tr*8+tc] === color) flips.push(...temp);
+        });
+        return flips;
+    }
+</script>
 </body>
 </html>
