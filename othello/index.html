@@ -11,17 +11,17 @@
             --primary: #6366f1; --accent: #a855f7; --bg: #0f172a;
             --glass: rgba(255, 255, 255, 0.05); --board-color: #1e293b;
         }
-        /* テーマ設定 */
-        body.theme-classic { --board-color: #2e7d32; }
+        /* 10種類のテーマ設定 */
         body.theme-dark { --board-color: #1e293b; }
-        body.theme-midnight { --board-color: #0f172a; }
-        body.theme-ocean { --board-color: #0284c7; }
-        body.theme-forest { --board-color: #166534; }
-        body.theme-crimson { --board-color: #991b1b; }
-        body.theme-amber { --board-color: #92400e; }
-        body.theme-grape { --board-color: #6b21a8; }
-        body.theme-slate { --board-color: #334155; }
-        body.theme-gold { --board-color: #854d0e; }
+        body.theme-classic { --board-color: #2e7d32; }
+        body.theme-midnight { --board-color: #020617; }
+        body.theme-ocean { --board-color: #075985; }
+        body.theme-forest { --board-color: #064e3b; }
+        body.theme-crimson { --board-color: #7f1d1d; }
+        body.theme-amber { --board-color: #78350f; }
+        body.theme-grape { --board-color: #581c87; }
+        body.theme-slate { --board-color: #1e293b; }
+        body.theme-gold { --board-color: #713f12; }
 
         body {
             background: radial-gradient(circle at top left, #1e1b4b, var(--bg));
@@ -33,13 +33,14 @@
             border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px;
             padding: 30px; width: 90%; max-width: 400px; text-align: center; position: relative;
         }
-        #version-display { position: fixed; top: 10px; right: 10px; background: var(--glass); padding: 4px 10px; border-radius: 8px; font-size: 0.7rem; color: rgba(255,255,255,0.7); border: 1px solid rgba(255,255,255,0.1); }
+        #version-display { position: fixed; top: 10px; right: 10px; background: var(--glass); padding: 4px 10px; border-radius: 8px; font-size: 0.7rem; color: rgba(255,255,255,0.7); border: 1px solid rgba(255,255,255,0.1); z-index: 2000; pointer-events: none; }
         button {
             background: linear-gradient(135deg, var(--primary), var(--accent));
             color: white; border: none; padding: 12px; font-size: 0.9rem; font-weight: bold;
             border-radius: 12px; cursor: pointer; width: 100%; margin: 5px 0; transition: 0.3s;
         }
         button:hover { transform: translateY(-1px); filter: brightness(1.1); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
         input, select {
             background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1);
             color: white; padding: 10px; border-radius: 10px; width: 100%; box-sizing: border-box; margin-bottom: 10px; text-align: center;
@@ -48,12 +49,13 @@
             display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;
             background: rgba(255, 255, 255, 0.05); padding: 8px; border-radius: 12px; margin: 15px 0; aspect-ratio: 1/1;
         }
-        .cell { background: var(--board-color); border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; }
+        .cell { background: var(--board-color); border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
         .stone { width: 85%; height: 85%; border-radius: 50%; transform: scale(0); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .stone.black { display: block; background: #000; transform: scale(1); box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
         .stone.white { display: block; background: #fff; transform: scale(1); box-shadow: 0 4px 10px rgba(255,255,255,0.3); }
         .hidden { display: none !important; }
         .status-badge { background: var(--glass); padding: 5px 15px; border-radius: 20px; font-size: 0.8rem; margin-bottom: 10px; }
+        label { display: block; font-size: 0.8rem; margin-top: 10px; text-align: left; color: rgba(255,255,255,0.6); }
     </style>
 </head>
 <body class="theme-dark">
@@ -69,7 +71,7 @@
 
         <div id="sc-menu" class="hidden">
             <div class="status-badge">Player: <span id="disp-name"></span></div>
-            <button onclick="startCPU()">CPU戦</button>
+            <button onclick="startCPU()">CPU戦（練習）</button>
             <button onclick="changeScreen('sc-online')">オンライン対戦</button>
             <button onclick="changeScreen('sc-set')">設定</button>
         </div>
@@ -109,9 +111,9 @@
             <h2>先攻決め</h2>
             <p id="jan-info">手を選んでね！</p>
             <div style="display:flex; gap:10px;">
-                <button onclick="setJan(0)">✊</button>
-                <button onclick="setJan(1)">✌️</button>
-                <button onclick="setJan(2)">🖐️</button>
+                <button class="j-btn" onclick="setJan(0)">✊</button>
+                <button class="j-btn" onclick="setJan(1)">✌️</button>
+                <button class="j-btn" onclick="setJan(2)">🖐️</button>
             </div>
         </div>
 
@@ -129,10 +131,11 @@
     <audio id="se-put" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3"></audio>
 
     <script>
-        // --- 最終更新表示 ---
+        // --- ビルド日時自動表示 ---
         window.addEventListener('load', () => {
             const lastMod = new Date(document.lastModified);
-            document.getElementById('version-display').innerText = `Build: ${lastMod.getMonth()+1}/${lastMod.getDate()} ${lastMod.getHours()}:${String(lastMod.getMinutes()).padStart(2,'0')}`;
+            const dateStr = `${lastMod.getMonth()+1}/${lastMod.getDate()} ${lastMod.getHours()}:${String(lastMod.getMinutes()).padStart(2,'0')}`;
+            document.getElementById('version-display').innerText = "Build: " + dateStr;
         });
 
         // --- Firebase設定 ---
@@ -145,7 +148,7 @@
             messagingSenderId: "91127278693",
             appId: "1:91127278693:web:89d6cdbbcabac60a172a8c"
         };
-        firebase.initializeApp(firebaseConfig);
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
         let myName = "", mySide = 'black', turn = 'black', mode = 'cpu', roomID = "", myRole = "", seEnabled = true;
@@ -163,14 +166,13 @@
             changeScreen('sc-menu');
         }
 
-        // --- 設定機能 ---
+        // --- 設定管理 ---
         function updateNick() {
             myName = document.getElementById('edit-name').value;
             document.getElementById('disp-name').innerText = myName;
         }
         function updateTheme() {
-            const theme = document.getElementById('theme-sel').value;
-            document.body.className = theme;
+            document.body.className = document.getElementById('theme-sel').value;
         }
         function toggleSE() {
             seEnabled = !seEnabled;
@@ -179,58 +181,60 @@
         function playSE() {
             if (seEnabled) {
                 const audio = document.getElementById('se-put');
-                audio.currentTime = 0; audio.play();
+                audio.currentTime = 0; audio.play().catch(()=>{});
             }
         }
 
-        // --- オンライン & じゃんけん ---
+        // --- マッチングロジック ---
         function createRoom() {
             roomID = Math.random().toString(36).substring(2, 7).toUpperCase();
             myRole = 'host';
             db.ref('rooms/' + roomID).set({ status: 'wait', hostName: myName });
-            document.getElementById('wait-msg').innerHTML = `コード: <b>${roomID}</b>`;
+            document.getElementById('wait-msg').innerHTML = `コード: <b style="color:#a855f7;">${roomID}</b><br>待機中...`;
             db.ref('rooms/' + roomID).on('value', s => {
-                if (s.val()?.status === 'ready') changeScreen('sc-jan');
-                if (s.val()?.status === 'play') syncGame(s.val());
+                const data = s.val();
+                if (data?.status === 'ready') changeScreen('sc-jan');
+                if (data?.status === 'play') syncGame(data);
             });
         }
 
         function joinRoom() {
             roomID = document.getElementById('in-room').value.toUpperCase();
+            if (!roomID) return;
             myRole = 'guest';
             db.ref('rooms/' + roomID).update({ status: 'ready', guestName: myName });
             changeScreen('sc-jan');
-            db.ref('rooms/' + roomID).on('value', s => { if (s.val()?.status === 'play') syncGame(s.val()); });
+            db.ref('rooms/' + roomID).on('value', s => {
+                if (s.val()?.status === 'play') syncGame(s.val());
+            });
         }
 
         function setJan(hand) {
             db.ref(`rooms/${roomID}/jan/${myRole}`).set(hand);
-            document.getElementById('jan-info').innerText = "待機中...";
+            document.getElementById('jan-info').innerText = "相手を待っています...";
+            document.querySelectorAll('.j-btn').forEach(b => b.disabled = true);
+            
             db.ref(`rooms/${roomID}/jan`).on('value', s => {
-                const h = s.val();
-                if (h && h.host !== undefined && h.guest !== undefined) {
-                    if (h.host === h.guest) {
-                        if (myRole === 'host') db.ref(`rooms/${roomID}/jan`).remove();
+                const hands = s.val();
+                if (hands && hands.host !== undefined && hands.guest !== undefined) {
+                    if (hands.host === hands.guest) {
                         document.getElementById('jan-info').innerText = "あいこ！";
+                        document.querySelectorAll('.j-btn').forEach(b => b.disabled = false);
+                        if (myRole === 'host') db.ref(`rooms/${roomID}/jan`).remove();
                     } else {
-                        const hostWins = (h.host===0 && h.guest===1) || (h.host===1 && h.guest===2) || (h.host===2 && h.guest===0);
+                        const hostWins = (hands.host===0 && hands.guest===1) || (hands.host===1 && hands.guest===2) || (hands.host===2 && hands.guest===0);
                         mySide = (myRole === 'host') ? (hostWins ? 'black' : 'white') : (hostWins ? 'white' : 'black');
-                        if (myRole === 'host') db.ref('rooms/' + roomID).update({ status: 'play', turn: 'black', board: JSON.stringify(initBoard()) });
+                        if (myRole === 'host') {
+                            db.ref('rooms/' + roomID).update({ status: 'play', turn: 'black', board: JSON.stringify(initBoard()) });
+                        }
                     }
                 }
             });
         }
 
-        // --- ゲーム論理（パス機能付き） ---
+        // --- ゲームエンジン ---
         function initBoard() {
             let b = Array(64).fill(null); b[27]='white'; b[28]='black'; b[35]='black'; b[36]='white'; return b;
-        }
-
-        function syncGame(data) {
-            mode = 'online'; boardState = JSON.parse(data.board); 
-            if (turn !== data.turn) playSE();
-            turn = data.turn; changeScreen('sc-game'); render();
-            checkPass();
         }
 
         function startCPU() {
@@ -238,12 +242,19 @@
             changeScreen('sc-game'); render();
         }
 
+        function syncGame(data) {
+            mode = 'online'; boardState = JSON.parse(data.board);
+            if (turn !== data.turn) playSE();
+            turn = data.turn; changeScreen('sc-game'); render();
+            checkPass();
+        }
+
         function render() {
             const b = document.getElementById('board'); b.innerHTML = "";
             let bc=0, wc=0;
             boardState.forEach((s, i) => {
                 const c = document.createElement('div'); c.className = 'cell';
-                const st = document.createElement('div'); st.className = 'stone ' + (s||'');
+                const st = document.createElement('div'); st.className = 'stone ' + (s || '');
                 if(s==='black') bc++; if(s==='white') wc++;
                 c.onclick = () => clickCell(i);
                 c.appendChild(st); b.appendChild(c);
@@ -253,27 +264,26 @@
         }
 
         function clickCell(i) {
-            if (turn !== mySide || boardState[i]) return;
+            if (mode === 'online' && turn !== mySide) return;
+            if (boardState[i]) return;
+
             const flips = getFlips(i, turn);
             if (flips.length > 0) {
                 boardState[i] = turn;
                 flips.forEach(idx => boardState[idx] = turn);
+                playSE();
                 const nextTurn = (turn === 'black' ? 'white' : 'black');
-                updateBoard(nextTurn);
+                
+                if (mode === 'online') {
+                    db.ref('rooms/' + roomID).update({ board: JSON.stringify(boardState), turn: nextTurn });
+                } else {
+                    turn = nextTurn; render();
+                    if (turn === 'white') setTimeout(cpuPlay, 600);
+                    else checkPass();
+                }
             }
         }
 
-        function updateBoard(nextTurn) {
-            if (mode === 'online') {
-                db.ref('rooms/' + roomID).update({ board: JSON.stringify(boardState), turn: nextTurn });
-            } else {
-                playSE(); turn = nextTurn; render();
-                if (turn === 'white') setTimeout(cpuPlay, 600);
-                else checkPass();
-            }
-        }
-
-        // パス判定
         function checkPass() {
             const moves = [];
             boardState.forEach((s, i) => { if(!s && getFlips(i, turn).length > 0) moves.push(i); });
@@ -283,10 +293,13 @@
                 boardState.forEach((s, i) => { if(!s && getFlips(i, opp).length > 0) oppMoves.push(i); });
                 
                 if (oppMoves.length > 0) {
-                    alert(turn + "は置く場所がないのでパスします！");
-                    updateBoard(opp);
+                    alert(turn === 'black' ? "黒パス！" : "白パス！");
+                    if (mode === 'online') db.ref('rooms/' + roomID).update({ turn: opp });
+                    else { turn = opp; render(); if(turn==='white') setTimeout(cpuPlay,600); }
                 } else {
-                    alert("対局終了！");
+                    const bc = boardState.filter(s=>s==='black').length;
+                    const wc = boardState.filter(s=>s==='white').length;
+                    alert(`試合終了！\n黒: ${bc} 白: ${wc}\n${bc>wc?"黒":"白"}の勝ち！`);
                 }
             }
         }
@@ -307,8 +320,14 @@
         function cpuPlay() {
             let moves = [];
             boardState.forEach((s, i) => { if(!s && getFlips(i, 'white').length > 0) moves.push(i); });
-            if (moves.length > 0) clickCell(moves[0]);
-            else { turn = 'black'; checkPass(); render(); }
+            if (moves.length > 0) {
+                const move = moves[Math.floor(Math.random() * moves.length)];
+                boardState[move] = 'white';
+                getFlips(move, 'white').forEach(idx => boardState[idx] = 'white');
+                playSE(); turn = 'black'; render(); checkPass();
+            } else {
+                turn = 'black'; render(); checkPass();
+            }
         }
     </script>
 </body>
