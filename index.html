@@ -4,92 +4,66 @@
     <meta charset="UTF-8">
     <title>★☆最強サイト紹介ポータル☆★</title>
     <style>
-        /* 1. 虹色グラデーション背景（目がチカチカするやつ） */
+        /* 1. 動かない虹色グラデーション背景 */
         body {
             background: linear-gradient(90deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);
-            background-size: 200% 200%;
-            animation: rainbow 3s linear infinite;
-            font-family: "MS PMincho", "MS P明朝", serif; /* 絶妙な明朝体 */
+            font-family: "MS PMincho", "MS P明朝", serif;
             color: #ffffff;
-            text-shadow: 3px 3px 0px #ff00ff; /* 読みづらい影 */
+            text-shadow: 3px 3px 0px #000000; /* 縁取りっぽく黒影に変更 */
             margin: 0;
-            overflow-x: hidden;
+            display: flex; /* 中央揃えセット */
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh; /* 画面いっぱいの高さ */
+            overflow: hidden;
         }
 
-        @keyframes rainbow {
-            0% { background-position: 0% 50%; }
-            100% { background-position: 100% 50%; }
-        }
-
-        /* 2. とげとげ吹き出し風のタイトル */
+        /* 2. 中央揃えのとげとげ吹き出し */
         .title-box {
             background: yellow;
             color: red;
-            padding: 20px;
-            margin: 50px auto;
-            width: 80%;
-            clip-path: polygon(0% 15%, 15% 15%, 15% 0%, 85% 0%, 85% 15%, 100% 15%, 100% 85%, 85% 85%, 85% 100%, 15% 100%, 15% 85%, 0% 85%);
+            padding: 40px;
+            width: fit-content; /* 中身に合わせる */
+            max-width: 90%;
+            /* パワポの「爆発」みたいなとげとげ */
+            clip-path: polygon(10% 25%, 0% 50%, 10% 75%, 25% 90%, 50% 100%, 75% 90%, 90% 75%, 100% 50%, 90% 25%, 75% 10%, 50% 0%, 25% 10%);
             animation: shake 0.5s infinite;
+            text-align: center;
         }
 
         @keyframes shake {
-            0% { transform: translate(1px, 1px) rotate(0deg); }
-            10px { transform: translate(-1px, -2px) rotate(-1deg); }
-            20px { transform: translate(-3px, 0px) rotate(1deg); }
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); } /* びよんびよん動く */
+            100% { transform: scale(1); }
         }
 
-        /* 3. 謎のワードアート風リンク */
-        .word-art-link {
-            display: inline-block;
-            font-size: 40px;
-            font-weight: bold;
-            background: linear-gradient(to bottom, #00ffff 0%, #0000ff 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-decoration: none;
-            border: 5px double white;
-            padding: 10px;
-            margin: 20px;
-            transform: skew(-20deg); /* 無駄な斜体 */
+        h1 {
+            margin: 0;
+            font-size: 3rem;
+            line-height: 1.2;
         }
 
-        .word-art-link:hover {
-            animation: flash 0.1s infinite;
-        }
-
-        @keyframes flash {
-            0% { opacity: 1; }
-            50% { opacity: 0; }
-        }
-
-        /* 4. 流れる文字（marquee）の再現 */
+        /* 流れる文字は上に固定 */
         .scrolling-text {
+            position: absolute;
+            top: 0;
+            width: 100%;
             background: black;
             color: #00ff00;
             padding: 10px;
-            font-size: 24px;
+            font-size: 20px;
         }
     </style>
 </head>
 <body>
 
     <div class="scrolling-text">
-        <marquee>ようこそ！HrMk-GGの爆速サイト紹介コーナーへ！最新情報をチェックしてね！</marquee>
+        <marquee>【緊急速報】HrMk-GGの最強サイトが爆誕！ 圧倒的パワー（Ryzen 5 & RTX 4060）で閲覧中！</marquee>
     </div>
 
     <div class="title-box">
-        <h1>💥 俺の最強ウェブサイト群 💥</h1>
-    </div>
-
-    <p style="font-size: 30px; background: blue;">↓ ここをクリックして別世界へ行こう ↓</p>
-
-    <a href="./sample" class="word-art-link">✨サンプルサイト入口✨</a>
-    <br>
-    <a href="./next-project" class="word-art-link">🚀次のプロジェクト(予定)🚀</a>
-
-    <div style="margin-top: 100px;">
-        <img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJmZzJ4ZzR4ZzR4ZzR4ZzR4ZzR4ZzR4ZzR4ZzR4ZzR4ZzR4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKMGpxX6LzJ9L3y/giphy.gif" width="200">
-        <p>工事中...🚧</p>
+        <h1>💥 俺の最強<br>ウェブサイト群 💥</h1>
     </div>
 
 </body>
