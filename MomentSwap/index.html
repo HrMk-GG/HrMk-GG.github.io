@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Moment Swap - Final Fix</title>
+    <title>Moment Swap - Final Battle</title>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
     <style>
-        body { background: radial-gradient(ellipse at bottom, #1B2735 0%, #090A0F 100%); color: #E2E2E2; font-family: sans-serif; margin: 0; padding-bottom: 50px; min-height: 100vh; text-align: center; }
+        body { background: radial-gradient(ellipse at bottom, #1B2735 0%, #090A0F 100%); color: #E2E2E2; font-family: sans-serif; margin: 0; min-height: 100vh; text-align: center; }
         .hidden { display: none !important; }
         #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2000; }
-        #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
+        #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
         .btn { background: linear-gradient(45deg, #4fc3f7, #9575cd); color: white; padding: 18px 45px; border-radius: 50px; font-weight: bold; border: none; cursor: pointer; font-size: 1.1rem; }
         video { width: 90%; max-width: 400px; border-radius: 20px; border: 2px solid #4fc3f7; margin-top: 20px; }
         .card { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 20px; width: 85%; max-width: 380px; border: 1px solid rgba(255,255,255,0.1); margin: 15px auto; }
@@ -25,15 +25,17 @@
 <div id="loading-overlay">
     <span class="loader"></span>
     <p>星空と交信中...</p>
+    <p id="debug-log" style="font-size: 0.7rem; color: #555;"></p>
 </div>
 
 <div id="overlay" class="hidden">
     <div id="login-ui">
         <h1>Moment Swap</h1>
         <button id="login-btn" class="btn">Googleでログイン</button>
+        <p style="font-size: 0.8rem; margin-top: 20px; color: #777;">※リダイレクト後に進まない場合は<br>Cookieを許可してね</p>
     </div>
     <div id="name-ui" class="hidden">
-        <h2>宇宙での名前は？</h2>
+        <h2>ニックネームを決めてね</h2>
         <input type="text" id="nickname" maxlength="10" style="padding:15px; border-radius:10px;">
         <br><br>
         <button class="btn" onclick="registerName()">銀河へ出発</button>
@@ -47,7 +49,7 @@
     <p id="user-info"></p>
     <button id="swap-btn" class="btn">🌟 今を撮って交換する</button>
     <p id="status">準備中...</p>
-    <div id="history"><h3>履歴</h3></div>
+    <div id="history"></div>
 </div>
 
 <script>
@@ -63,18 +65,18 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-let myName = "";
+// ログ出力用
+function log(msg) { document.getElementById('debug-log').innerText += msg + "\n"; }
 
-// ページ起動時の処理
 async function startApp() {
+    log("認証チェック開始...");
     try {
-        // 1. リダイレクト結果をまず受け取る
-        const result = await auth.getRedirectResult();
-        if (result.user) console.log("Redirect Success");
-
-        // 2. ログイン状態が確定するのを待つ
+        // リダイレクト結果を待つ（最大5秒）
+        const result = await auth.getRedirectResult().catch(e => { log("Redirect Error: " + e.message); });
+        
         auth.onAuthStateChanged(async (user) => {
-            document.getElementById('loading-overlay').classList.add('hidden'); // ロード画面消す
+            log("StateChanged: " + (user ? "LoggedIn" : "LoggedOut"));
+            document.getElementById('loading-overlay').classList.add('hidden');
             
             if (user) {
                 const doc = await db.collection("users").doc(user.uid).get();
@@ -88,49 +90,54 @@ async function startApp() {
                 }
             } else {
                 document.getElementById('overlay').classList.remove('hidden');
-                document.getElementById('login-ui').classList.remove('hidden');
             }
         });
     } catch (e) {
-        console.error(e);
-        alert("エラー: " + e.message);
+        log("Fatal Error: " + e.message);
     }
 }
 
 document.getElementById('login-btn').onclick = () => {
     const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithRedirect(provider);
+    // ここがミソ：ブラウザの制限を回避するためにセッションを明示的にLOCALにする
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(() => {
+        return auth.signInWithRedirect(provider);
+    });
 };
 
+// ニックネーム登録
+let myName = "";
 async function registerName() {
     const name = document.getElementById('nickname').value;
-    if (!name) return alert("名前を入力！");
+    if (!name) return alert("名前を入れて！");
     await db.collection("users").doc(auth.currentUser.uid).set({ nickname: name });
     myName = name;
     showMainUI();
 }
 
+// メイン表示
 async function showMainUI() {
     document.getElementById('overlay').classList.add('hidden');
     document.getElementById('main').classList.remove('hidden');
-    document.getElementById('user-info').innerText = `✨ Explorer: ${myName}`;
+    document.getElementById('user-info').innerText = `Explorer: ${myName}`;
     const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
     document.getElementById('camera').srcObject = stream;
 }
 
-// （写真交換ロジックは前回と同じなので、ここから先は前のコードのswap-btnとaddHistoryをそのまま使ってくれ！）
+// 写真交換
 document.getElementById('swap-btn').onclick = async () => {
     const btn = document.getElementById('swap-btn');
     const stat = document.getElementById('status');
     btn.disabled = true;
     stat.innerText = "撮影中...";
     const canvas = document.getElementById('output');
-    const video = document.getElementById('camera');
     canvas.width = 300; canvas.height = 400;
-    canvas.getContext('2d').drawImage(video, 0, 0, 300, 400);
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
-    stat.innerText = "マッチング中...";
-    const waitingRooms = await db.collection("waiting").limit(1).get();
+    canvas.getContext('2d').drawImage(document.getElementById('camera'), 0, 0, 300, 400);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.4);
+
+    stat.innerText = "銀河を検索中...";
+    const waitingRooms = await db.collection("waiting").orderBy("time", "asc").limit(1).get();
+
     if (waitingRooms.empty) {
         await db.collection("waiting").doc(auth.currentUser.uid).set({ uid: auth.currentUser.uid, nickname: myName, photoData: dataUrl, time: Date.now() });
         const unsubscribe = db.collection("swaps").doc(auth.currentUser.uid).onSnapshot((doc) => {
@@ -139,10 +146,11 @@ document.getElementById('swap-btn').onclick = async () => {
                 addHistory(data.partnerName, data.partnerPhoto);
                 stat.innerText = "交信成功！";
                 btn.disabled = false;
+                db.collection("swaps").doc(auth.currentUser.uid).delete();
                 unsubscribe();
             }
         });
-        stat.innerText = "待機中...";
+        stat.innerText = "誰もいません...（信号送信中）";
     } else {
         const partner = waitingRooms.docs[0].data();
         await db.collection("waiting").doc(partner.uid).delete();
@@ -152,12 +160,12 @@ document.getElementById('swap-btn').onclick = async () => {
         btn.disabled = false;
     }
 };
+
 function addHistory(name, url) {
-    const item = `<div class="card"><span class="name">🚀 ${name}</span><img src="${url}"></div>`;
+    const item = `<div class="card"><span style="color:#4fc3f7">🚀 ${name}</span><img src="${url}"></div>`;
     document.getElementById('history').insertAdjacentHTML('afterbegin', item);
 }
 
-// アプリ起動！
 startApp();
 </script>
 </body>
