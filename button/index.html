@@ -3,40 +3,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Red Button - Login Edition</title>
+    <title>The Red Button - World War</title>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
     <style>
-        body { margin: 0; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #fff; font-family: sans-serif; }
-        #counter { font-size: 8rem; font-weight: 900; color: #333; margin-bottom: 30px; }
-        #red-button {
-            width: 200px; height: 200px; background: #ff0000; border: none; border-radius: 50%;
-            cursor: pointer; box-shadow: 0 15px #990000; transition: 0.1s;
-        }
-        #red-button:active { box-shadow: 0 5px #990000; transform: translateY(10px); }
-        #red-button:disabled { background: #ccc; box-shadow: 0 15px #999; cursor: not-allowed; }
+        :root { --main-red: #ff4b2b; --dark-red: #ff416c; }
+        body { margin: 0; display: flex; height: 100vh; background: #fff; font-family: 'Helvetica Neue', Arial, sans-serif; overflow: hidden; }
         
-        .auth-ui { position: fixed; top: 20px; right: 20px; }
-        .btn { padding: 10px 20px; border-radius: 5px; cursor: pointer; border: 1px solid #ddd; }
-        .hidden { display: none; }
+        /* サイドバー */
+        .sidebar { width: 260px; background: #f9f9f9; border-right: 1px solid #eee; display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; }
+        .sidebar h2 { font-size: 1.2rem; color: #333; margin-bottom: 20px; letter-spacing: 1px; }
+        .tab-btn { background: none; border: none; padding: 12px 15px; text-align: left; font-size: 0.9rem; cursor: pointer; border-radius: 8px; margin-bottom: 5px; transition: 0.2s; color: #666; font-weight: bold; }
+        .tab-btn:hover { background: #f0f0f0; }
+        .tab-btn.active { background: var(--main-red); color: white; box-shadow: 0 4px 12px rgba(255, 75, 43, 0.3); }
+
+        /* メインコンテンツ */
+        .main-content { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle, #ffffff 0%, #f0f0f0 100%); }
+        #total-counter { font-size: 7rem; font-weight: 900; color: #222; margin-bottom: 30px; font-variant-numeric: tabular-nums; text-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+
+        /* 赤いボタン（3D演出） */
+        .btn-container { perspective: 1000px; }
+        #red-button {
+            width: 220px; height: 220px; background: linear-gradient(145deg, #ff4b2b, #ff416c);
+            border: none; border-radius: 50%; cursor: pointer; outline: none;
+            box-shadow: 0 15px #b32d15, 0 20px 30px rgba(0,0,0,0.2);
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+        #red-button:active { transform: translateY(12px); box-shadow: 0 3px #b32d15, 0 5px 15px rgba(0,0,0,0.2); }
+        #red-button:disabled { background: #ccc; box-shadow: 0 15px #999; cursor: not-allowed; }
+
+        /* ランキング表示 */
+        .ranking-card { position: absolute; right: 30px; top: 30px; width: 280px; background: rgba(255,255,255,0.9); border-radius: 20px; padding: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.5); }
+        .rank-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f0f0f0; font-size: 0.9rem; }
+        .rank-name { font-weight: bold; color: #444; }
+        .rank-val { color: var(--main-red); font-weight: bold; }
+
+        /* ログイン・ニックネーム画面 */
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); backdrop-filter: blur(15px); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; transition: 0.5s; }
+        .google-btn { background: white; color: #757575; border: 1px solid #ddd; border-radius: 4px; padding: 2px 16px 2px 2px; display: flex; align-items: center; font-size: 14px; font-weight: 500; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .google-btn img { width: 36px; height: 36px; margin-right: 12px; }
+        .nickname-box { background: white; padding: 40px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.1); text-align: center; }
+        .nickname-box input { padding: 15px; font-size: 1.2rem; border: 2px solid #eee; border-radius: 12px; margin-bottom: 20px; width: 260px; text-align: center; }
+        .save-btn { background: var(--main-red); color: white; border: none; padding: 15px 40px; font-size: 1rem; border-radius: 12px; cursor: pointer; font-weight: bold; }
+        
+        .hidden { display: none !important; }
+        #user-info-tag { position: fixed; bottom: 20px; left: 20px; color: #999; font-size: 0.8rem; }
     </style>
 </head>
 <body>
 
-    <div class="auth-ui">
-        <button id="login-btn" class="btn">Googleでログイン</button>
-        <div id="user-info" class="hidden">
-            <span id="user-name"></span>
-            <button id="logout-btn" class="btn">ログアウト</button>
+    <div id="login-layer" class="overlay">
+        <h1 style="color:#333; margin-bottom:30px;">The Red Button</h1>
+        <button id="login-btn" class="google-btn">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg">
+            Googleでサインイン
+        </button>
+    </div>
+
+    <div id="nickname-layer" class="overlay hidden">
+        <div class="nickname-box">
+            <h2>名前を決めて世界へ</h2>
+            <p style="color:#666; margin-bottom:25px;">ランキングに表示されるニックネームです</p>
+            <input type="text" id="nickname-input" placeholder="最大10文字" maxlength="10">
+            <br>
+            <button id="save-nickname-btn" class="save-btn">この名前で開始</button>
         </div>
     </div>
 
-    <div id="counter">0</div>
-    <button id="red-button" disabled></button>
-    <p id="msg">ログインするとボタンが押せるよ！</p>
+    <div class="sidebar">
+        <h2>RANKINGS</h2>
+        <button class="tab-btn active" onclick="changeTab('daily')">1日 (Daily)</button>
+        <button class="tab-btn" onclick="changeTab('weekly')">週間 (Weekly)</button>
+        <button class="tab-btn" onclick="changeTab('monthly')">1ヶ月 (Monthly)</button>
+        <button class="tab-btn" onclick="changeTab('yearly')">1年 (Yearly)</button>
+        <button class="tab-btn" onclick="changeTab('lifetime')">生涯 (Lifetime)</button>
+        <div id="user-info-tag">ログイン中: <span id="display-name">---</span></div>
+    </div>
+
+    <div class="main-content">
+        <div id="total-counter">0</div>
+        <div class="btn-container">
+            <button id="red-button" disabled></button>
+        </div>
+        
+        <div class="ranking-card">
+            <h3 id="rank-title" style="margin-top:0; font-size:1rem; color:#333;">Daily Ranking</h3>
+            <div id="rank-list">読み込み中...</div>
+        </div>
+    </div>
 
 <script>
+// --- 君のFirebase設定 ---
 const firebaseConfig = {
   apiKey: "AIzaSyBfxHcbZ5OT47BdOBviu8ZvdRHNXbQyn1I",
   authDomain: "global-button-fc4d8.firebaseapp.com",
@@ -46,43 +104,77 @@ const firebaseConfig = {
   appId: "1:881383326015:web:e7868469ffab15d3ec538a",
   measurementId: "G-YKJ9LYXP6Q"
 };
+
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
 
-// 1. ログイン状態の監視
-auth.onAuthStateChanged(user => {
+let myNickname = "";
+
+// 1. 認証とニックネームチェック
+auth.onAuthStateChanged(async (user) => {
     if (user) {
-        document.getElementById('login-btn').classList.add('hidden');
-        document.getElementById('user-info').classList.remove('hidden');
-        document.getElementById('user-name').innerText = user.displayName;
-        document.getElementById('red-button').disabled = false;
-        document.getElementById('msg').innerText = "連打開始だ！";
+        document.getElementById('login-layer').classList.add('hidden');
+        const userDoc = await db.collection("users").doc(user.uid).get();
+        
+        if (userDoc.exists() && userDoc.data().nickname) {
+            myNickname = userDoc.data().nickname;
+            document.getElementById('display-name').innerText = myNickname;
+            document.getElementById('nickname-layer').classList.add('hidden');
+            document.getElementById('red-button').disabled = false;
+        } else {
+            document.getElementById('nickname-layer').classList.remove('hidden');
+        }
     } else {
-        document.getElementById('login-btn').classList.remove('hidden');
-        document.getElementById('user-info').classList.add('hidden');
+        document.getElementById('login-layer').classList.remove('hidden');
+        document.getElementById('nickname-layer').classList.add('hidden');
         document.getElementById('red-button').disabled = true;
-        document.getElementById('msg').innerText = "ログインしてね！";
     }
 });
 
-// 2. ログイン・ログアウト処理
-document.getElementById('login-btn').onclick = () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider);
+// ログイン・名前保存
+document.getElementById('login-btn').onclick = () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+document.getElementById('save-nickname-btn').onclick = async () => {
+    const val = document.getElementById('nickname-input').value.trim();
+    if (!val) return alert("名前を入れてくれ！");
+    await db.collection("users").doc(auth.currentUser.uid).set({ nickname: val, updatedAt: Date.now() });
+    location.reload(); // ニックネーム確定後にリロードして反映
 };
-document.getElementById('logout-btn').onclick = () => auth.signOut();
 
-// 3. カウント処理
+// 2. カウント処理
 db.collection("global").doc("counter").onSnapshot(doc => {
-    if (doc.exists()) document.getElementById('counter').innerText = doc.data().count;
+    if (doc.exists()) document.getElementById('total-counter').innerText = doc.data().count.toLocaleString();
 });
 
 document.getElementById('red-button').onclick = () => {
-    db.collection("global").doc("counter").update({
-        count: firebase.firestore.FieldValue.increment(1)
-    });
+    db.collection("global").doc("counter").update({ count: firebase.firestore.FieldValue.increment(1) });
+    db.collection("rankings").doc(myNickname).set({
+        name: myNickname,
+        clicks: firebase.firestore.FieldValue.increment(1),
+        lastUpdate: Date.now()
+    }, { merge: true });
 };
+
+// 3. ランキング表示
+async function fetchRanking() {
+    const snapshot = await db.collection("rankings").orderBy("clicks", "desc").limit(10).get();
+    const list = document.getElementById('rank-list');
+    list.innerHTML = "";
+    snapshot.forEach(doc => {
+        const d = doc.data();
+        list.innerHTML += `<div class="rank-item"><span class="rank-name">${d.name}</span><span class="rank-val">${d.clicks}回</span></div>`;
+    });
+}
+
+function changeTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById('rank-title').innerText = event.target.innerText;
+    fetchRanking();
+}
+
+setInterval(fetchRanking, 5000);
+fetchRanking();
 </script>
 </body>
 </html>
