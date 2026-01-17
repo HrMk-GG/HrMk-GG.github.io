@@ -2,15 +2,15 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Liquid Glass Danmaku - Mobile Ready</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Liquid Glass - Slim Edition</title>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
     <style>
         body { 
             margin: 0; padding: 0; 
             background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
-            font-family: sans-serif; overflow: hidden; height: 100dvh; 
+            font-family: sans-serif; overflow: hidden; height: 100vh; 
         }
 
         #danmaku-stage { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
@@ -24,44 +24,39 @@
 
         @keyframes flow { from { transform: translateX(100vw); } to { transform: translateX(-100%); } }
 
-        /* --- UIパネルの改善 --- */
+        /* --- 横幅をスリムにした操作バー --- */
         .ui-panel {
-            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-            z-index: 100; width: 90%; max-width: 800px;
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            z-index: 100;
+            /* 横幅を固定してコンパクトに！ */
+            width: fit-content;
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 20px; padding: 10px 15px;
-            display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px;
+            border-radius: 30px; padding: 10px 25px;
+            display: flex; align-items: center; gap: 15px;
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
         }
 
         .input-group { display: flex; flex-direction: column; align-items: center; font-size: 9px; color: rgba(255,255,255,0.6); }
         
         input[type="text"] { 
-            background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2);
             color: white; padding: 8px 12px; border-radius: 12px; outline: none; font-size: 14px;
         }
         
-        #nickname { width: 60px; }
-        #message { flex: 1; min-width: 120px; }
+        #nickname { width: 70px; }
+        #message { width: 200px; } /* メッセージ入力欄も少し短くしたぜ */
         
         #send-btn {
             background: rgba(255, 255, 255, 0.9); color: #1e293b; border: none; 
-            padding: 8px 15px; border-radius: 12px; cursor: pointer; font-weight: 900; font-size: 14px;
+            padding: 8px 20px; border-radius: 12px; cursor: pointer; font-weight: 900; 
+            transition: 0.3s;
         }
+        #send-btn:hover { background: #fff; transform: translateY(-2px); }
 
-        input[type="color"] { border: none; width: 24px; height: 24px; cursor: pointer; background: none; padding: 0; }
-        input[type="range"] { width: 50px; accent-color: #fff; }
-
-        /* --- スマホ用の調整（レスポンシブ） --- */
-        @media screen and (max-width: 600px) {
-            .ui-panel { padding: 8px; gap: 8px; bottom: 10px; width: 95%; }
-            #message { width: 100%; order: -1; } /* メッセージ欄を一番上に持ってくる */
-            .input-group span { display: none; } /* ラベルを消してスッキリさせる */
-            input[type="range"] { width: 40px; }
-            .comment { font-size: 24px !important; } /* スマホだとデカすぎると邪魔なので制限（JSでも調整可） */
-        }
+        input[type="color"] { border: none; width: 25px; height: 25px; cursor: pointer; background: none; }
+        input[type="range"] { width: 60px; accent-color: #fff; }
     </style>
 </head>
 <body>
@@ -69,8 +64,6 @@
     <div id="danmaku-stage"></div>
 
     <div class="ui-panel">
-        <input type="text" id="message" placeholder="Message..." maxlength="50">
-        
         <div class="input-group">
             <span>NAME</span>
             <input type="text" id="nickname" placeholder="Name" maxlength="8">
@@ -83,14 +76,15 @@
 
         <div class="input-group">
             <span>SIZE</span>
-            <input type="range" id="size" min="20" max="60" value="30">
+            <input type="range" id="size" min="20" max="80" value="40">
         </div>
 
+        <input type="text" id="message" placeholder="Message..." maxlength="50">
         <button id="send-btn">SEND</button>
     </div>
 
 <script>
-// --- 君のFirebase設定（ここはそのまま使ってくれ！） ---
+// Firebaseの設定
 const firebaseConfig = {
   apiKey: "AIzaSyCxexufR8PjjXe_AjkObG2bwvAxYgd6P4U",
   authDomain: "realtimemessage-754ef.firebaseapp.com",
@@ -109,13 +103,9 @@ function launch(text, color, size) {
     div.className = 'comment';
     div.innerText = text;
     div.style.color = color;
-    
-    // スマホの場合はサイズを少し抑える補正
-    const finalSize = window.innerWidth < 600 ? Math.min(size, 40) : size;
-    div.style.fontSize = finalSize + "px";
-    
-    div.style.top = (Math.random() * 80 + 5) + "%";
-    const speed = Math.random() * 2 + 4;
+    div.style.fontSize = size + "px";
+    div.style.top = (Math.random() * 85 + 5) + "%";
+    const speed = Math.random() * 3 + 4;
     div.style.animationDuration = speed + "s";
     stage.appendChild(div);
     setTimeout(() => div.remove(), speed * 1000);
@@ -123,10 +113,9 @@ function launch(text, color, size) {
 
 document.getElementById('send-btn').onclick = async () => {
     const msg = document.getElementById('message').value.trim();
-    const name = document.getElementById('nickname').value || "Guest";
     if (!msg) return;
     await db.collection("comments").add({
-        content: `[${name}] ${msg}`,
+        content: `[${document.getElementById('nickname').value || "Guest"}] ${msg}`,
         color: document.getElementById('color').value,
         size: parseInt(document.getElementById('size').value),
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
