@@ -3,44 +3,101 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>極・オセロ プレミアム</title>
+    <title>極・オセロ PREMIER</title>
     <script src="https://www.gstatic.com/firebasejs/9.1.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.1/firebase-database-compat.js"></script>
     <style>
-        :root { --primary: #6366f1; --accent: #a855f7; --bg: #0f172a; --glass: rgba(255, 255, 255, 0.05); --board-color: #1e293b; }
-        body { background: radial-gradient(circle at top left, #1e1b4b, var(--bg)); color: #f8fafc; font-family: sans-serif; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
-        .glass-card { background: var(--glass); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px; padding: 30px; width: 90%; max-width: 400px; text-align: center; }
-        h1 { background: linear-gradient(to right, #818cf8, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        button { background: linear-gradient(135deg, var(--primary), var(--accent)); color: white; border: none; padding: 14px; font-size: 1rem; font-weight: bold; border-radius: 12px; cursor: pointer; width: 100%; margin: 8px 0; transition: 0.3s; }
-        button:disabled { filter: grayscale(1); cursor: not-allowed; }
-        input { background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); color: white; padding: 12px; border-radius: 10px; width: 100%; box-sizing: border-box; margin-bottom: 15px; text-align: center; }
-        .board { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; background: rgba(255, 255, 255, 0.05); padding: 8px; border-radius: 12px; margin: 20px 0; aspect-ratio: 1/1; }
-        .cell { background: var(--board-color); border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; aspect-ratio: 1/1; }
-        .stone { width: 85%; height: 85%; border-radius: 50%; transform: scale(0); transition: 0.4s; }
-        .black { display: block; background: #000; transform: scale(1); box-shadow: 0 0 10px #000; }
-        .white { display: block; background: #fff; transform: scale(1); box-shadow: 0 0 10px #fff; }
+        :root {
+            --primary: #6366f1; --accent: #a855f7; --bg: #0f172a;
+            --glass: rgba(255, 255, 255, 0.05); --board-color: #1e293b;
+        }
+        /* テーマ設定 */
+        body.theme-classic { --board-color: #2e7d32; }
+        body.theme-dark { --board-color: #1e293b; }
+        body.theme-midnight { --board-color: #0f172a; }
+        body.theme-ocean { --board-color: #0284c7; }
+        body.theme-forest { --board-color: #166534; }
+        body.theme-crimson { --board-color: #991b1b; }
+        body.theme-amber { --board-color: #92400e; }
+        body.theme-grape { --board-color: #6b21a8; }
+        body.theme-slate { --board-color: #334155; }
+        body.theme-gold { --board-color: #854d0e; }
+
+        body {
+            background: radial-gradient(circle at top left, #1e1b4b, var(--bg));
+            color: #f8fafc; font-family: 'Hiragino Sans', sans-serif;
+            margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden;
+        }
+        .glass-card {
+            background: var(--glass); backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px;
+            padding: 30px; width: 90%; max-width: 400px; text-align: center; position: relative;
+        }
+        #version-display { position: fixed; top: 10px; right: 10px; background: var(--glass); padding: 4px 10px; border-radius: 8px; font-size: 0.7rem; color: rgba(255,255,255,0.7); border: 1px solid rgba(255,255,255,0.1); }
+        button {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white; border: none; padding: 12px; font-size: 0.9rem; font-weight: bold;
+            border-radius: 12px; cursor: pointer; width: 100%; margin: 5px 0; transition: 0.3s;
+        }
+        button:hover { transform: translateY(-1px); filter: brightness(1.1); }
+        input, select {
+            background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white; padding: 10px; border-radius: 10px; width: 100%; box-sizing: border-box; margin-bottom: 10px; text-align: center;
+        }
+        .board {
+            display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;
+            background: rgba(255, 255, 255, 0.05); padding: 8px; border-radius: 12px; margin: 15px 0; aspect-ratio: 1/1;
+        }
+        .cell { background: var(--board-color); border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; }
+        .stone { width: 85%; height: 85%; border-radius: 50%; transform: scale(0); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .stone.black { display: block; background: #000; transform: scale(1); box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .stone.white { display: block; background: #fff; transform: scale(1); box-shadow: 0 4px 10px rgba(255,255,255,0.3); }
         .hidden { display: none !important; }
         .status-badge { background: var(--glass); padding: 5px 15px; border-radius: 20px; font-size: 0.8rem; margin-bottom: 10px; }
     </style>
 </head>
-<body>
+<body class="theme-dark">
+
+    <div id="version-display">Build: Loading...</div>
 
     <div class="glass-card">
         <div id="sc-login">
             <h1>極・オセロ</h1>
             <input type="text" id="in-name" placeholder="名前を入力">
-            <button onclick="toMenu()">ゲーム開始</button>
+            <button onclick="toMenu()">ログイン</button>
         </div>
 
         <div id="sc-menu" class="hidden">
-            <div class="status-badge"><span id="disp-name"></span> さん</div>
-            <button onclick="startCPU()">CPU対戦</button>
+            <div class="status-badge">Player: <span id="disp-name"></span></div>
+            <button onclick="startCPU()">CPU戦</button>
             <button onclick="changeScreen('sc-online')">オンライン対戦</button>
             <button onclick="changeScreen('sc-set')">設定</button>
         </div>
 
+        <div id="sc-set" class="hidden">
+            <h2>設定</h2>
+            <label>ニックネーム変更</label>
+            <input type="text" id="edit-name" onchange="updateNick()">
+            <label>盤面テーマ</label>
+            <select id="theme-sel" onchange="updateTheme()">
+                <option value="theme-dark">ダーク（標準）</option>
+                <option value="theme-classic">クラシック（緑）</option>
+                <option value="theme-midnight">ミッドナイト</option>
+                <option value="theme-ocean">オーシャン</option>
+                <option value="theme-forest">フォレスト</option>
+                <option value="theme-crimson">クリムゾン</option>
+                <option value="theme-amber">アンバー</option>
+                <option value="theme-grape">グレープ</option>
+                <option value="theme-slate">スレート</option>
+                <option value="theme-gold">ゴールド</option>
+            </select>
+            <label>効果音</label>
+            <button id="btn-se" onclick="toggleSE()" style="background:var(--glass)">SE: ON</button>
+            <button onclick="changeScreen('sc-menu')">戻る</button>
+        </div>
+
         <div id="sc-online" class="hidden">
-            <h1>オンライン</h1>
+            <h2>オンライン</h2>
             <button onclick="createRoom()">部屋を作る</button>
             <input type="text" id="in-room" placeholder="5桁コード">
             <button onclick="joinRoom()">参加する</button>
@@ -49,214 +106,210 @@
         </div>
 
         <div id="sc-jan" class="hidden">
-            <h1>先攻決め</h1>
-            <p id="jan-info">出す手を選んでね！</p>
+            <h2>先攻決め</h2>
+            <p id="jan-info">手を選んでね！</p>
             <div style="display:flex; gap:10px;">
-                <button class="j-btn" onclick="setJan(0)">✊</button>
-                <button class="j-btn" onclick="setJan(1)">✌️</button>
-                <button class="j-btn" onclick="setJan(2)">🖐️</button>
+                <button onclick="setJan(0)">✊</button>
+                <button onclick="setJan(1)">✌️</button>
+                <button onclick="setJan(2)">🖐️</button>
             </div>
         </div>
 
         <div id="sc-game" class="hidden">
-            <div class="status-badge" id="turn-txt">黒の番</div>
+            <div class="status-badge" id="turn-txt">準備中...</div>
             <div id="board" class="board"></div>
-            <div style="display:flex; justify-content:space-around;">
+            <div style="display:flex; justify-content:space-around; font-size:0.9rem;">
                 <span>黒: <b id="cnt-b">2</b></span>
                 <span>白: <b id="cnt-w">2</b></span>
             </div>
             <button onclick="location.reload()" style="margin-top:10px; background:var(--glass)">終了</button>
         </div>
-
-        <div id="sc-set" class="hidden">
-            <h1>設定</h1>
-            <input type="color" id="col-pick" value="#1e293b" onchange="upCol()">
-            <button onclick="changeScreen('sc-menu')">戻る</button>
-        </div>
     </div>
 
-<script>
-    // Firebase初期化（設定はそのまま）
-    const firebaseConfig = {
-        apiKey: "AIzaSyBYb9uXyjA7XJdRiYjcA3VBlSVgLh0C1fw",
-        authDomain: "hrmk-othello.firebaseapp.com",
-        projectId: "hrmk-othello",
-        databaseURL: "https://hrmk-othello-default-rtdb.asia-southeast1.firebasedatabase.app/",        
-        storageBucket: "hrmk-othello.firebasestorage.app",
-        messagingSenderId: "91127278693",
-        appId: "1:91127278693:web:89d6cdbbcabac60a172a8c"
-    };
-    if (!firebase.apps.length) {
+    <audio id="se-put" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3"></audio>
+
+    <script>
+        // --- 最終更新表示 ---
+        window.addEventListener('load', () => {
+            const lastMod = new Date(document.lastModified);
+            document.getElementById('version-display').innerText = `Build: ${lastMod.getMonth()+1}/${lastMod.getDate()} ${lastMod.getHours()}:${String(lastMod.getMinutes()).padStart(2,'0')}`;
+        });
+
+        // --- Firebase設定 ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyBYb9uXyjA7XJdRiYjcA3VBlSVgLh0C1fw",
+            authDomain: "hrmk-othello.firebaseapp.com",
+            projectId: "hrmk-othello",
+            databaseURL: "https://hrmk-othello-default-rtdb.asia-southeast1.firebasedatabase.app/",
+            storageBucket: "hrmk-othello.firebasestorage.app",
+            messagingSenderId: "91127278693",
+            appId: "1:91127278693:web:89d6cdbbcabac60a172a8c"
+        };
         firebase.initializeApp(firebaseConfig);
-    }
-    const db = firebase.database();
+        const db = firebase.database();
 
-    let myName = "", mySide = 'black', turn = 'black', mode = 'cpu', roomID = "", myRole = "";
-    let boardState = Array(64).fill(null);
+        let myName = "", mySide = 'black', turn = 'black', mode = 'cpu', roomID = "", myRole = "", seEnabled = true;
+        let boardState = Array(64).fill(null);
 
-    function changeScreen(id) {
-        document.querySelectorAll('.glass-card > div').forEach(d => d.classList.add('hidden'));
-        document.getElementById(id).classList.remove('hidden');
-    }
+        function changeScreen(id) {
+            document.querySelectorAll('.glass-card > div').forEach(d => d.classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+        }
 
-    function toMenu() {
-        myName = document.getElementById('in-name').value || "ななし";
-        document.getElementById('disp-name').innerText = myName;
-        changeScreen('sc-menu');
-    }
+        function toMenu() {
+            myName = document.getElementById('in-name').value || "ななし";
+            document.getElementById('disp-name').innerText = myName;
+            document.getElementById('edit-name').value = myName;
+            changeScreen('sc-menu');
+        }
 
-    // --- 【重要】オンラインマッチング修正 ---
-
-    // 1. 部屋を作る（ホスト）
-    function createRoom() {
-        roomID = Math.random().toString(36).substring(2, 7).toUpperCase();
-        myRole = 'host';
-        
-        // データをセット
-        const roomRef = db.ref('rooms/' + roomID);
-        roomRef.set({
-            status: 'wait',
-            hostName: myName,
-            turn: 'black'
-        });
-
-        document.getElementById('wait-msg').innerHTML = `コード: <b style="font-size:1.5rem; color:#a855f7;">${roomID}</b><br>相手を待っています...`;
-        
-        // 相手が来るのを監視
-        roomRef.on('value', (snapshot) => {
-            const data = snapshot.val();
-            if (data && data.status === 'ready') {
-                console.log("ゲストが来たよ！じゃんけんへ進みます");
-                changeScreen('sc-jan');
-            }
-            if (data && data.status === 'play') {
-                syncGame(data);
-            }
-        });
-    }
-
-    // 2. 部屋に入る（ゲスト）
-    function joinRoom() {
-        roomID = document.getElementById('in-room').value.toUpperCase();
-        if (!roomID) return alert("コードを入れてね！");
-        myRole = 'guest';
-
-        const roomRef = db.ref('rooms/' + roomID);
-        
-        // 部屋が存在するかチェックしてから入る
-        roomRef.once('value').then((snapshot) => {
-            if (snapshot.exists()) {
-                roomRef.update({
-                    status: 'ready',
-                    guestName: myName
-                });
-                changeScreen('sc-jan');
-                
-                // ゲーム更新を監視
-                roomRef.on('value', (s) => {
-                    const data = s.val();
-                    if (data && data.status === 'play') syncGame(data);
-                });
-            } else {
-                alert("そのコードの部屋は見つからなかったよ！😢");
-            }
-        });
-    }
-
-    // --- じゃんけん判定 ---
-    function setJan(hand) {
-        const janRef = db.ref(`rooms/${roomID}/jan/${myRole}`);
-        janRef.set(hand);
-        
-        document.getElementById('jan-info').innerText = "相手の手を待っています...";
-        document.querySelectorAll('.j-btn').forEach(b => b.disabled = true);
-        
-        db.ref(`rooms/${roomID}/jan`).on('value', s => {
-            const hands = s.val();
-            if (hands && hands.host !== undefined && hands.guest !== undefined) {
-                const h = hands.host;
-                const g = hands.guest;
-                
-                if (h === g) {
-                    document.getElementById('jan-info').innerText = "あいこ！もう一回！";
-                    document.querySelectorAll('.j-btn').forEach(b => b.disabled = false);
-                    if (myRole === 'host') db.ref(`rooms/${roomID}/jan`).remove(); // ホストがリセット
-                } else {
-                    const hostWins = (h === 0 && g === 1) || (h === 1 && g === 2) || (h === 2 && g === 0);
-                    
-                    // 勝敗で色（先攻後攻）を決める
-                    if (myRole === 'host') {
-                        mySide = hostWins ? 'black' : 'white';
-                        // ホスト側がゲーム開始の合図を出す
-                        db.ref('rooms/' + roomID).update({
-                            status: 'play',
-                            turn: 'black',
-                            board: JSON.stringify(initBoard())
-                        });
-                    } else {
-                        mySide = hostWins ? 'white' : 'black';
-                    }
-                }
-            }
-        });
-    }
-
-    // 3. ゲーム同期
-    function syncGame(data) {
-        mode = 'online';
-        boardState = JSON.parse(data.board);
-        turn = data.turn;
-        changeScreen('sc-game');
-        render();
-    }
-
-    // --- その他ロジック（前と同じ） ---
-    function initBoard() {
-        let b = Array(64).fill(null);
-        b[27]='white'; b[28]='black'; b[35]='black'; b[36]='white';
-        return b;
-    }
-
-    function render() {
-        const b = document.getElementById('board'); b.innerHTML = "";
-        let bc=0, wc=0;
-        boardState.forEach((s, i) => {
-            const c = document.createElement('div'); c.className = 'cell';
-            const st = document.createElement('div'); st.className = 'stone ' + (s || '');
-            if(s==='black') bc++; if(s==='white') wc++;
-            c.onclick = () => clickCell(i);
-            c.appendChild(st); b.appendChild(c);
-        });
-        document.getElementById('cnt-b').innerText = bc;
-        document.getElementById('cnt-w').innerText = wc;
-        document.getElementById('turn-txt').innerText = (turn === 'black' ? "黒" : "白") + "の番" + (turn === mySide ? " (あなた)" : " (相手)");
-    }
-
-    function clickCell(i) {
-        if (turn !== mySide || boardState[i]) return;
-        const flips = getFlips(i, turn);
-        if (flips.length > 0) {
-            boardState[i] = turn;
-            flips.forEach(idx => boardState[idx] = turn);
-            const nextTurn = (turn === 'black' ? 'white' : 'black');
-            if (mode === 'online') {
-                db.ref('rooms/' + roomID).update({ board: JSON.stringify(boardState), turn: nextTurn });
+        // --- 設定機能 ---
+        function updateNick() {
+            myName = document.getElementById('edit-name').value;
+            document.getElementById('disp-name').innerText = myName;
+        }
+        function updateTheme() {
+            const theme = document.getElementById('theme-sel').value;
+            document.body.className = theme;
+        }
+        function toggleSE() {
+            seEnabled = !seEnabled;
+            document.getElementById('btn-se').innerText = `SE: ${seEnabled ? 'ON' : 'OFF'}`;
+        }
+        function playSE() {
+            if (seEnabled) {
+                const audio = document.getElementById('se-put');
+                audio.currentTime = 0; audio.play();
             }
         }
-    }
 
-    function getFlips(idx, color) {
-        const opp = (color === 'black' ? 'white' : 'black');
-        const flips = [];
-        const dirs = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
-        const r = Math.floor(idx/8), c = idx%8;
-        dirs.forEach(([dr, dc]) => {
-            let tr=r+dr, tc=c+dc, temp=[];
-            while(tr>=0 && tr<8 && tc>=0 && tc<8 && boardState[tr*8+tc] === opp) { temp.push(tr*8+tc); tr+=dr; tc+=dc; }
-            if(tr>=0 && tr<8 && tc>=0 && tc<8 && boardState[tr*8+tc] === color) flips.push(...temp);
-        });
-        return flips;
-    }
-</script>
+        // --- オンライン & じゃんけん ---
+        function createRoom() {
+            roomID = Math.random().toString(36).substring(2, 7).toUpperCase();
+            myRole = 'host';
+            db.ref('rooms/' + roomID).set({ status: 'wait', hostName: myName });
+            document.getElementById('wait-msg').innerHTML = `コード: <b>${roomID}</b>`;
+            db.ref('rooms/' + roomID).on('value', s => {
+                if (s.val()?.status === 'ready') changeScreen('sc-jan');
+                if (s.val()?.status === 'play') syncGame(s.val());
+            });
+        }
+
+        function joinRoom() {
+            roomID = document.getElementById('in-room').value.toUpperCase();
+            myRole = 'guest';
+            db.ref('rooms/' + roomID).update({ status: 'ready', guestName: myName });
+            changeScreen('sc-jan');
+            db.ref('rooms/' + roomID).on('value', s => { if (s.val()?.status === 'play') syncGame(s.val()); });
+        }
+
+        function setJan(hand) {
+            db.ref(`rooms/${roomID}/jan/${myRole}`).set(hand);
+            document.getElementById('jan-info').innerText = "待機中...";
+            db.ref(`rooms/${roomID}/jan`).on('value', s => {
+                const h = s.val();
+                if (h && h.host !== undefined && h.guest !== undefined) {
+                    if (h.host === h.guest) {
+                        if (myRole === 'host') db.ref(`rooms/${roomID}/jan`).remove();
+                        document.getElementById('jan-info').innerText = "あいこ！";
+                    } else {
+                        const hostWins = (h.host===0 && h.guest===1) || (h.host===1 && h.guest===2) || (h.host===2 && h.guest===0);
+                        mySide = (myRole === 'host') ? (hostWins ? 'black' : 'white') : (hostWins ? 'white' : 'black');
+                        if (myRole === 'host') db.ref('rooms/' + roomID).update({ status: 'play', turn: 'black', board: JSON.stringify(initBoard()) });
+                    }
+                }
+            });
+        }
+
+        // --- ゲーム論理（パス機能付き） ---
+        function initBoard() {
+            let b = Array(64).fill(null); b[27]='white'; b[28]='black'; b[35]='black'; b[36]='white'; return b;
+        }
+
+        function syncGame(data) {
+            mode = 'online'; boardState = JSON.parse(data.board); 
+            if (turn !== data.turn) playSE();
+            turn = data.turn; changeScreen('sc-game'); render();
+            checkPass();
+        }
+
+        function startCPU() {
+            mode = 'cpu'; mySide = 'black'; boardState = initBoard(); turn = 'black';
+            changeScreen('sc-game'); render();
+        }
+
+        function render() {
+            const b = document.getElementById('board'); b.innerHTML = "";
+            let bc=0, wc=0;
+            boardState.forEach((s, i) => {
+                const c = document.createElement('div'); c.className = 'cell';
+                const st = document.createElement('div'); st.className = 'stone ' + (s||'');
+                if(s==='black') bc++; if(s==='white') wc++;
+                c.onclick = () => clickCell(i);
+                c.appendChild(st); b.appendChild(c);
+            });
+            document.getElementById('cnt-b').innerText = bc; document.getElementById('cnt-w').innerText = wc;
+            document.getElementById('turn-txt').innerText = (turn === 'black' ? "黒" : "白") + "の番" + (turn === mySide ? " (あなた)" : "");
+        }
+
+        function clickCell(i) {
+            if (turn !== mySide || boardState[i]) return;
+            const flips = getFlips(i, turn);
+            if (flips.length > 0) {
+                boardState[i] = turn;
+                flips.forEach(idx => boardState[idx] = turn);
+                const nextTurn = (turn === 'black' ? 'white' : 'black');
+                updateBoard(nextTurn);
+            }
+        }
+
+        function updateBoard(nextTurn) {
+            if (mode === 'online') {
+                db.ref('rooms/' + roomID).update({ board: JSON.stringify(boardState), turn: nextTurn });
+            } else {
+                playSE(); turn = nextTurn; render();
+                if (turn === 'white') setTimeout(cpuPlay, 600);
+                else checkPass();
+            }
+        }
+
+        // パス判定
+        function checkPass() {
+            const moves = [];
+            boardState.forEach((s, i) => { if(!s && getFlips(i, turn).length > 0) moves.push(i); });
+            if (moves.length === 0) {
+                const opp = (turn === 'black' ? 'white' : 'black');
+                const oppMoves = [];
+                boardState.forEach((s, i) => { if(!s && getFlips(i, opp).length > 0) oppMoves.push(i); });
+                
+                if (oppMoves.length > 0) {
+                    alert(turn + "は置く場所がないのでパスします！");
+                    updateBoard(opp);
+                } else {
+                    alert("対局終了！");
+                }
+            }
+        }
+
+        function getFlips(idx, color) {
+            const opp = (color === 'black' ? 'white' : 'black');
+            const flips = [];
+            const dirs = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+            const r = Math.floor(idx/8), c = idx%8;
+            dirs.forEach(([dr, dc]) => {
+                let tr=r+dr, tc=c+dc, temp=[];
+                while(tr>=0 && tr<8 && tc>=0 && tc<8 && boardState[tr*8+tc] === opp) { temp.push(tr*8+tc); tr+=dr; tc+=dc; }
+                if(tr>=0 && tr<8 && tc>=0 && tc<8 && boardState[tr*8+tc] === color) flips.push(...temp);
+            });
+            return flips;
+        }
+
+        function cpuPlay() {
+            let moves = [];
+            boardState.forEach((s, i) => { if(!s && getFlips(i, 'white').length > 0) moves.push(i); });
+            if (moves.length > 0) clickCell(moves[0]);
+            else { turn = 'black'; checkPass(); render(); }
+        }
+    </script>
 </body>
 </html>
