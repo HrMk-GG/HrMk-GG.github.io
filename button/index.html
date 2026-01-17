@@ -18,9 +18,9 @@
         .tab-btn:hover { background: #f0f0f0; }
         .tab-btn.active { background: var(--main-red); color: white; box-shadow: 0 4px 12px rgba(255, 75, 43, 0.3); }
 
-        /* 左下のログアウトエリア */
-        .user-control { position: absolute; bottom: 20px; left: 20px; display: flex; flex-direction: column; gap: 10px; }
-        #display-name { color: #333; font-weight: bold; font-size: 0.9rem; }
+        /* 左下のユーザー情報・ログアウト */
+        .user-control { position: absolute; bottom: 20px; left: 20px; display: flex; flex-direction: column; gap: 10px; width: calc(100% - 40px); }
+        #display-name { color: #333; font-weight: bold; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .logout-btn { background: #eee; border: 1px solid #ddd; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-size: 0.8rem; transition: 0.2s; }
         .logout-btn:hover { background: #e0e0e0; color: #ff0000; }
 
@@ -28,7 +28,7 @@
         .main-content { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle, #ffffff 0%, #f0f0f0 100%); }
         #total-counter { font-size: 7rem; font-weight: 900; color: #222; margin-bottom: 30px; font-variant-numeric: tabular-nums; }
 
-        /* 赤いボタン */
+        /* 赤いボタン（3D演出） */
         .btn-container { perspective: 1000px; }
         #red-button {
             width: 220px; height: 220px; background: linear-gradient(145deg, #ff4b2b, #ff416c);
@@ -39,17 +39,18 @@
         #red-button:active { transform: translateY(12px); box-shadow: 0 3px #b32d15, 0 5px 15px rgba(0,0,0,0.2); }
         #red-button:disabled { background: #ccc; box-shadow: 0 15px #999; cursor: not-allowed; }
 
-        /* ランキング */
-        .ranking-card { position: absolute; right: 30px; top: 30px; width: 280px; background: rgba(255,255,255,0.9); border-radius: 20px; padding: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.05); backdrop-filter: blur(10px); }
+        /* ランキングカード */
+        .ranking-card { position: absolute; right: 30px; top: 30px; width: 280px; background: rgba(255,255,255,0.9); border-radius: 20px; padding: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.5); }
         .rank-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f0f0f0; font-size: 0.9rem; }
+        .rank-name { font-weight: bold; color: #444; }
         .rank-val { color: var(--main-red); font-weight: bold; }
 
-        /* オーバーレイ */
+        /* オーバーレイ共通 */
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); backdrop-filter: blur(15px); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
-        .google-btn { background: white; color: #757575; border: 1px solid #ddd; border-radius: 4px; padding: 2px 16px 2px 2px; display: flex; align-items: center; font-size: 14px; font-weight: 500; cursor: pointer; }
+        .google-btn { background: white; color: #757575; border: 1px solid #ddd; border-radius: 4px; padding: 2px 16px 2px 2px; display: flex; align-items: center; font-size: 14px; font-weight: 500; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .google-btn img { width: 36px; height: 36px; margin-right: 12px; }
         .nickname-box { background: white; padding: 40px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.1); text-align: center; }
-        .nickname-box input { padding: 15px; font-size: 1.2rem; border: 2px solid #eee; border-radius: 12px; margin-bottom: 20px; width: 260px; text-align: center; }
+        .nickname-box input { padding: 15px; font-size: 1.2rem; border: 2px solid #eee; border-radius: 12px; margin-bottom: 20px; width: 260px; text-align: center; outline: none; }
         .save-btn { background: var(--main-red); color: white; border: none; padding: 15px 40px; font-size: 1rem; border-radius: 12px; cursor: pointer; font-weight: bold; }
         
         .hidden { display: none !important; }
@@ -67,7 +68,7 @@
 
     <div id="nickname-layer" class="overlay hidden">
         <div class="nickname-box">
-            <h2>名前を決めよう</h2>
+            <h2>名前を決めて世界へ</h2>
             <input type="text" id="nickname-input" placeholder="最大10文字" maxlength="10">
             <br>
             <button id="save-nickname-btn" class="save-btn">開始する</button>
@@ -81,7 +82,7 @@
         <button class="tab-btn" onclick="changeTab('monthly')">1ヶ月 (Monthly)</button>
         <button class="tab-btn" onclick="changeTab('lifetime')">生涯 (Lifetime)</button>
         
-        <div class="user-control" id="user-controls">
+        <div class="user-control">
             <span id="display-name">---</span>
             <button class="logout-btn" onclick="logout()">ログアウト</button>
         </div>
@@ -115,10 +116,25 @@ const db = firebase.firestore();
 const auth = firebase.auth();
 
 let myNickname = "";
-// クリック音の設定
-const clickSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3');
 
-// 1. 認証監視
+// --- サウンド生成エンジン (Web Audio API) ---
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playClickSound() {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.1);
+}
+
+// 1. 認証とニックネームチェック
 auth.onAuthStateChanged(async (user) => {
     if (user) {
         document.getElementById('login-layer').classList.add('hidden');
@@ -138,30 +154,26 @@ auth.onAuthStateChanged(async (user) => {
     }
 });
 
-// 2. ボタン操作
+// ログイン・ログアウト
 document.getElementById('login-btn').onclick = () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+function logout() { auth.signOut().then(() => location.reload()); }
 
-function logout() {
-    auth.signOut().then(() => location.reload());
-}
-
+// ニックネーム保存
 document.getElementById('save-nickname-btn').onclick = async () => {
     const val = document.getElementById('nickname-input').value.trim();
-    if (!val) return;
+    if (!val) return alert("名前を入れてくれ！");
     await db.collection("users").doc(auth.currentUser.uid).set({ nickname: val, updatedAt: Date.now() });
     location.reload();
 };
 
-// 3. カウント＆サウンド
+// 2. カウント監視
 db.collection("global").doc("counter").onSnapshot(doc => {
     if (doc.exists) document.getElementById('total-counter').innerText = doc.data().count.toLocaleString();
 });
 
+// 3. ボタンクリック（音とデータ更新）
 document.getElementById('red-button').onclick = () => {
-    // 音を鳴らす（再生位置をリセットしてから再生することで連打に対応）
-    clickSound.currentTime = 0;
-    clickSound.play();
-
+    playClickSound(); // 音を鳴らす
     db.collection("global").doc("counter").update({ count: firebase.firestore.FieldValue.increment(1) });
     if (myNickname) {
         db.collection("rankings").doc(myNickname).set({
@@ -172,14 +184,14 @@ document.getElementById('red-button').onclick = () => {
     }
 };
 
-// 4. ランキング
+// 4. ランキング表示
 async function fetchRanking() {
     const snapshot = await db.collection("rankings").orderBy("clicks", "desc").limit(10).get();
     const list = document.getElementById('rank-list');
     list.innerHTML = "";
     snapshot.forEach(doc => {
         const d = doc.data();
-        list.innerHTML += `<div class="rank-item"><span>${d.name}</span><span class="rank-val">${d.clicks}回</span></div>`;
+        list.innerHTML += `<div class="rank-item"><span class="rank-name">${d.name}</span><span class="rank-val">${d.clicks}回</span></div>`;
     });
 }
 
