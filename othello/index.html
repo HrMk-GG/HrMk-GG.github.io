@@ -2,134 +2,262 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>極・オセロオンライン</title>
+    <script type="importmap">
+    {
+        "imports": {
+            "firebase/app": "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js",
+            "firebase/database": "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"
+        }
+    }
+    </script>
     <style>
         :root { --bg-color: #2c3e50; --board-color: #27ae60; }
-        body { background-color: var(--bg-color); color: white; font-family: 'Hiragino Sans', sans-serif; text-align: center; margin: 0; }
+        body { background-color: var(--bg-color); color: white; font-family: 'Hiragino Sans', sans-serif; text-align: center; margin: 0; transition: 0.3s; }
         .hidden { display: none; }
+        .screen { padding: 20px; animation: fadeIn 0.5s; min-height: 80vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        button { background: #ecf0f1; border: none; padding: 12px 24px; margin: 8px; font-size: 18px; cursor: pointer; border-radius: 8px; font-weight: bold; }
+        button:hover { background: #bdc3c7; transform: translateY(-2px); }
+        input[type="text"] { padding: 12px; font-size: 18px; border-radius: 8px; border: none; width: 240px; text-align: center; margin: 10px; }
         
-        /* メニュー周り */
-        .screen { padding: 20px; animation: fadeIn 0.5s; }
-        button { background: #ecf0f1; border: none; padding: 10px 20px; margin: 10px; font-size: 18px; cursor: pointer; border-radius: 5px; transition: 0.2s; }
-        button:hover { background: #bdc3c7; transform: scale(1.05); }
-        input { padding: 10px; font-size: 18px; border-radius: 5px; border: none; width: 200px; text-align: center; }
-
         /* 盤面 */
-        .board { display: grid; grid-template-columns: repeat(8, 50px); grid-template-rows: repeat(8, 50px); gap: 2px; background: #2c3e50; border: 5px solid #34495e; margin: 20px auto; width: 416px; }
-        .cell { background: var(--board-color); display: flex; align-items: center; justify-content: center; cursor: pointer; }
-        .stone { width: 40px; height: 40px; border-radius: 50%; display: none; }
-        .black { display: block; background: #000; box-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
-        .white { display: block; background: #fff; box-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        .board { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; background: #34495e; border: 5px solid #34495e; margin: 20px auto; width: 320px; height: 320px; }
+        .cell { background: var(--board-color); display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; }
+        .stone { width: 85%; height: 85%; border-radius: 50%; display: none; transition: 0.3s transform; }
+        .black { display: block; background: #000; box-shadow: 2px 2px 4px rgba(0,0,0,0.4); }
+        .white { display: block; background: #fff; box-shadow: 2px 2px 4px rgba(0,0,0,0.2); }
+        .valid-hint::after { content: ""; width: 10px; height: 10px; background: rgba(255,255,255,0.3); border-radius: 50%; }
 
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .matching-loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 30px; height: 30px; animation: spin 2s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
-    <div id="nickname-screen" class="screen">
+    <div id="screen-nick" class="screen">
         <h1>⚪️ 極・オセロ ⚫️</h1>
-        <p>ニックネームを決めてね (10文字以内)</p>
-        <input type="text" id="nickname-input" maxlength="10" placeholder="なまえ">
-        <br>
-        <button onclick="goToMenu()">決定！</button>
+        <p>名前を決めてね (10文字以内)</p>
+        <input type="text" id="nick-input" maxlength="10" placeholder="なまえ">
+        <button id="nick-btn">決定！</button>
     </div>
 
-    <div id="menu-screen" class="screen hidden">
-        <h2>ようこそ、<span id="display-name"></span> さん！</h2>
-        <button onclick="startCPU()">CPU対戦</button><br>
-        <button onclick="showOnlineMenu()">オンライン対戦</button><br>
-        <button onclick="showSettings()">設定</button>
+    <div id="screen-menu" class="screen hidden">
+        <h2>ようこそ、<span id="name-display"></span> さん！</h2>
+        <button id="btn-cpu-menu">CPU対戦</button>
+        <button id="btn-online-menu">オンライン対戦</button>
+        <button id="btn-settings-menu">設定</button>
     </div>
 
-    <div id="online-screen" class="screen hidden">
+    <div id="screen-cpu-lv" class="screen hidden">
+        <h2>レベルを選んでね</h2>
+        <button onclick="startGame('cpu', 'weak')">弱い</button>
+        <button onclick="startGame('cpu', 'normal')">普通</button>
+        <button onclick="startGame('cpu', 'strong')">強い</button>
+        <button class="back-btn">もどる</button>
+    </div>
+
+    <div id="screen-online" class="screen hidden">
         <h2>オンライン対戦</h2>
-        <button onclick="createRoom()">部屋を作成</button>
-        <button onclick="joinRoom()">部屋に参加</button><br>
-        <p id="room-code-display"></p>
-        <div id="matching-msg"></div>
-        <button onclick="backToMenu()">もどる</button>
+        <button id="btn-create-room">部屋を作成</button>
+        <p>または</p>
+        <input type="text" id="room-input" maxlength="5" placeholder="5桁コード入力">
+        <button id="btn-join-room">部屋に参加</button>
+        <p id="online-status"></p>
+        <button class="back-btn">もどる</button>
     </div>
 
-    <div id="settings-screen" class="screen hidden">
-        <h2>設定</h2>
-        <p>効果音: <button onclick="toggleSound()" id="sound-btn">ON</button></p>
-        <p>テーマ色: <input type="color" id="color-picker" value="#27ae60" onchange="updateColor()"></p>
-        <button onclick="backToMenu()">保存して戻る</button>
+    <div id="screen-janken" class="screen hidden">
+        <h2 id="janken-status">じゃんけん！</h2>
+        <div>
+            <button onclick="sendJanken('goo')">✊</button>
+            <button onclick="sendJanken('choki')">✌️</button>
+            <button onclick="sendJanken('paa')">🖐️</button>
+        </div>
+        <p id="janken-msg"></p>
     </div>
 
-    <div id="game-screen" class="screen hidden">
-        <h3 id="game-info">あなたの番です</h3>
+    <div id="screen-game" class="screen hidden">
+        <div id="turn-display" style="font-size: 20px; margin-bottom: 10px;"></div>
         <div class="board" id="board"></div>
-        <p>黒: <span id="black-score">2</span> 白: <span id="white-score">2</span></p>
-        <div id="game-over-menu" class="hidden">
-            <h2 id="winner-msg"></h2>
-            <button onclick="resetGame()">再度対戦</button>
-            <button onclick="backToMenu()">メニューへ</button>
+        <p>黒(あなた): <span id="s-black">2</span> 白(相手): <span id="s-white">2</span></p>
+        <div id="game-over" class="hidden">
+            <h2 id="win-msg"></h2>
+            <button id="btn-retry">再度対戦</button>
+            <button class="back-btn">メニューへ</button>
         </div>
     </div>
 
-    <script>
-        let myName = "";
+    <div id="screen-settings" class="screen hidden">
+        <h2>設定</h2>
+        <p>ニックネーム: <input type="text" id="setting-nick" maxlength="10"></p>
+        <p>効果音: <button id="btn-sound">ON</button></p>
+        <p>盤面の色: <input type="color" id="color-picker" value="#27ae60"></p>
+        <button id="btn-save-settings">保存して戻る</button>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "firebase/app";
+        import { getDatabase, ref, set, onValue, update, remove, push } from "firebase/database";
+
+        // 君のFirebase設定
+        const firebaseConfig = {
+            apiKey: "AIzaSyBYb9uXyjA7XJdRiYjcA3VBlSVgLh0C1fw",
+            authDomain: "hrmk-othello.firebaseapp.com",
+            projectId: "hrmk-othello",
+            storageBucket: "hrmk-othello.firebasestorage.app",
+            messagingSenderId: "91127278693",
+            appId: "1:91127278693:web:89d6cdbbcabac60a172a8c",
+            databaseURL: "https://hrmk-othello-default-rtdb.firebaseio.com" // 手動追加
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // --- 変数管理 ---
+        let myNick = "";
         let soundOn = true;
+        let myRole = "black"; // black or white
+        let currentTurn = "black";
+        let roomID = null;
+        let isOnline = false;
+        let cpuLevel = null;
+        let boardState = Array(64).fill(null); // null, 'black', 'white'
 
-        // 画面遷移
-        function goToMenu() {
-            const input = document.getElementById('nickname-input').value;
-            if(input === "") return alert("名前を入力してね！");
-            myName = input;
-            document.getElementById('display-name').innerText = myName;
-            showScreen('menu-screen');
-        }
-
-        function showScreen(id) {
+        // --- 画面遷移 ---
+        const show = (id) => {
             document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
             document.getElementById(id).classList.remove('hidden');
+        };
+
+        document.getElementById('nick-btn').onclick = () => {
+            myNick = document.getElementById('nick-input').value || "ななし";
+            document.getElementById('name-display').innerText = myNick;
+            document.getElementById('setting-nick').value = myNick;
+            show('screen-menu');
+        };
+
+        document.getElementById('btn-cpu-menu').onclick = () => show('screen-cpu-lv');
+        document.getElementById('btn-online-menu').onclick = () => show('screen-online');
+        document.getElementById('btn-settings-menu').onclick = () => show('screen-settings');
+        document.querySelectorAll('.back-btn').forEach(b => b.onclick = () => {
+            if(roomID && isOnline) remove(ref(db, 'rooms/' + roomID));
+            isOnline = false;
+            show('screen-menu');
+        });
+
+        // --- 設定 ---
+        document.getElementById('btn-save-settings').onclick = () => {
+            myNick = document.getElementById('setting-nick').value;
+            document.getElementById('name-display').innerText = myNick;
+            document.documentElement.style.setProperty('--board-color', document.getElementById('color-picker').value);
+            show('screen-menu');
+        };
+
+        // --- オンラインマッチング ---
+        document.getElementById('btn-create-room').onclick = () => {
+            roomID = Math.random().toString(36).substring(2, 7).toUpperCase();
+            set(ref(db, 'rooms/' + roomID), {
+                host: myNick,
+                status: 'waiting'
+            });
+            document.getElementById('online-status').innerText = "部屋コード: " + roomID + "\n待機中...";
+            
+            onValue(ref(db, 'rooms/' + roomID), (snapshot) => {
+                const data = snapshot.val();
+                if(data && data.status === 'matched') {
+                    alert("マッチングしました！相手: " + data.guest);
+                    isOnline = true;
+                    myRole = "host"; 
+                    startJanken();
+                }
+            });
+        };
+
+        document.getElementById('btn-join-room').onclick = () => {
+            const code = document.getElementById('room-input').value.toUpperCase();
+            const roomRef = ref(db, 'rooms/' + code);
+            update(roomRef, {
+                guest: myNick,
+                status: 'matched'
+            }).then(() => {
+                roomID = code;
+                isOnline = true;
+                myRole = "guest";
+                startJanken();
+            });
+        };
+
+        // --- じゃんけん (簡易同期版) ---
+        function startJanken() {
+            show('screen-janken');
         }
+        window.sendJanken = (hand) => {
+            const path = `rooms/${roomID}/janken/${myRole}`;
+            set(ref(db, path), hand);
+            document.getElementById('janken-msg').innerText = "相手の選択を待っています...";
+            
+            onValue(ref(db, `rooms/${roomID}/janken`), (snap) => {
+                const hands = snap.val();
+                if(hands && hands.host && hands.guest) {
+                    // ここで勝敗判定してゲーム開始（今回はホスト先攻固定の簡易版）
+                    setTimeout(() => startGame('online'), 1000);
+                }
+            });
+        };
 
-        function backToMenu() { showScreen('menu-screen'); }
-        function showSettings() { showScreen('settings-screen'); }
-        function showOnlineMenu() { showScreen('online-screen'); }
-
-        function toggleSound() {
-            soundOn = !soundOn;
-            document.getElementById('sound-btn').innerText = soundOn ? "ON" : "OFF";
-        }
-
-        function updateColor() {
-            const color = document.getElementById('color-picker').value;
-            document.documentElement.style.setProperty('--board-color', color);
-        }
-
-        // オンライン仮装ロジック
-        function createRoom() {
-            const code = Math.random().toString(36).substring(2, 7).toUpperCase();
-            document.getElementById('room-code-display').innerText = "部屋コード: " + code;
-            setTimeout(() => {
-                document.getElementById('matching-msg').innerText = "マッチングしました！相手：ゲスト123";
-            }, 3000);
-        }
-
-        // オセロ盤面生成（簡易版）
-        function startCPU() {
-            showScreen('game-screen');
+        // --- ゲーム本体 ---
+        window.startGame = (mode, lv) => {
+            show('screen-game');
+            cpuLevel = lv;
             initBoard();
-        }
+        };
 
         function initBoard() {
-            const boardEl = document.getElementById('board');
-            boardEl.innerHTML = "";
-            for(let i=0; i<64; i++) {
+            boardState = Array(64).fill(null);
+            boardState[27] = 'white'; boardState[28] = 'black';
+            boardState[35] = 'black'; boardState[36] = 'white';
+            renderBoard();
+        }
+
+        function renderBoard() {
+            const b = document.getElementById('board');
+            b.innerHTML = "";
+            let bCount = 0, wCount = 0;
+            boardState.forEach((s, i) => {
                 const cell = document.createElement('div');
                 cell.className = 'cell';
-                const stone = document.createElement('div');
-                stone.className = 'stone';
-                // 初期配置
-                if(i === 27 || i === 36) stone.classList.add('white');
-                if(i === 28 || i === 35) stone.classList.add('black');
-                cell.appendChild(stone);
-                boardEl.appendChild(cell);
+                if(s) {
+                    const stone = document.createElement('div');
+                    stone.className = `stone ${s}`;
+                    cell.appendChild(stone);
+                    if(s==='black') bCount++; else wCount++;
+                }
+                cell.onclick = () => handleMove(i);
+                b.appendChild(cell);
+            });
+            document.getElementById('s-black').innerText = bCount;
+            document.getElementById('s-white').innerText = wCount;
+        }
+
+        function handleMove(idx) {
+            if(boardState[idx]) return;
+            // 本来はここでオセロのルール判定（挟めるか）を入れる
+            boardState[idx] = currentTurn;
+            currentTurn = currentTurn === 'black' ? 'white' : 'black';
+            renderBoard();
+            if(cpuLevel && currentTurn === 'white') setTimeout(cpuMove, 1000);
+        }
+
+        function cpuMove() {
+            const emptyIdx = boardState.map((s, i) => s === null ? i : null).filter(i => i !== null);
+            if(emptyIdx.length > 0) {
+                const move = emptyIdx[Math.floor(Math.random() * emptyIdx.length)];
+                handleMove(move);
             }
         }
+
     </script>
 </body>
 </html>
