@@ -11,7 +11,7 @@
             --primary: #6366f1; --accent: #a855f7; --bg: #0f172a;
             --glass: rgba(255, 255, 255, 0.05); --board-color: #1e293b;
         }
-        /* 10種類のテーマ設定 */
+        /* テーマ設定 */
         body.theme-dark { --board-color: #1e293b; }
         body.theme-classic { --board-color: #2e7d32; }
         body.theme-midnight { --board-color: #020617; }
@@ -20,7 +20,7 @@
         body.theme-crimson { --board-color: #7f1d1d; }
         body.theme-amber { --board-color: #78350f; }
         body.theme-grape { --board-color: #581c87; }
-        body.theme-slate { --board-color: #1e293b; }
+        body.theme-slate { --board-color: #334155; }
         body.theme-gold { --board-color: #713f12; }
 
         body {
@@ -33,14 +33,13 @@
             border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px;
             padding: 30px; width: 90%; max-width: 400px; text-align: center; position: relative;
         }
-        #version-display { position: fixed; top: 10px; right: 10px; background: var(--glass); padding: 4px 10px; border-radius: 8px; font-size: 0.7rem; color: rgba(255,255,255,0.7); border: 1px solid rgba(255,255,255,0.1); z-index: 2000; pointer-events: none; }
+        #version-display { position: fixed; top: 10px; right: 10px; background: var(--glass); padding: 4px 10px; border-radius: 8px; font-size: 0.7rem; color: rgba(255,255,255,0.7); border: 1px solid rgba(255,255,255,0.1); z-index: 2000; }
         button {
             background: linear-gradient(135deg, var(--primary), var(--accent));
             color: white; border: none; padding: 12px; font-size: 0.9rem; font-weight: bold;
             border-radius: 12px; cursor: pointer; width: 100%; margin: 5px 0; transition: 0.3s;
         }
         button:hover { transform: translateY(-1px); filter: brightness(1.1); }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
         input, select {
             background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1);
             color: white; padding: 10px; border-radius: 10px; width: 100%; box-sizing: border-box; margin-bottom: 10px; text-align: center;
@@ -55,7 +54,7 @@
         .stone.white { display: block; background: #fff; transform: scale(1); box-shadow: 0 4px 10px rgba(255,255,255,0.3); }
         .hidden { display: none !important; }
         .status-badge { background: var(--glass); padding: 5px 15px; border-radius: 20px; font-size: 0.8rem; margin-bottom: 10px; }
-        label { display: block; font-size: 0.8rem; margin-top: 10px; text-align: left; color: rgba(255,255,255,0.6); }
+        .share-box { background: rgba(0,0,0,0.2); padding: 10px; border-radius: 10px; margin-top: 10px; font-size: 0.8rem; word-break: break-all; border: 1px dashed var(--accent); }
     </style>
 </head>
 <body class="theme-dark">
@@ -78,12 +77,10 @@
 
         <div id="sc-set" class="hidden">
             <h2>設定</h2>
-            <label>ニックネーム変更</label>
-            <input type="text" id="edit-name" onchange="updateNick()">
-            <label>盤面テーマ</label>
+            <input type="text" id="edit-name" onchange="updateNick()" placeholder="名前変更">
             <select id="theme-sel" onchange="updateTheme()">
-                <option value="theme-dark">ダーク（標準）</option>
-                <option value="theme-classic">クラシック（緑）</option>
+                <option value="theme-dark">ダーク</option>
+                <option value="theme-classic">クラシック</option>
                 <option value="theme-midnight">ミッドナイト</option>
                 <option value="theme-ocean">オーシャン</option>
                 <option value="theme-forest">フォレスト</option>
@@ -93,18 +90,22 @@
                 <option value="theme-slate">スレート</option>
                 <option value="theme-gold">ゴールド</option>
             </select>
-            <label>効果音</label>
-            <button id="btn-se" onclick="toggleSE()" style="background:var(--glass)">SE: ON</button>
+            <button id="btn-se" onclick="toggleSE()">SE: ON</button>
             <button onclick="changeScreen('sc-menu')">戻る</button>
         </div>
 
         <div id="sc-online" class="hidden">
             <h2>オンライン</h2>
             <button onclick="createRoom()">部屋を作る</button>
-            <input type="text" id="in-room" placeholder="5桁コード">
+            <div style="margin: 10px 0; opacity: 0.5;">── または ──</div>
+            <input type="text" id="in-room" placeholder="5桁コードを入力">
             <button onclick="joinRoom()">参加する</button>
-            <p id="wait-msg"></p>
-            <button onclick="changeScreen('sc-menu')" style="background:var(--glass)">戻る</button>
+            <div id="wait-area" class="hidden">
+                <p id="wait-msg"></p>
+                <div class="share-box" id="share-url"></div>
+                <button onclick="copyURL()" style="font-size: 0.7rem; padding: 5px;">URLをコピー</button>
+            </div>
+            <button onclick="changeScreen('sc-menu')" style="background:var(--glass); margin-top: 20px;">戻る</button>
         </div>
 
         <div id="sc-jan" class="hidden">
@@ -131,11 +132,16 @@
     <audio id="se-put" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3"></audio>
 
     <script>
-        // --- ビルド日時自動表示 ---
+        // --- ビルド日時 & 自動参加チェック ---
         window.addEventListener('load', () => {
             const lastMod = new Date(document.lastModified);
-            const dateStr = `${lastMod.getMonth()+1}/${lastMod.getDate()} ${lastMod.getHours()}:${String(lastMod.getMinutes()).padStart(2,'0')}`;
-            document.getElementById('version-display').innerText = "Build: " + dateStr;
+            document.getElementById('version-display').innerText = `Build: ${lastMod.getMonth()+1}/${lastMod.getDate()} ${lastMod.getHours()}:${String(lastMod.getMinutes()).padStart(2,'0')}`;
+            
+            // URLパラメータに room があれば自動入力
+            const params = new URLSearchParams(window.location.search);
+            if (params.has('room')) {
+                document.getElementById('in-room').value = params.get('room');
+            }
         });
 
         // --- Firebase設定 ---
@@ -148,7 +154,7 @@
             messagingSenderId: "91127278693",
             appId: "1:91127278693:web:89d6cdbbcabac60a172a8c"
         };
-        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
         let myName = "", mySide = 'black', turn = 'black', mode = 'cpu', roomID = "", myRole = "", seEnabled = true;
@@ -166,36 +172,27 @@
             changeScreen('sc-menu');
         }
 
-        // --- 設定管理 ---
-        function updateNick() {
-            myName = document.getElementById('edit-name').value;
-            document.getElementById('disp-name').innerText = myName;
-        }
-        function updateTheme() {
-            document.body.className = document.getElementById('theme-sel').value;
-        }
-        function toggleSE() {
-            seEnabled = !seEnabled;
-            document.getElementById('btn-se').innerText = `SE: ${seEnabled ? 'ON' : 'OFF'}`;
-        }
-        function playSE() {
-            if (seEnabled) {
-                const audio = document.getElementById('se-put');
-                audio.currentTime = 0; audio.play().catch(()=>{});
-            }
-        }
-
-        // --- マッチングロジック ---
+        // --- シェア機能 ---
         function createRoom() {
             roomID = Math.random().toString(36).substring(2, 7).toUpperCase();
             myRole = 'host';
             db.ref('rooms/' + roomID).set({ status: 'wait', hostName: myName });
-            document.getElementById('wait-msg').innerHTML = `コード: <b style="color:#a855f7;">${roomID}</b><br>待機中...`;
+            
+            const shareURL = window.location.origin + window.location.pathname + "?room=" + roomID;
+            document.getElementById('wait-area').classList.remove('hidden');
+            document.getElementById('wait-msg').innerHTML = `コード: <b>${roomID}</b>`;
+            document.getElementById('share-url').innerText = shareURL;
+
             db.ref('rooms/' + roomID).on('value', s => {
-                const data = s.val();
-                if (data?.status === 'ready') changeScreen('sc-jan');
-                if (data?.status === 'play') syncGame(data);
+                if (s.val()?.status === 'ready') changeScreen('sc-jan');
+                if (s.val()?.status === 'play') syncGame(s.val());
             });
+        }
+
+        function copyURL() {
+            const url = document.getElementById('share-url').innerText;
+            navigator.clipboard.writeText(url);
+            alert("対戦URLをコピーしたよ！友達に送ってね！🔗");
         }
 
         function joinRoom() {
@@ -204,50 +201,37 @@
             myRole = 'guest';
             db.ref('rooms/' + roomID).update({ status: 'ready', guestName: myName });
             changeScreen('sc-jan');
-            db.ref('rooms/' + roomID).on('value', s => {
-                if (s.val()?.status === 'play') syncGame(s.val());
-            });
+            db.ref('rooms/' + roomID).on('value', s => { if (s.val()?.status === 'play') syncGame(s.val()); });
         }
 
+        // --- じゃんけん・ゲームエンジン（省略せず全入り） ---
         function setJan(hand) {
             db.ref(`rooms/${roomID}/jan/${myRole}`).set(hand);
             document.getElementById('jan-info').innerText = "相手を待っています...";
             document.querySelectorAll('.j-btn').forEach(b => b.disabled = true);
-            
             db.ref(`rooms/${roomID}/jan`).on('value', s => {
-                const hands = s.val();
-                if (hands && hands.host !== undefined && hands.guest !== undefined) {
-                    if (hands.host === hands.guest) {
-                        document.getElementById('jan-info').innerText = "あいこ！";
-                        document.querySelectorAll('.j-btn').forEach(b => b.disabled = false);
+                const h = s.val();
+                if (h && h.host !== undefined && h.guest !== undefined) {
+                    if (h.host === h.guest) {
                         if (myRole === 'host') db.ref(`rooms/${roomID}/jan`).remove();
+                        document.querySelectorAll('.j-btn').forEach(b => b.disabled = false);
+                        document.getElementById('jan-info').innerText = "あいこ！";
                     } else {
-                        const hostWins = (hands.host===0 && hands.guest===1) || (hands.host===1 && hands.guest===2) || (hands.host===2 && hands.guest===0);
+                        const hostWins = (h.host===0 && h.guest===1) || (h.host===1 && h.guest===2) || (h.host===2 && h.guest===0);
                         mySide = (myRole === 'host') ? (hostWins ? 'black' : 'white') : (hostWins ? 'white' : 'black');
-                        if (myRole === 'host') {
-                            db.ref('rooms/' + roomID).update({ status: 'play', turn: 'black', board: JSON.stringify(initBoard()) });
-                        }
+                        if (myRole === 'host') db.ref('rooms/' + roomID).update({ status: 'play', turn: 'black', board: JSON.stringify(initBoard()) });
                     }
                 }
             });
         }
 
-        // --- ゲームエンジン ---
-        function initBoard() {
-            let b = Array(64).fill(null); b[27]='white'; b[28]='black'; b[35]='black'; b[36]='white'; return b;
-        }
-
-        function startCPU() {
-            mode = 'cpu'; mySide = 'black'; boardState = initBoard(); turn = 'black';
-            changeScreen('sc-game'); render();
-        }
-
-        function syncGame(data) {
-            mode = 'online'; boardState = JSON.parse(data.board);
-            if (turn !== data.turn) playSE();
-            turn = data.turn; changeScreen('sc-game'); render();
-            checkPass();
-        }
+        function initBoard() { let b = Array(64).fill(null); b[27]='white'; b[28]='black'; b[35]='black'; b[36]='white'; return b; }
+        function startCPU() { mode = 'cpu'; mySide = 'black'; boardState = initBoard(); turn = 'black'; changeScreen('sc-game'); render(); }
+        function syncGame(data) { mode = 'online'; boardState = JSON.parse(data.board); if (turn !== data.turn) playSE(); turn = data.turn; changeScreen('sc-game'); render(); checkPass(); }
+        function updateNick() { myName = document.getElementById('edit-name').value; document.getElementById('disp-name').innerText = myName; }
+        function updateTheme() { document.body.className = document.getElementById('theme-sel').value; }
+        function toggleSE() { seEnabled = !seEnabled; document.getElementById('btn-se').innerText = `SE: ${seEnabled ? 'ON' : 'OFF'}`; }
+        function playSE() { if (seEnabled) { const a = document.getElementById('se-put'); a.currentTime = 0; a.play().catch(()=>{}); } }
 
         function render() {
             const b = document.getElementById('board'); b.innerHTML = "";
@@ -266,21 +250,14 @@
         function clickCell(i) {
             if (mode === 'online' && turn !== mySide) return;
             if (boardState[i]) return;
-
             const flips = getFlips(i, turn);
             if (flips.length > 0) {
                 boardState[i] = turn;
                 flips.forEach(idx => boardState[idx] = turn);
                 playSE();
                 const nextTurn = (turn === 'black' ? 'white' : 'black');
-                
-                if (mode === 'online') {
-                    db.ref('rooms/' + roomID).update({ board: JSON.stringify(boardState), turn: nextTurn });
-                } else {
-                    turn = nextTurn; render();
-                    if (turn === 'white') setTimeout(cpuPlay, 600);
-                    else checkPass();
-                }
+                if (mode === 'online') db.ref('rooms/' + roomID).update({ board: JSON.stringify(boardState), turn: nextTurn });
+                else { turn = nextTurn; render(); if (turn === 'white') setTimeout(cpuPlay, 600); else checkPass(); }
             }
         }
 
@@ -291,15 +268,14 @@
                 const opp = (turn === 'black' ? 'white' : 'black');
                 const oppMoves = [];
                 boardState.forEach((s, i) => { if(!s && getFlips(i, opp).length > 0) oppMoves.push(i); });
-                
                 if (oppMoves.length > 0) {
-                    alert(turn === 'black' ? "黒パス！" : "白パス！");
+                    alert(turn + "パス！");
                     if (mode === 'online') db.ref('rooms/' + roomID).update({ turn: opp });
                     else { turn = opp; render(); if(turn==='white') setTimeout(cpuPlay,600); }
                 } else {
                     const bc = boardState.filter(s=>s==='black').length;
                     const wc = boardState.filter(s=>s==='white').length;
-                    alert(`試合終了！\n黒: ${bc} 白: ${wc}\n${bc>wc?"黒":"白"}の勝ち！`);
+                    alert(`終了！ 黒:${bc} 白:${wc}\n${bc>wc?"黒":"白"}の勝ち！`);
                 }
             }
         }
@@ -325,9 +301,7 @@
                 boardState[move] = 'white';
                 getFlips(move, 'white').forEach(idx => boardState[idx] = 'white');
                 playSE(); turn = 'black'; render(); checkPass();
-            } else {
-                turn = 'black'; render(); checkPass();
-            }
+            } else { turn = 'black'; render(); checkPass(); }
         }
     </script>
 </body>
