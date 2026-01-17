@@ -12,15 +12,21 @@
         body { margin: 0; display: flex; height: 100vh; background: #fff; font-family: 'Helvetica Neue', Arial, sans-serif; overflow: hidden; }
         
         /* サイドバー */
-        .sidebar { width: 260px; background: #f9f9f9; border-right: 1px solid #eee; display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; }
+        .sidebar { width: 260px; background: #f9f9f9; border-right: 1px solid #eee; display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; position: relative; }
         .sidebar h2 { font-size: 1.2rem; color: #333; margin-bottom: 20px; letter-spacing: 1px; }
         .tab-btn { background: none; border: none; padding: 12px 15px; text-align: left; font-size: 0.9rem; cursor: pointer; border-radius: 8px; margin-bottom: 5px; transition: 0.2s; color: #666; font-weight: bold; }
         .tab-btn:hover { background: #f0f0f0; }
         .tab-btn.active { background: var(--main-red); color: white; box-shadow: 0 4px 12px rgba(255, 75, 43, 0.3); }
 
+        /* 左下のログアウトエリア */
+        .user-control { position: absolute; bottom: 20px; left: 20px; display: flex; flex-direction: column; gap: 10px; }
+        #display-name { color: #333; font-weight: bold; font-size: 0.9rem; }
+        .logout-btn { background: #eee; border: 1px solid #ddd; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-size: 0.8rem; transition: 0.2s; }
+        .logout-btn:hover { background: #e0e0e0; color: #ff0000; }
+
         /* メインコンテンツ */
         .main-content { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle, #ffffff 0%, #f0f0f0 100%); }
-        #total-counter { font-size: 7rem; font-weight: 900; color: #222; margin-bottom: 30px; font-variant-numeric: tabular-nums; text-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+        #total-counter { font-size: 7rem; font-weight: 900; color: #222; margin-bottom: 30px; font-variant-numeric: tabular-nums; }
 
         /* 赤いボタン */
         .btn-container { perspective: 1000px; }
@@ -34,21 +40,19 @@
         #red-button:disabled { background: #ccc; box-shadow: 0 15px #999; cursor: not-allowed; }
 
         /* ランキング */
-        .ranking-card { position: absolute; right: 30px; top: 30px; width: 280px; background: rgba(255,255,255,0.9); border-radius: 20px; padding: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.5); }
+        .ranking-card { position: absolute; right: 30px; top: 30px; width: 280px; background: rgba(255,255,255,0.9); border-radius: 20px; padding: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.05); backdrop-filter: blur(10px); }
         .rank-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f0f0f0; font-size: 0.9rem; }
-        .rank-name { font-weight: bold; color: #444; }
         .rank-val { color: var(--main-red); font-weight: bold; }
 
         /* オーバーレイ */
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); backdrop-filter: blur(15px); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
-        .google-btn { background: white; color: #757575; border: 1px solid #ddd; border-radius: 4px; padding: 2px 16px 2px 2px; display: flex; align-items: center; font-size: 14px; font-weight: 500; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .google-btn { background: white; color: #757575; border: 1px solid #ddd; border-radius: 4px; padding: 2px 16px 2px 2px; display: flex; align-items: center; font-size: 14px; font-weight: 500; cursor: pointer; }
         .google-btn img { width: 36px; height: 36px; margin-right: 12px; }
         .nickname-box { background: white; padding: 40px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.1); text-align: center; }
-        .nickname-box input { padding: 15px; font-size: 1.2rem; border: 2px solid #eee; border-radius: 12px; margin-bottom: 20px; width: 260px; text-align: center; outline: none; }
+        .nickname-box input { padding: 15px; font-size: 1.2rem; border: 2px solid #eee; border-radius: 12px; margin-bottom: 20px; width: 260px; text-align: center; }
         .save-btn { background: var(--main-red); color: white; border: none; padding: 15px 40px; font-size: 1rem; border-radius: 12px; cursor: pointer; font-weight: bold; }
         
         .hidden { display: none !important; }
-        #user-info-tag { position: fixed; bottom: 20px; left: 20px; color: #999; font-size: 0.8rem; }
     </style>
 </head>
 <body>
@@ -63,11 +67,10 @@
 
     <div id="nickname-layer" class="overlay hidden">
         <div class="nickname-box">
-            <h2>名前を決めて世界へ</h2>
-            <p style="color:#666; margin-bottom:25px;">ランキングに表示されるニックネームです</p>
+            <h2>名前を決めよう</h2>
             <input type="text" id="nickname-input" placeholder="最大10文字" maxlength="10">
             <br>
-            <button id="save-nickname-btn" class="save-btn">この名前で開始</button>
+            <button id="save-nickname-btn" class="save-btn">開始する</button>
         </div>
     </div>
 
@@ -76,9 +79,12 @@
         <button class="tab-btn active" onclick="changeTab('daily')">1日 (Daily)</button>
         <button class="tab-btn" onclick="changeTab('weekly')">週間 (Weekly)</button>
         <button class="tab-btn" onclick="changeTab('monthly')">1ヶ月 (Monthly)</button>
-        <button class="tab-btn" onclick="changeTab('yearly')">1年 (Yearly)</button>
         <button class="tab-btn" onclick="changeTab('lifetime')">生涯 (Lifetime)</button>
-        <div id="user-info-tag">ログイン中: <span id="display-name">---</span></div>
+        
+        <div class="user-control" id="user-controls">
+            <span id="display-name">---</span>
+            <button class="logout-btn" onclick="logout()">ログアウト</button>
+        </div>
     </div>
 
     <div class="main-content">
@@ -87,7 +93,7 @@
             <button id="red-button" disabled></button>
         </div>
         <div class="ranking-card">
-            <h3 id="rank-title" style="margin-top:0; font-size:1rem; color:#333;">Daily Ranking</h3>
+            <h3 id="rank-title" style="margin-top:0; font-size:1rem;">Daily Ranking</h3>
             <div id="rank-list">読み込み中...</div>
         </div>
     </div>
@@ -109,17 +115,17 @@ const db = firebase.firestore();
 const auth = firebase.auth();
 
 let myNickname = "";
+// クリック音の設定
+const clickSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3');
 
-// 1. 認証とニックネームチェック
+// 1. 認証監視
 auth.onAuthStateChanged(async (user) => {
     if (user) {
         document.getElementById('login-layer').classList.add('hidden');
         const userDoc = await db.collection("users").doc(user.uid).get();
-        
-        // 修正ポイント：existsの()を外したぜ！
         if (userDoc.exists && userDoc.data().nickname) {
             myNickname = userDoc.data().nickname;
-            document.getElementById('display-name').innerText = myNickname;
+            document.getElementById('display-name').innerText = "Player: " + myNickname;
             document.getElementById('nickname-layer').classList.add('hidden');
             document.getElementById('red-button').disabled = false;
         } else {
@@ -132,26 +138,30 @@ auth.onAuthStateChanged(async (user) => {
     }
 });
 
+// 2. ボタン操作
 document.getElementById('login-btn').onclick = () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+
+function logout() {
+    auth.signOut().then(() => location.reload());
+}
 
 document.getElementById('save-nickname-btn').onclick = async () => {
     const val = document.getElementById('nickname-input').value.trim();
-    if (!val) return alert("名前を入れてくれ！");
-    try {
-        await db.collection("users").doc(auth.currentUser.uid).set({ nickname: val, updatedAt: Date.now() });
-        location.reload(); 
-    } catch (e) { alert("保存に失敗したぜ: " + e.message); }
+    if (!val) return;
+    await db.collection("users").doc(auth.currentUser.uid).set({ nickname: val, updatedAt: Date.now() });
+    location.reload();
 };
 
-// 2. カウント処理
+// 3. カウント＆サウンド
 db.collection("global").doc("counter").onSnapshot(doc => {
-    // 修正ポイント：ここもexistsの()を外したぜ！
-    if (doc.exists) {
-        document.getElementById('total-counter').innerText = doc.data().count.toLocaleString();
-    }
+    if (doc.exists) document.getElementById('total-counter').innerText = doc.data().count.toLocaleString();
 });
 
 document.getElementById('red-button').onclick = () => {
+    // 音を鳴らす（再生位置をリセットしてから再生することで連打に対応）
+    clickSound.currentTime = 0;
+    clickSound.play();
+
     db.collection("global").doc("counter").update({ count: firebase.firestore.FieldValue.increment(1) });
     if (myNickname) {
         db.collection("rankings").doc(myNickname).set({
@@ -162,17 +172,15 @@ document.getElementById('red-button').onclick = () => {
     }
 };
 
-// 3. ランキング
+// 4. ランキング
 async function fetchRanking() {
-    try {
-        const snapshot = await db.collection("rankings").orderBy("clicks", "desc").limit(10).get();
-        const list = document.getElementById('rank-list');
-        list.innerHTML = "";
-        snapshot.forEach(doc => {
-            const d = doc.data();
-            list.innerHTML += `<div class="rank-item"><span class="rank-name">${d.name}</span><span class="rank-val">${d.clicks}回</span></div>`;
-        });
-    } catch (e) { console.error("Ranking fetch failed", e); }
+    const snapshot = await db.collection("rankings").orderBy("clicks", "desc").limit(10).get();
+    const list = document.getElementById('rank-list');
+    list.innerHTML = "";
+    snapshot.forEach(doc => {
+        const d = doc.data();
+        list.innerHTML += `<div class="rank-item"><span>${d.name}</span><span class="rank-val">${d.clicks}回</span></div>`;
+    });
 }
 
 function changeTab(tab) {
