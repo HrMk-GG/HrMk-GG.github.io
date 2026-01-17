@@ -2,329 +2,153 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HTMLミニクラフト</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>極・3D MINECRAFT (PC & Mobile)</title>
     <style>
-        body {
-            background-color: #87CEEB; /* 空の色 */
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-            font-family: 'Press Start 2P', cursive; /* ドット絵っぽいフォント */
-            color: white;
-            text-shadow: 2px 2px 0px black;
+        body { margin: 0; overflow: hidden; font-family: sans-serif; touch-action: none; background: #000; }
+        #crosshair {
+            position: absolute; top: 50%; left: 50%;
+            width: 20px; height: 20px; border: 2px solid white; border-radius: 50%;
+            transform: translate(-50%, -50%); pointer-events: none; z-index: 10;
         }
-        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'); /* フォント読み込み */
-
-        h1 {
-            font-size: 2.5em;
-            margin-bottom: 20px;
-            color: #FFD700; /* 金色 */
-            -webkit-text-stroke: 2px #A52A2A; /* 茶色の縁取り */
-            text-shadow: 4px 4px 0px #000;
-        }
-
-        #game-area {
-            display: grid;
-            grid-template-columns: repeat(20, 30px); /* 20x20のグリッド */
-            grid-template-rows: repeat(20, 30px);
-            border: 5px solid #654321; /* 木の枠 */
-            background-color: #333; /* デフォルトの背景 */
-            image-rendering: pixelated; /* ドット絵をきれいに表示 */
-            box-shadow: 8px 8px 0px #000;
-        }
-
-        .block {
-            width: 30px;
-            height: 30px;
-            box-sizing: border-box; /* paddingとborderをwidth/heightに含める */
-            border: 1px solid rgba(0,0,0,0.2); /* ブロック間の区切り */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.8em;
-            cursor: pointer;
-            transition: background-color 0.05s ease-out; /* クリック時の反応 */
-        }
-
-        /* ブロックの色 */
-        .air { background-color: #87CEEB; } /* 空 */
-        .grass { background-color: #7CFC00; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30"><rect x="0" y="0" width="30" height="30" fill="%237CFC00"/><path d="M0 25h30v5H0z" fill="%238B4513"/></svg>'); } /* 草 */
-        .dirt { background-color: #8B4513; } /* 土 */
-        .stone { background-color: #808080; } /* 石 */
-        .wood { background-color: #A0522D; } /* 木 */
-        .leaves { background-color: #228B22; border-radius: 50%; width: 80%; height: 80%; margin: 10%; box-shadow: inset 0 0 5px rgba(0,0,0,0.3); } /* 葉っぱ */
-        .crafting { background-color: #CD853F; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30"><rect x="0" y="0" width="30" height="30" fill="%23CD853F"/><rect x="5" y="5" width="20" height="20" fill="%23A0522D"/><rect x="10" y="10" width="10" height="10" fill="%23CD853F"/></svg>'); } /* 作業台 */
-
-        #inventory {
-            display: flex;
-            margin-top: 20px;
-            padding: 10px;
-            background: rgba(0,0,0,0.5);
-            border: 3px solid #654321;
-            border-radius: 10px;
-            box-shadow: 4px 4px 0px #000;
-        }
-        .inv-slot {
-            width: 40px; height: 40px;
-            background-color: rgba(255,255,255,0.1);
-            border: 2px solid #aaa;
-            margin: 0 5px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.7em;
-            position: relative;
-            cursor: pointer;
-        }
-        .inv-slot.selected {
-            border-color: #FFD700; /* 選択中の枠 */
-            box-shadow: 0 0 5px #FFD700;
-        }
-        .item-count {
-            position: absolute;
-            bottom: 2px;
-            right: 2px;
-            font-size: 0.6em;
-            color: white;
-            text-shadow: 1px 1px 0 black;
-        }
-        /* インベントリ内のアイテム表示 */
-        .inv-item-grass { background-color: #7CFC00; }
-        .inv-item-dirt { background-color: #8B4513; }
-        .inv-item-stone { background-color: #808080; }
-        .inv-item-wood { background-color: #A0522D; }
-        .inv-item-leaves { background-color: #228B22; border-radius: 50%; }
-
-        #controls {
-            margin-top: 20px;
-            display: flex;
-            gap: 10px;
-        }
-        .control-btn {
-            background-color: #4CAF50; /* 緑 */
-            color: white;
-            padding: 10px 15px;
-            border: 2px solid #2E8B57;
-            border-radius: 5px;
-            cursor: pointer;
-            font-family: 'Press Start 2P', cursive;
-            font-size: 0.8em;
-            box-shadow: 2px 2px 0px #000;
-        }
-        .control-btn:hover {
-            background-color: #2E8B57;
-        }
-        .control-btn:active {
-            transform: translateY(1px);
-            box-shadow: 1px 1px 0px #000;
-        }
+        /* UI（スマホのみ表示、PCでも一応出る） */
+        .ui-panel { position: absolute; bottom: 30px; width: 100%; display: flex; justify-content: space-between; padding: 0 30px; box-sizing: border-box; pointer-events: none; z-index: 20; }
+        .d-pad { display: grid; grid-template-columns: repeat(3, 60px); grid-template-rows: repeat(3, 60px); gap: 8px; pointer-events: auto; }
+        .btn { width: 60px; height: 60px; background: rgba(0, 0, 0, 0.4); border: 2px solid white; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; user-select: none; }
+        .btn:active { background: rgba(255, 255, 255, 0.4); }
+        .action-group { display: flex; flex-direction: column; gap: 10px; pointer-events: auto; }
+        #inst { position: absolute; top: 10px; left: 10px; color: white; background: rgba(0,0,0,0.5); padding: 5px; font-size: 12px; }
     </style>
 </head>
 <body>
-    <h1>ミニクラフト</h1>
-    <div id="game-area"></div>
-    <div id="inventory"></div>
-    <div id="controls">
-        <button class="control-btn" onclick="movePlayer(-1, 0)">← 左</button>
-        <button class="control-btn" onclick="movePlayer(0, -1)">↑ 上</button>
-        <button class="control-btn" onclick="movePlayer(0, 1)">↓ 下</button>
-        <button class="control-btn" onclick="movePlayer(1, 0)">→ 右</button>
+    <div id="crosshair"></div>
+    <div id="inst">PC: WASDで移動 / マウスで視点 / 左クリで設置 / 右クリで破壊<br>スマホ: ボタンとスワイプ</div>
+    
+    <div class="ui-panel">
+        <div class="d-pad">
+            <div></div><div class="btn" id="up">↑</div><div></div>
+            <div class="btn" id="left">←</div><div class="btn" id="jump">J</div><div class="btn" id="right">→</div>
+            <div></div><div class="btn" id="down">↓</div><div></div>
+        </div>
+        <div class="action-group">
+            <div class="btn" style="width:120px" id="add">設置 (L-Click)</div>
+            <div class="btn" style="width:120px" id="rem">破壊 (R-Click)</div>
+        </div>
     </div>
 
-    <script>
-        const GRID_SIZE = 20; // 20x20マス
-        let playerX = 10;
-        let playerY = 10;
-        let currentItem = 'dirt'; // 持っているアイテム（デフォルトは土）
+    <script type="importmap">
+        { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
+    </script>
 
-        const inventory = {
-            dirt: 16,
-            grass: 0,
-            stone: 0,
-            wood: 0,
-            leaves: 0,
-            crafting: 0 // 作業台もインベントリで管理
-        };
-        const itemClasses = {
-            dirt: 'inv-item-dirt',
-            grass: 'inv-item-grass',
-            stone: 'inv-item-stone',
-            wood: 'inv-item-wood',
-            leaves: 'inv-item-leaves',
-            crafting: 'inv-item-crafting' // 後で追加
-        };
+    <script type="module">
+        import * as THREE from 'three';
+        import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 
-        const world = []; // ゲーム世界のマップデータ
-        const blockTypes = ['air', 'grass', 'dirt', 'stone', 'wood', 'leaves', 'crafting'];
+        // --- 基本設定 ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x73C2FB);
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
 
-        // ワールド生成 (簡易的な地形)
-        function generateWorld() {
-            for (let y = 0; y < GRID_SIZE; y++) {
-                world[y] = [];
-                for (let x = 0; x < GRID_SIZE; x++) {
-                    if (y < GRID_SIZE / 2 + 2) { // 地表より上は空
-                        world[y][x] = 'air';
-                    } else if (y === GRID_SIZE / 2 + 2) { // 地表
-                        world[y][x] = 'grass';
-                    } else if (y < GRID_SIZE / 2 + 5) { // その下は土
-                        world[y][x] = 'dirt';
-                    } else { // もっと下は石
-                        world[y][x] = 'stone';
-                    }
-                }
-            }
-            // 木をランダムに配置
-            for (let i = 0; i < 3; i++) {
-                const treeX = Math.floor(Math.random() * (GRID_SIZE - 4)) + 2;
-                const treeY = GRID_SIZE / 2; // 地表に生やす
-                if (world[treeY][treeX] === 'grass') {
-                    world[treeY - 1][treeX] = 'wood';
-                    world[treeY - 2][treeX] = 'wood';
-                    world[treeY - 3][treeX] = 'leaves';
-                    world[treeY - 3][treeX - 1] = 'leaves';
-                    world[treeY - 3][treeX + 1] = 'leaves';
-                    world[treeY - 4][treeX] = 'leaves';
-                }
-            }
-            // 作業台を1つ設置
-            world[GRID_SIZE / 2 + 2][GRID_SIZE / 2] = 'crafting'; // 地表の真ん中に置く
-        }
+        // PC用視点ロック
+        const controls = new PointerLockControls(camera, document.body);
+        document.body.addEventListener('click', () => { if(!isTouch) controls.lock(); });
 
-        function renderWorld() {
-            const gameArea = document.getElementById('game-area');
-            gameArea.innerHTML = ''; // 一度クリア
-
-            for (let y = 0; y < GRID_SIZE; y++) {
-                for (let x = 0; x < GRID_SIZE; x++) {
-                    const block = document.createElement('div');
-                    block.classList.add('block', world[y][x]);
-                    block.dataset.x = x;
-                    block.dataset.y = y;
-
-                    // プレイヤーの位置にマーク
-                    if (x === playerX && y === playerY) {
-                        block.style.backgroundColor = 'rgba(255,255,0,0.5)'; // プレイヤーのいるセルを黄色っぽく
-                        block.innerText = '👤'; // プレイヤーアイコン
-                        block.style.fontSize = '1.5em';
-                    } else {
-                        block.onclick = (e) => {
-                            const targetX = parseInt(e.target.dataset.x);
-                            const targetY = parseInt(e.target.dataset.y);
-                            handleClickBlock(targetX, targetY);
-                        };
-                    }
-                    gameArea.appendChild(block);
-                }
-            }
-            renderInventory();
-        }
-
-        function renderInventory() {
-            const invElement = document.getElementById('inventory');
-            invElement.innerHTML = '';
-
-            for (const item in inventory) {
-                const slot = document.createElement('div');
-                slot.classList.add('inv-slot');
-                if (item === currentItem) {
-                    slot.classList.add('selected');
-                }
-                slot.dataset.item = item;
-                slot.onclick = () => selectItem(item);
-
-                const itemDisplay = document.createElement('div');
-                itemDisplay.classList.add('inv-item-' + item); // 各アイテムのスタイル
-                itemDisplay.style.width = '70%'; itemDisplay.style.height = '70%';
-                slot.appendChild(itemDisplay);
-
-                if (inventory[item] > 0) {
-                    const count = document.createElement('span');
-                    count.classList.add('item-count');
-                    count.innerText = inventory[item];
-                    slot.appendChild(count);
-                }
-                invElement.appendChild(slot);
+        // --- ライト & 地面 ---
+        const blocks = [];
+        const geo = new THREE.BoxGeometry(1,1,1);
+        const grassMat = new THREE.MeshLambertMaterial({ color: 0x5ead3a });
+        const dirtMat = new THREE.MeshLambertMaterial({ color: 0x8b4513 });
+        
+        for(let x=-10; x<10; x++) {
+            for(let z=-10; z<10; z++) {
+                const b = new THREE.Mesh(geo, grassMat);
+                b.position.set(x, 0, z); scene.add(b); blocks.push(b);
             }
         }
+        scene.add(new THREE.AmbientLight(0xffffff, 0.6), new THREE.DirectionalLight(0xffffff, 0.8));
+        camera.position.set(0, 2, 5);
 
-        function selectItem(item) {
-            if (inventory[item] > 0 || item === 'air') { // 'air'は壊すモード
-                currentItem = item;
-                renderInventory();
-            } else {
-                alert('そのアイテムは持っていません！');
-            }
-        }
+        // --- 操作ロジック ---
+        let move = { f:0, b:0, l:0, r:0 };
+        let isTouch = false;
+        let yVelocity = 0, isGrounded = true;
 
-        function handleClickBlock(targetX, targetY) {
-            const distance = Math.abs(playerX - targetX) + Math.abs(playerY - targetY);
-            if (distance > 1) { // 1マス隣のブロックしか操作できない
-                alert('近寄ってから操作してね！');
-                return;
-            }
-
-            const blockType = world[targetY][targetX];
-
-            if (currentItem === 'air') { // 壊すモード
-                if (blockType !== 'air' && blockType !== 'crafting') { // 空と作業台は壊せない
-                    inventory[blockType]++; // インベントリに追加
-                    world[targetY][targetX] = 'air'; // ブロックを空にする
-                    renderWorld();
-                } else if (blockType === 'crafting') {
-                    alert('作業台は壊せないよ！'); // 作業台は壊せない
-                }
-            } else { // ブロックを置くモード
-                if (blockType === 'air' && inventory[currentItem] > 0) {
-                    inventory[currentItem]--; // インベントリから減らす
-                    world[targetY][targetX] = currentItem; // ブロックを置く
-                    renderWorld();
-                } else if (inventory[currentItem] === 0) {
-                    alert('そのブロックが足りないよ！');
-                } else {
-                    alert('そこには置けないよ！');
-                }
-            }
-        }
-
-        function movePlayer(dx, dy) {
-            const newPlayerX = playerX + dx;
-            const newPlayerY = playerY + dy;
-
-            // 境界チェック
-            if (newPlayerX >= 0 && newPlayerX < GRID_SIZE &&
-                newPlayerY >= 0 && newPlayerY < GRID_SIZE &&
-                world[newPlayerY][newPlayerX] !== 'wood' && // 木は通れない
-                world[newPlayerY][newPlayerX] !== 'stone' && // 石は通れない
-                world[newPlayerY][newPlayerX] !== 'crafting' // 作業台も通れない
-                ) {
-                playerX = newPlayerX;
-                playerY = newPlayerY;
-                renderWorld();
-            }
-        }
-
-        // 初期化
-        generateWorld();
-        renderWorld();
-
-        // キーボード操作
+        // PCキーボード設定
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowUp') movePlayer(0, -1);
-            else if (e.key === 'ArrowDown') movePlayer(0, 1);
-            else if (e.key === 'ArrowLeft') movePlayer(-1, 0);
-            else if (e.key === 'ArrowRight') movePlayer(1, 0);
-            else if (e.key === ' ') selectItem('air'); // スペースで壊すモードに切り替え
-            else if (e.key === '1') selectItem('dirt'); // 数字キーでアイテム選択 (簡易)
-            else if (e.key === '2') selectItem('grass');
-            else if (e.key === '3') selectItem('wood');
-            else if (e.key === '4') selectItem('stone');
-            else if (e.key === '5') selectItem('leaves');
-            else if (e.key === '6') selectItem('crafting');
+            if(e.code === 'KeyW') move.f = 1; if(e.code === 'KeyS') move.b = 1;
+            if(e.code === 'KeyA') move.l = 1; if(e.code === 'KeyD') move.r = 1;
+            if(e.code === 'Space' && isGrounded) { yVelocity = 0.15; isGrounded = false; }
         });
+        document.addEventListener('keyup', (e) => {
+            if(e.code === 'KeyW') move.f = 0; if(e.code === 'KeyS') move.b = 0;
+            if(e.code === 'KeyA') move.l = 0; if(e.code === 'KeyD') move.r = 0;
+        });
+
+        // スマホタッチ設定
+        const bind = (id, k) => {
+            const el = document.getElementById(id);
+            el.addEventListener('touchstart', (e) => { e.preventDefault(); isTouch = true; move[k] = 1; });
+            el.addEventListener('touchend', () => move[k] = 0);
+        };
+        bind('up','f'); bind('down','b'); bind('left','l'); bind('right','r');
+        document.getElementById('jump').ontouchstart = (e) => { e.preventDefault(); if(isGrounded){ yVelocity = 0.15; isGrounded = false; }};
+
+        // 視点移動 (スマホ用)
+        let lastX, lastY;
+        window.addEventListener('touchstart', e => { if(e.target.tagName==='CANVAS'){ lastX=e.touches[0].pageX; lastY=e.touches[0].pageY; isTouch=true; } });
+        window.addEventListener('touchmove', e => {
+            if(isTouch && e.target.tagName==='CANVAS'){
+                const dx = e.touches[0].pageX - lastX; const dy = e.touches[0].pageY - lastY;
+                camera.rotation.y -= dx * 0.005; camera.rotation.x -= dy * 0.005;
+                camera.rotation.x = Math.max(-1.5, 1.5, camera.rotation.x);
+                lastX = e.touches[0].pageX; lastY = e.touches[0].pageY;
+            }
+        });
+
+        // ブロック操作 (共通)
+        const ray = new THREE.Raycaster();
+        const op = (type) => {
+            ray.setFromCamera(new THREE.Vector2(0,0), camera);
+            const hits = ray.intersectObjects(blocks);
+            if(hits.length > 0){
+                const h = hits[0];
+                if(type === 'add'){
+                    const nb = new THREE.Mesh(geo, dirtMat);
+                    nb.position.copy(h.object.position).add(h.face.normal);
+                    scene.add(nb); blocks.push(nb);
+                } else if(h.object.position.y !== 0){
+                    scene.remove(h.object); blocks.splice(blocks.indexOf(h.object), 1);
+                }
+            }
+        };
+        document.addEventListener('mousedown', (e) => { if(controls.isLocked) op(e.button === 0 ? 'add' : 'rem'); });
+        document.getElementById('add').ontouchstart = (e) => { e.preventDefault(); op('add'); };
+        document.getElementById('rem').ontouchstart = (e) => { e.preventDefault(); op('rem'); };
+        window.addEventListener('contextmenu', e => e.preventDefault());
+
+        // --- ループ ---
+        function animate() {
+            requestAnimationFrame(animate);
+            const dir = new THREE.Vector3(); camera.getWorldDirection(dir);
+            dir.y = 0; dir.normalize();
+            const side = new THREE.Vector3().crossVectors(camera.up, dir).normalize();
+
+            const s = 0.1;
+            if(move.f) camera.position.addScaledVector(dir, s);
+            if(move.b) camera.position.addScaledVector(dir, -s);
+            if(move.l) camera.position.addScaledVector(side, s);
+            if(move.r) camera.position.addScaledVector(side, -s);
+
+            yVelocity -= 0.008; camera.position.y += yVelocity;
+            if(camera.position.y < 2){ camera.position.y = 2; yVelocity = 0; isGrounded = true; }
+
+            renderer.render(scene, camera);
+        }
+        animate();
+        window.onresize = () => { camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); };
     </script>
 </body>
 </html>
