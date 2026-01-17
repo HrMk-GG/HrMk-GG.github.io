@@ -3,67 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Moment Swap - Starry Edition</title>
+    <title>Moment Swap - Final Fix</title>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
     <style>
-        body {
-            background: radial-gradient(ellipse at bottom, #1B2735 0%, #090A0F 100%);
-            color: #E2E2E2; font-family: sans-serif; margin: 0; padding-bottom: 50px;
-            min-height: 100vh; text-align: center; overflow-x: hidden;
-        }
-        /* 星屑の背景 */
-        body::before {
-            content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: transparent url('https://s3-us-west-2.amazonaws.com/s.cdpn.io/123163/stars.png') repeat;
-            z-index: -1; opacity: 0.4; animation: move-stars 200s linear infinite;
-        }
-        @keyframes move-stars { from { background-position: 0 0; } to { background-position: 10000px 5000px; } }
-        
+        body { background: radial-gradient(ellipse at bottom, #1B2735 0%, #090A0F 100%); color: #E2E2E2; font-family: sans-serif; margin: 0; padding-bottom: 50px; min-height: 100vh; text-align: center; }
         .hidden { display: none !important; }
-        #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(10px); }
-        
-        video { width: 90%; max-width: 400px; border-radius: 20px; border: 2px solid #4fc3f7; margin-top: 20px; box-shadow: 0 0 20px rgba(79,195,247,0.3); }
-        .btn { background: linear-gradient(45deg, #4fc3f7, #9575cd); color: white; padding: 18px 40px; border-radius: 50px; font-weight: bold; border: none; cursor: pointer; font-size: 1.1rem; box-shadow: 0 5px 15px rgba(0,0,0,0.3); transition: 0.2s; }
-        .btn:active { transform: scale(0.95); }
-        .btn:disabled { background: #555; cursor: not-allowed; }
-        
-        input { padding: 15px; border-radius: 10px; border: 2px solid #4fc3f7; background: #000; color: white; width: 200px; text-align: center; font-size: 1.1rem; }
-        .card { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 20px; width: 85%; max-width: 380px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(5px); margin: 15px auto; }
-        .card img { width: 100%; border-radius: 10px; margin-top: 10px; }
-        .name { color: #4fc3f7; font-weight: bold; }
+        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2000; }
+        #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
+        .btn { background: linear-gradient(45deg, #4fc3f7, #9575cd); color: white; padding: 18px 45px; border-radius: 50px; font-weight: bold; border: none; cursor: pointer; font-size: 1.1rem; }
+        video { width: 90%; max-width: 400px; border-radius: 20px; border: 2px solid #4fc3f7; margin-top: 20px; }
+        .card { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 20px; width: 85%; max-width: 380px; border: 1px solid rgba(255,255,255,0.1); margin: 15px auto; }
+        .card img { width: 100%; border-radius: 10px; }
+        .loader { width: 48px; height: 48px; border: 5px solid #FFF; border-bottom-color: #4fc3f7; border-radius: 50%; display: inline-block; animation: rotation 1s linear infinite; }
+        @keyframes rotation { 0% { transform: rotate(0deg) } 100% { transform: rotate(360deg) } }
     </style>
 </head>
 <body>
 
+<div id="loading-overlay">
+    <span class="loader"></span>
+    <p>星空と交信中...</p>
+</div>
+
 <div id="overlay" class="hidden">
     <div id="login-ui">
         <h1>Moment Swap</h1>
-        <p style="color:#4fc3f7">星空に写真を送り出そう</p>
         <button id="login-btn" class="btn">Googleでログイン</button>
-        <p id="l-status" style="font-size:0.8rem; margin-top:10px;"></p>
     </div>
     <div id="name-ui" class="hidden">
         <h2>宇宙での名前は？</h2>
-        <input type="text" id="nickname" maxlength="10" placeholder="名前を入力">
+        <input type="text" id="nickname" maxlength="10" style="padding:15px; border-radius:10px;">
         <br><br>
         <button class="btn" onclick="registerName()">銀河へ出発</button>
     </div>
 </div>
 
 <div id="main" class="hidden">
-    <h1 style="text-shadow: 0 0 10px #4fc3f7;">Moment Swap</h1>
+    <h1>Moment Swap</h1>
     <video id="camera" autoplay playsinline></video>
     <canvas id="output" class="hidden"></canvas>
-    <p id="user-info" style="color:#9575cd"></p>
+    <p id="user-info"></p>
     <button id="swap-btn" class="btn">🌟 今を撮って交換する</button>
     <p id="status">準備中...</p>
-    <div id="history"><h3>受信した星座</h3></div>
+    <div id="history"><h3>履歴</h3></div>
 </div>
 
 <script>
-// --- 君のFirebase設定 ---
 const firebaseConfig = {
   apiKey: "AIzaSyAWVuyKmGKY04Xnpia_2ehtG8fVW5rLX3s",
   authDomain: "photo-share-9405d.firebaseapp.com",
@@ -72,96 +59,80 @@ const firebaseConfig = {
   messagingSenderId: "218976247260",
   appId: "1:218976247260:web:52f9c93559065317f7c319"
 };
-
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
 let myName = "";
-const overlay = document.getElementById('overlay');
-const loginUI = document.getElementById('login-ui');
-const nameUI = document.getElementById('name-ui');
-const mainUI = document.getElementById('main');
-const lStatus = document.getElementById('l-status');
 
-// 1. ログイン処理
+// ページ起動時の処理
+async function startApp() {
+    try {
+        // 1. リダイレクト結果をまず受け取る
+        const result = await auth.getRedirectResult();
+        if (result.user) console.log("Redirect Success");
+
+        // 2. ログイン状態が確定するのを待つ
+        auth.onAuthStateChanged(async (user) => {
+            document.getElementById('loading-overlay').classList.add('hidden'); // ロード画面消す
+            
+            if (user) {
+                const doc = await db.collection("users").doc(user.uid).get();
+                if (doc.exists()) {
+                    myName = doc.data().nickname;
+                    showMainUI();
+                } else {
+                    document.getElementById('overlay').classList.remove('hidden');
+                    document.getElementById('login-ui').classList.add('hidden');
+                    document.getElementById('name-ui').classList.remove('hidden');
+                }
+            } else {
+                document.getElementById('overlay').classList.remove('hidden');
+                document.getElementById('login-ui').classList.remove('hidden');
+            }
+        });
+    } catch (e) {
+        console.error(e);
+        alert("エラー: " + e.message);
+    }
+}
+
 document.getElementById('login-btn').onclick = () => {
-    lStatus.innerText = "認証画面へジャンプ中...";
     const provider = new firebase.auth.GoogleAuthProvider();
     auth.signInWithRedirect(provider);
 };
 
-// 2. ログイン結果の受け取りと状態監視
-async function init() {
-    try {
-        // リダイレクトから戻ってきた結果を確認
-        const result = await auth.getRedirectResult();
-        if (result.user) console.log("ログイン成功");
-    } catch (e) {
-        console.error("エラー:", e);
-        lStatus.innerText = "ログインエラーが発生したぜ。";
-    }
-
-    auth.onAuthStateChanged(async (user) => {
-        if (user) {
-            const doc = await db.collection("users").doc(user.uid).get();
-            if (doc.exists()) {
-                myName = doc.data().nickname;
-                showApp();
-            } else {
-                overlay.classList.remove('hidden');
-                loginUI.classList.add('hidden');
-                nameUI.classList.remove('hidden');
-            }
-        } else {
-            overlay.classList.remove('hidden');
-            loginUI.classList.remove('hidden');
-            nameUI.classList.add('hidden');
-        }
-    });
-}
-
 async function registerName() {
     const name = document.getElementById('nickname').value;
-    if (!name) return alert("名前を入れてね！");
+    if (!name) return alert("名前を入力！");
     await db.collection("users").doc(auth.currentUser.uid).set({ nickname: name });
     myName = name;
-    showApp();
+    showMainUI();
 }
 
-async function showApp() {
-    overlay.classList.add('hidden');
-    mainUI.classList.remove('hidden');
+async function showMainUI() {
+    document.getElementById('overlay').classList.add('hidden');
+    document.getElementById('main').classList.remove('hidden');
     document.getElementById('user-info').innerText = `✨ Explorer: ${myName}`;
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-        document.getElementById('camera').srcObject = stream;
-        document.getElementById('status').innerText = "交信準備完了";
-    } catch(e) {
-        document.getElementById('status').innerText = "カメラを許可してくれ！";
-    }
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+    document.getElementById('camera').srcObject = stream;
 }
 
-// 3. 写真交換ロジック
+// （写真交換ロジックは前回と同じなので、ここから先は前のコードのswap-btnとaddHistoryをそのまま使ってくれ！）
 document.getElementById('swap-btn').onclick = async () => {
     const btn = document.getElementById('swap-btn');
     const stat = document.getElementById('status');
     btn.disabled = true;
     stat.innerText = "撮影中...";
-
     const canvas = document.getElementById('output');
     const video = document.getElementById('camera');
     canvas.width = 300; canvas.height = 400;
     canvas.getContext('2d').drawImage(video, 0, 0, 300, 400);
     const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
-
-    stat.innerText = "信号を送信中...";
+    stat.innerText = "マッチング中...";
     const waitingRooms = await db.collection("waiting").limit(1).get();
-
     if (waitingRooms.empty) {
-        await db.collection("waiting").doc(auth.currentUser.uid).set({
-            uid: auth.currentUser.uid, nickname: myName, photoData: dataUrl, time: Date.now()
-        });
+        await db.collection("waiting").doc(auth.currentUser.uid).set({ uid: auth.currentUser.uid, nickname: myName, photoData: dataUrl, time: Date.now() });
         const unsubscribe = db.collection("swaps").doc(auth.currentUser.uid).onSnapshot((doc) => {
             if (doc.exists()) {
                 const data = doc.data();
@@ -171,7 +142,7 @@ document.getElementById('swap-btn').onclick = async () => {
                 unsubscribe();
             }
         });
-        stat.innerText = "人がいません...（待機中）";
+        stat.innerText = "待機中...";
     } else {
         const partner = waitingRooms.docs[0].data();
         await db.collection("waiting").doc(partner.uid).delete();
@@ -181,13 +152,13 @@ document.getElementById('swap-btn').onclick = async () => {
         btn.disabled = false;
     }
 };
-
 function addHistory(name, url) {
     const item = `<div class="card"><span class="name">🚀 ${name}</span><img src="${url}"></div>`;
     document.getElementById('history').insertAdjacentHTML('afterbegin', item);
 }
 
-init();
+// アプリ起動！
+startApp();
 </script>
 </body>
 </html>
