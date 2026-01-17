@@ -2,79 +2,129 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>★☆最強サイト紹介ポータル☆★</title>
+    <title>★☆HrMk-GGの最強サイト紹介☆★</title>
     <style>
-        /* 1. 動かない虹色背景 */
         body {
-            background: linear-gradient(90deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);
+            /* 謎の青空背景 */
+            background: linear-gradient(to bottom, #1e5799 0%,#2989d8 50%,#207cca 51%,#7db9e8 100%);
+            margin: 0;
+            padding: 20px;
             font-family: "MS PMincho", "MS P明朝", serif;
-            color: #ffffff;
-            text-shadow: 2px 2px 0px #000;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            height: 100vh;
-        }
-
-        /* 2. もっとチクチクした「うに」吹き出し（上配置） */
-        .title-box {
-            background: #ffff00;
-            color: #ff0000;
-            padding: 50px;
-            margin-top: 50px; /* 上に配置 */
-            width: fit-content;
-            /* 20個の点がある「うに」のようなトゲトゲ */
-            clip-path: polygon(50% 0%, 61% 19%, 81% 9%, 75% 30%, 100% 25%, 85% 46%, 97% 69%, 74% 69%, 75% 95%, 54% 80%, 31% 96%, 33% 72%, 0% 85%, 15% 58%, 2% 35%, 26% 38%, 13% 13%, 38% 25%, 42% 2%);
-            animation: slow-scale 4s ease-in-out infinite; /* ゆっくり拡大縮小 */
+            overflow-x: hidden;
             text-align: center;
-            border: 5px solid #ff00ff;
         }
 
-        @keyframes slow-scale {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
+        /* 上下のカラフルな丸 */
+        .dots-line {
+            display: flex;
+            justify-content: space-around;
+            padding: 5px;
+            background: rgba(255,255,255,0.3);
+        }
+        .dot {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid #000;
         }
 
-        h1 {
-            margin: 0;
-            font-size: 2.5rem;
-            filter: drop-shadow(2px 2px 0 yellow);
-        }
-
-        /* 3. 電光掲示板（中身変更） */
-        .scrolling-text {
-            width: 100%;
-            background: #0000ff;
-            color: #ffff00;
-            padding: 10px;
-            font-size: 24px;
+        /* 絶妙にダサいワードアート風 */
+        .word-art {
+            font-size: 80px;
             font-weight: bold;
-            border-bottom: 3px ridge #fff;
+            color: yellow;
+            -webkit-text-stroke: 3px blue;
+            text-shadow: 8px 8px 0px #000;
+            margin: 20px 0;
+            display: block;
+            transform: scaleY(1.2);
         }
 
-        /* 4. アクセスカウンターのエリア */
-        .counter-area {
-            margin-top: 30px;
-            background: #000;
+        /* 黄色の帯におもてなし */
+        .banner {
+            background: yellow;
+            color: #00ff00;
+            font-size: 40px;
+            font-weight: bold;
             padding: 10px;
-            border: 3px double #fff;
+            border: 3px solid red;
+            display: inline-block;
+            text-shadow: 2px 2px 0 red;
+        }
+
+        /* うに吹き出し */
+        .uni-speech {
+            background: red;
+            color: blue;
+            padding: 40px;
+            margin: 20px auto;
+            width: 300px;
+            clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+            /* 実際はもっとトゲトゲにするために多角形を複雑化 */
+            clip-path: polygon(50% 0%, 63% 38%, 90% 20%, 80% 50%, 100% 70%, 70% 70%, 60% 100%, 50% 80%, 30% 100%, 40% 70%, 0% 70%, 20% 50%, 10% 20%, 37% 38%);
+            animation: move-slow 3s infinite ease-in-out;
+            font-size: 30px;
+            font-weight: bold;
+        }
+
+        @keyframes move-slow {
+            0%, 100% { transform: rotate(-5deg) scale(1); }
+            50% { transform: rotate(5deg) scale(1.1); }
+        }
+
+        /* アクセスカウンター風 */
+        .visitor-msg {
+            background: #000;
+            color: #ff00ff;
+            font-size: 20px;
+            padding: 5px;
+            border: 2px solid white;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 100;
         }
     </style>
 </head>
 <body>
 
-    <div class="scrolling-text">
-        <marquee>最強サイトにようこそ！あなたは<img src="https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fhrmk-gg.github.io&count_bg=%23000000&title_bg=%23000000&icon=&icon_color=%23E7E7E7&title=hits&edge_flat=false" alt="訪問者数" style="vertical-align: middle;">人目です！</marquee>
+    <div class="visitor-msg">
+        <marquee>
+            最強サイトにようこそ！あなたは <img src="https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fhrmk-gg.github.io&count_bg=%23FF00FF&title_bg=%23000000&icon=&icon_color=%23E7E7E7&title=hits&edge_flat=false" style="vertical-align: middle;"> 人目の訪問者です！！感謝感激雨あられ！！
+        </marquee>
     </div>
 
-    <div class="title-box">
-        <h1>💥 俺の最強<br>ウェブサイト群 💥</h1>
+    <div class="dots-line">
+        <div class="dot" style="background: red;"></div>
+        <div class="dot" style="background: blue;"></div>
+        <div class="dot" style="background: yellow;"></div>
+        <div class="dot" style="background: green;"></div>
+        <div class="dot" style="background: purple;"></div>
+        <div class="dot" style="background: orange;"></div>
+        <div class="dot" style="background: pink;"></div>
     </div>
 
-    <div class="counter-area">
-        <p>現在の閲覧者数：計測中...</p>
-        <img src="https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fhrmk-gg.github.io&count_bg=%23FF0000&title_bg=%23555555&icon=&icon_color=%23E7E7E7&title=Total+Visitors&edge_flat=false">
+    <p style="color: white; font-size: 40px; margin-bottom: 0;">welcome to My WebSite!! 😊✈️🗾</p>
+    
+    <span class="word-art">最強サイトへようこそ！！</span>
+
+    <div class="banner">
+        ★★🌟おもてなしいたします🌟★★
+    </div>
+
+    <div class="uni-speech">
+        たのし<br>いワン！
+    </div>
+
+    <p style="color: #ffff00; font-size: 24px;">オススメは<br>GitHub Pages(ぺーじ)♪</p>
+
+    <div class="dots-line" style="position: fixed; bottom: 0; left: 0; width: 100%;">
+        <div class="dot" style="background: silver;"></div>
+        <div class="dot" style="background: gold;"></div>
+        <div class="dot" style="background: cyan;"></div>
+        <div class="dot" style="background: lime;"></div>
+        <div class="dot" style="background: white;"></div>
     </div>
 
 </body>
