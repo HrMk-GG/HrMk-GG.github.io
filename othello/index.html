@@ -2,216 +2,225 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>OTHELLO PREMIER</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OTHELLO PREMIER - 極</title>
+    <script src="https://www.gstatic.com/firebasejs/9.1.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.1/firebase-database-compat.js"></script>
     <style>
         :root {
-            --primary: #6366f1; /* インディゴ */
-            --accent: #a855f7;  /* パープル */
-            --bg: #0f172a;      /* 深夜の空色 */
-            --glass: rgba(255, 255, 255, 0.05);
-            --board-color: #1e293b;
+            --primary: #6366f1; --accent: #a855f7; --bg: #0f172a;
+            --glass: rgba(255, 255, 255, 0.05); --board-color: #1e293b;
         }
-
         body {
             background: radial-gradient(circle at top left, #1e1b4b, var(--bg));
-            color: #f8fafc;
-            font-family: 'Inter', -apple-system, sans-serif;
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            overflow: hidden;
+            color: #f8fafc; font-family: 'Hiragino Sans', 'Meiryo', sans-serif;
+            margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden;
         }
-
-        /* グラスモーフィズムのカード */
         .glass-card {
-            background: var(--glass);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 24px;
-            padding: 40px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            width: 90%;
-            max-width: 450px;
-            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            background: var(--glass); backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px;
+            padding: 30px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            width: 90%; max-width: 400px; text-align: center; position: relative;
         }
-
-        h1 {
-            font-size: 2.5rem;
-            background: linear-gradient(to right, #818cf8, #c084fc);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            letter-spacing: -1px;
-            margin-bottom: 30px;
-        }
-
-        /* モダンなボタン */
+        h1 { background: linear-gradient(to right, #818cf8, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-top: 0; }
         button {
             background: linear-gradient(135deg, var(--primary), var(--accent));
-            color: white;
-            border: none;
-            padding: 14px 28px;
-            font-size: 1rem;
-            font-weight: 600;
-            border-radius: 12px;
-            cursor: pointer;
-            width: 100%;
-            margin: 10px 0;
-            transition: 0.3s;
-            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+            color: white; border: none; padding: 14px; font-size: 1rem; font-weight: bold;
+            border-radius: 12px; cursor: pointer; width: 100%; margin: 8px 0; transition: 0.3s;
         }
-
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.5);
-            filter: brightness(1.1);
+        button:hover { transform: translateY(-2px); filter: brightness(1.1); }
+        input {
+            background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white; padding: 12px; border-radius: 10px; width: 100%; box-sizing: border-box; margin-bottom: 15px; text-align: center;
         }
-
-        /* 入力フォーム */
-        input[type="text"] {
-            background: rgba(0, 0, 0, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: white;
-            padding: 14px;
-            border-radius: 12px;
-            width: 100%;
-            box-sizing: border-box;
-            margin-bottom: 20px;
-            font-size: 1rem;
-            outline: none;
-        }
-
-        input:focus { border-color: var(--primary); }
-
-        /* モダン盤面 */
         .board {
-            display: grid;
-            grid-template-columns: repeat(8, 1fr);
-            gap: 4px;
-            background: rgba(255, 255, 255, 0.05);
-            padding: 8px;
-            border-radius: 16px;
-            margin: 20px 0;
-            aspect-ratio: 1 / 1;
+            display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;
+            background: rgba(255, 255, 255, 0.05); padding: 8px; border-radius: 12px; margin: 20px 0; aspect-ratio: 1/1;
         }
-
-        .cell {
-            background: var(--board-color);
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-
-        .cell:hover { background: #334155; }
-
-        /* 石のネオンデザイン */
-        .stone {
-            width: 80%;
-            height: 80%;
-            border-radius: 50%;
-            transform: scale(0);
-            transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        .black { 
-            background: #000; 
-            transform: scale(1);
-            box-shadow: 0 0 15px rgba(0,0,0,0.8), inset 0 2px 4px rgba(255,255,255,0.2);
-        }
-
-        .white { 
-            background: #fff; 
-            transform: scale(1);
-            box-shadow: 0 0 15px rgba(255,255,255,0.5);
-        }
-
-        .hidden { display: none; }
-        .turn-badge {
-            display: inline-block;
-            padding: 6px 16px;
-            border-radius: 20px;
-            background: var(--glass);
-            font-size: 0.9rem;
-            margin-bottom: 10px;
-        }
+        .cell { background: var(--board-color); border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .stone { width: 85%; height: 85%; border-radius: 50%; transform: scale(0); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .black { display: block; background: #000; transform: scale(1); box-shadow: 0 0 10px rgba(0,0,0,0.8); }
+        .white { display: block; background: #fff; transform: scale(1); box-shadow: 0 0 10px rgba(255,255,255,0.5); }
+        .hidden { display: none !important; }
+        .status-badge { background: var(--glass); padding: 5px 15px; border-radius: 20px; font-size: 0.8rem; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
-    <div class="glass-card" id="main-container">
-        <div id="screen-nick">
-            <h1>OTHELLO<br>PREMIER</h1>
-            <p style="color: #94a3b8;">Welcome. Please enter your name.</p>
-            <input type="text" id="nick-input" maxlength="10" placeholder="Username">
-            <button onclick="goToMenu()">START GAME</button>
+    <div class="glass-card">
+        <div id="sc-login">
+            <h1>極・オセロ</h1>
+            <input type="text" id="in-name" maxlength="10" placeholder="名前を入力">
+            <button onclick="toMenu()">ゲーム開始</button>
         </div>
 
-        <div id="screen-menu" class="hidden">
-            <div class="turn-badge">Logged in as <span id="name-display"></span></div>
-            <h1>MENU</h1>
-            <button onclick="showScreen('screen-cpu-lv')">SINGLE PLAYER</button>
-            <button onclick="showScreen('screen-online')">MULTIPLAYER</button>
-            <button onclick="showScreen('screen-settings')" style="background: var(--glass); box-shadow: none;">SETTINGS</button>
+        <div id="sc-menu" class="hidden">
+            <div class="status-badge">プレイヤー: <span id="disp-name"></span></div>
+            <button onclick="changeScreen('sc-cpu')">CPU対戦</button>
+            <button onclick="changeScreen('sc-online')">オンライン対戦</button>
+            <button onclick="changeScreen('sc-set')">設定</button>
         </div>
 
-        <div id="screen-game" class="hidden">
-            <div class="turn-badge" id="turn-info">BLACK'S TURN</div>
+        <div id="sc-cpu" class="hidden">
+            <h1>CPUレベル</h1>
+            <button onclick="startG('cpu','weak')">弱い</button>
+            <button onclick="startG('cpu','normal')">普通</button>
+            <button onclick="startG('cpu','strong')">強い</button>
+            <button onclick="changeScreen('sc-menu')" style="background:var(--glass)">戻る</button>
+        </div>
+
+        <div id="sc-online" class="hidden">
+            <h1>オンライン</h1>
+            <button onclick="createRoom()">部屋を作る</button>
+            <p>または</p>
+            <input type="text" id="in-room" maxlength="5" placeholder="5桁コード">
+            <button onclick="joinRoom()">参加する</button>
+            <p id="wait-msg"></p>
+            <button onclick="changeScreen('sc-menu')" style="background:var(--glass)">戻る</button>
+        </div>
+
+        <div id="sc-game" class="hidden">
+            <div class="status-badge" id="turn-txt">黒の番です</div>
             <div id="board" class="board"></div>
-            <button onclick="showScreen('screen-menu')" style="background: var(--glass);">GIVE UP</button>
+            <div style="display:flex; justify-content:space-around;">
+                <span>黒: <b id="cnt-b">2</b></span>
+                <span>白: <b id="cnt-w">2</b></span>
+            </div>
+            <button onclick="location.reload()" style="margin-top:15px; background:var(--glass)">終了</button>
         </div>
 
-        <div id="screen-settings" class="hidden">
-            <h1>SETTINGS</h1>
-            <p>BOARD COLOR</p>
-            <input type="color" id="color-picker" value="#27ae60" style="width: 100%; height: 50px; cursor: pointer;">
-            <button onclick="saveSettings()">SAVE & BACK</button>
+        <div id="sc-set" class="hidden">
+            <h1>設定</h1>
+            <p>盤面の色</p>
+            <input type="color" id="col-pick" value="#1e293b" onchange="upCol()">
+            <button onclick="changeScreen('sc-menu')">戻る</button>
         </div>
     </div>
 
     <script>
-        // 前回のロジックをここに統合する
-        function showScreen(id) {
-            document.querySelectorAll('#main-container > div').forEach(div => div.classList.add('hidden'));
+        // --- Firebase設定 ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyBYb9uXyjA7XJdRiYjcA3VBlSVgLh0C1fw",
+            authDomain: "hrmk-othello.firebaseapp.com",
+            projectId: "hrmk-othello",
+            databaseURL: "https://hrmk-othello-default-rtdb.firebaseio.com",
+            storageBucket: "hrmk-othello.firebasestorage.app",
+            messagingSenderId: "91127278693",
+            appId: "1:91127278693:web:89d6cdbbcabac60a172a8c"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // --- 変数管理 ---
+        let myName = "", mySide = 'black', turn = 'black', mode = 'cpu', level = 'weak', roomID = "";
+        let boardState = Array(64).fill(null);
+
+        // --- 画面切り替え ---
+        function changeScreen(id) {
+            document.querySelectorAll('.glass-card > div').forEach(d => d.classList.add('hidden'));
             document.getElementById(id).classList.remove('hidden');
         }
 
-        function goToMenu() {
-            const nick = document.getElementById('nick-input').value;
-            if(!nick) return alert("Enter your name!");
-            document.getElementById('name-display').innerText = nick;
-            showScreen('screen-menu');
+        function toMenu() {
+            myName = document.getElementById('in-name').value || "ななし";
+            document.getElementById('disp-name').innerText = myName;
+            changeScreen('sc-menu');
         }
 
-        function saveSettings() {
-            const color = document.getElementById('color-picker').value;
-            document.documentElement.style.setProperty('--board-color', color);
-            showScreen('screen-menu');
+        function upCol() {
+            document.documentElement.style.setProperty('--board-color', document.getElementById('col-pick').value);
         }
 
-        // 盤面生成（デモ用）
-        function initDemoBoard() {
-            const board = document.getElementById('board');
-            board.innerHTML = '';
-            for(let i=0; i<64; i++){
-                const cell = document.createElement('div');
-                cell.className = 'cell';
-                const stone = document.createElement('div');
-                stone.className = 'stone';
-                if(i===27 || i===36) stone.classList.add('white');
-                if(i===28 || i===35) stone.classList.add('black');
-                cell.appendChild(stone);
-                board.appendChild(cell);
+        // --- オンライン通信 ---
+        function createRoom() {
+            roomID = Math.random().toString(36).substring(2, 7).toUpperCase();
+            mySide = 'black';
+            firebase.database().ref('rooms/' + roomID).set({ host: myName, status: 'wait', board: "" });
+            document.getElementById('wait-msg').innerText = "コード: " + roomID + " 待機中...";
+            listenRoom();
+        }
+
+        function joinRoom() {
+            roomID = document.getElementById('in-room').value.toUpperCase();
+            mySide = 'white';
+            firebase.database().ref('rooms/' + roomID).update({ guest: myName, status: 'play' });
+            startG('online');
+        }
+
+        function listenRoom() {
+            firebase.database().ref('rooms/' + roomID).on('value', (s) => {
+                const data = s.val();
+                if (data && data.status === 'play') startG('online');
+                if (data && data.board) syncBoard(data.board, data.turn);
+            });
+        }
+
+        // --- ゲーム論理 ---
+        function startG(m, l) {
+            mode = m; level = l;
+            changeScreen('sc-game');
+            boardState.fill(null);
+            boardState[27] = 'white'; boardState[28] = 'black';
+            boardState[35] = 'black'; boardState[36] = 'white';
+            render();
+        }
+
+        function render() {
+            const b = document.getElementById('board'); b.innerHTML = "";
+            let bc = 0, wc = 0;
+            boardState.forEach((s, i) => {
+                const c = document.createElement('div'); c.className = 'cell';
+                const st = document.createElement('div'); st.className = 'stone' + (s ? ' ' + s : '');
+                if(s==='black') bc++; if(s==='white') wc++;
+                c.onclick = () => clickCell(i);
+                c.appendChild(st); b.appendChild(c);
+            });
+            document.getElementById('cnt-b').innerText = bc;
+            document.getElementById('cnt-w').innerText = wc;
+            document.getElementById('turn-txt').innerText = (turn === 'black' ? "黒" : "白") + "の番";
+        }
+
+        function clickCell(i) {
+            if (mode === 'online' && turn !== mySide) return;
+            if (boardState[i]) return;
+            const flips = getFlips(i, turn);
+            if (flips.length > 0) {
+                boardState[i] = turn;
+                flips.forEach(idx => boardState[idx] = turn);
+                turn = (turn === 'black' ? 'white' : 'black');
+                if (mode === 'online') {
+                    firebase.database().ref('rooms/' + roomID).update({ board: JSON.stringify(boardState), turn: turn });
+                }
+                render();
+                if (mode === 'cpu' && turn === 'white') setTimeout(cpuPlay, 600);
             }
         }
-        // ゲーム開始時に呼ぶ
-        document.querySelector('[onclick*="screen-cpu-lv"]').addEventListener('click', () => {
-            showScreen('screen-game');
-            initDemoBoard();
-        });
+
+        function syncBoard(bStr, t) {
+            boardState = JSON.parse(bStr); turn = t; render();
+        }
+
+        function getFlips(idx, color) {
+            const opp = (color === 'black' ? 'white' : 'black');
+            const flips = [];
+            const dirs = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+            const r = Math.floor(idx/8), c = idx%8;
+            dirs.forEach(([dr, dc]) => {
+                let tr = r + dr, tc = c + dc, temp = [];
+                while (tr>=0 && tr<8 && tc>=0 && tc<8 && boardState[tr*8+tc] === opp) {
+                    temp.push(tr*8+tc); tr += dr; tc += dc;
+                }
+                if (tr>=0 && tr<8 && tc>=0 && tc<8 && boardState[tr*8+tc] === color) flips.push(...temp);
+            });
+            return flips;
+        }
+
+        function cpuPlay() {
+            let moves = [];
+            boardState.forEach((s, i) => { if(!s && getFlips(i, 'white').length > 0) moves.push(i); });
+            if (moves.length > 0) clickCell(moves[Math.floor(Math.random() * moves.length)]);
+            else { turn = 'black'; render(); }
+        }
     </script>
 </body>
 </html>
