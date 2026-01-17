@@ -3,83 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Red Button - World War</title>
+    <title>The Red Button - Login Edition</title>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
     <style>
-        body { margin: 0; display: flex; height: 100vh; background: #fff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; }
-        
-        /* 左サイドバー：ランキング切り替え */
-        .sidebar {
-            width: 260px; background: #f4f4f4; border-right: 1px solid #ddd;
-            display: flex; flex-direction: column; padding: 20px; box-sizing: border-box;
-        }
-        .sidebar h2 { font-size: 1.5rem; margin-bottom: 30px; color: #333; }
-        .tab-btn {
-            background: none; border: none; padding: 15px; text-align: left;
-            font-size: 1rem; cursor: pointer; border-radius: 10px; margin-bottom: 8px;
-            transition: 0.2s; color: #555; font-weight: bold;
-        }
-        .tab-btn:hover { background: #e0e0e0; }
-        .tab-btn.active { background: #ff0000; color: white; box-shadow: 0 4px 10px rgba(255,0,0,0.3); }
-
-        /* メインエリア：ボタンとカウンター */
-        .main-content { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
-        #total-counter { font-size: 8rem; font-weight: 900; color: #222; margin-bottom: 20px; font-variant-numeric: tabular-nums; }
-        
-        /* 物理ボタン演出 */
-        .btn-container { perspective: 1000px; }
+        body { margin: 0; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #fff; font-family: sans-serif; }
+        #counter { font-size: 8rem; font-weight: 900; color: #333; margin-bottom: 30px; }
         #red-button {
-            width: 220px; height: 220px; background: #ff0000; border: none; border-radius: 50%;
-            cursor: pointer; outline: none; box-shadow: 0 15px #b30000, 0 20px 30px rgba(0,0,0,0.2);
-            transition: transform 0.1s, box-shadow 0.1s;
+            width: 200px; height: 200px; background: #ff0000; border: none; border-radius: 50%;
+            cursor: pointer; box-shadow: 0 15px #990000; transition: 0.1s;
         }
-        #red-button:active { transform: translateY(12px); box-shadow: 0 3px #b30000, 0 5px 15px rgba(0,0,0,0.2); }
-
-        /* 右側ランキングリスト */
-        .ranking-overlay {
-            position: absolute; right: 30px; top: 30px; width: 280px;
-            background: rgba(255,255,255,0.9); border: 1px solid #eee; border-radius: 20px;
-            padding: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.05); backdrop-filter: blur(10px);
-        }
-        .ranking-overlay h3 { margin: 0 0 15px 0; font-size: 1.1rem; color: #333; border-bottom: 2px solid #ff0000; display: inline-block; }
-        .rank-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f0f0f0; font-size: 0.9rem; }
-        .rank-name { font-weight: bold; color: #444; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px; }
-        .rank-val { color: #ff0000; font-weight: bold; }
-
-        #name-input {
-            position: fixed; bottom: 20px; left: 20px; width: 220px;
-            padding: 12px; border-radius: 10px; border: 2px solid #ddd; font-size: 1rem;
-        }
+        #red-button:active { box-shadow: 0 5px #990000; transform: translateY(10px); }
+        #red-button:disabled { background: #ccc; box-shadow: 0 15px #999; cursor: not-allowed; }
+        
+        .auth-ui { position: fixed; top: 20px; right: 20px; }
+        .btn { padding: 10px 20px; border-radius: 5px; cursor: pointer; border: 1px solid #ddd; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
 
-    <div class="sidebar">
-        <h2>RED MENU</h2>
-        <button class="tab-btn active" onclick="changeTab('daily')">1日 (Daily)</button>
-        <button class="tab-btn" onclick="changeTab('weekly')">週間 (Weekly)</button>
-        <button class="tab-btn" onclick="changeTab('monthly')">1ヶ月 (Monthly)</button>
-        <button class="tab-btn" onclick="changeTab('yearly')">1年 (Yearly)</button>
-        <button class="tab-btn" onclick="changeTab('lifetime')">生涯 (Lifetime)</button>
-    </div>
-
-    <div class="main-content">
-        <div id="total-counter">0</div>
-        <div class="btn-container">
-            <button id="red-button"></button>
-        </div>
-        
-        <div class="ranking-overlay">
-            <h3 id="rank-title">Daily Ranking</h3>
-            <div id="rank-list">読み込み中...</div>
+    <div class="auth-ui">
+        <button id="login-btn" class="btn">Googleでログイン</button>
+        <div id="user-info" class="hidden">
+            <span id="user-name"></span>
+            <button id="logout-btn" class="btn">ログアウト</button>
         </div>
     </div>
 
-    <input type="text" id="name-input" placeholder="あなたの名前" maxlength="12">
+    <div id="counter">0</div>
+    <button id="red-button" disabled></button>
+    <p id="msg">ログインするとボタンが押せるよ！</p>
 
 <script>
-// --- 君のFirebase設定を適用！ ---
 const firebaseConfig = {
   apiKey: "AIzaSyBfxHcbZ5OT47BdOBviu8ZvdRHNXbQyn1I",
   authDomain: "global-button-fc4d8.firebaseapp.com",
@@ -89,66 +46,43 @@ const firebaseConfig = {
   appId: "1:881383326015:web:e7868469ffab15d3ec538a",
   measurementId: "G-YKJ9LYXP6Q"
 };
-
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+const auth = firebase.auth();
 
-let currentTab = 'daily';
-const counterDisp = document.getElementById('total-counter');
-const rankList = document.getElementById('rank-list');
-const rankTitle = document.getElementById('rank-title');
-const nameInput = document.getElementById('name-input');
-
-// 1. 全体カウント監視
-db.collection("global").doc("counter").onSnapshot(doc => {
-    if (doc.exists()) counterDisp.innerText = doc.data().count.toLocaleString();
-    else db.collection("global").doc("counter").set({ count: 0 });
+// 1. ログイン状態の監視
+auth.onAuthStateChanged(user => {
+    if (user) {
+        document.getElementById('login-btn').classList.add('hidden');
+        document.getElementById('user-info').classList.remove('hidden');
+        document.getElementById('user-name').innerText = user.displayName;
+        document.getElementById('red-button').disabled = false;
+        document.getElementById('msg').innerText = "連打開始だ！";
+    } else {
+        document.getElementById('login-btn').classList.remove('hidden');
+        document.getElementById('user-info').classList.add('hidden');
+        document.getElementById('red-button').disabled = true;
+        document.getElementById('msg').innerText = "ログインしてね！";
+    }
 });
 
-// 2. ボタンクリック
-document.getElementById('red-button').onclick = async () => {
-    const name = nameInput.value.trim() || "名無しさん";
-    
-    // 全体カウントアップ
+// 2. ログイン・ログアウト処理
+document.getElementById('login-btn').onclick = () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider);
+};
+document.getElementById('logout-btn').onclick = () => auth.signOut();
+
+// 3. カウント処理
+db.collection("global").doc("counter").onSnapshot(doc => {
+    if (doc.exists()) document.getElementById('counter').innerText = doc.data().count;
+});
+
+document.getElementById('red-button').onclick = () => {
     db.collection("global").doc("counter").update({
         count: firebase.firestore.FieldValue.increment(1)
     });
-
-    // 個人ランキング更新 (生涯クリック数を記録)
-    db.collection("rankings").doc(name).set({
-        name: name,
-        clicks: firebase.firestore.FieldValue.increment(1),
-        lastUpdate: Date.now()
-    }, { merge: true });
 };
-
-// 3. ランキング取得 (5秒ごとに更新)
-async function fetchRanking() {
-    // 今回は簡易版として「生涯ランキング」を表示するぜ！
-    // 期間別を本格的にやるなら lastUpdate の時間で filter するクエリを書くんだ。
-    const snapshot = await db.collection("rankings").orderBy("clicks", "desc").limit(10).get();
-    rankList.innerHTML = "";
-    snapshot.forEach(doc => {
-        const d = doc.data();
-        rankList.innerHTML += `
-            <div class="rank-item">
-                <span class="rank-name">${d.name}</span>
-                <span class="rank-val">${d.clicks.toLocaleString()}回</span>
-            </div>`;
-    });
-}
-
-function changeTab(tab) {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    event.target.classList.add('active');
-    currentTab = tab;
-    rankTitle.innerText = event.target.innerText;
-    fetchRanking();
-}
-
-setInterval(fetchRanking, 5000);
-fetchRanking();
-
 </script>
 </body>
 </html>
