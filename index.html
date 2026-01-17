@@ -2,177 +2,113 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>極・3D MINECRAFT</title>
+    <title>★☆HrMk-GGの最強サイト紹介☆★</title>
     <style>
-        body { margin: 0; overflow: hidden; font-family: 'Courier New', Courier, monospace; touch-action: none; background: #000; }
-        #crosshair {
-            position: absolute; top: 50%; left: 50%;
-            width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.8);
-            transform: translate(-50%, -50%); pointer-events: none; z-index: 10;
+        body {
+            background: linear-gradient(90deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);
+            margin: 0; padding: 0;
+            font-family: "MS PMincho", "MS P明朝", serif;
+            display: flex; flex-direction: column; align-items: center;
+            min-height: 100vh; overflow-x: hidden;
         }
-        #crosshair::before { content: ''; position: absolute; top: 9px; left: 0; width: 20px; height: 2px; background: white; }
-        #crosshair::after { content: ''; position: absolute; top: 0; left: 9px; width: 2px; height: 20px; background: white; }
+        .dots-line {
+            display: flex; justify-content: space-around; width: 100%;
+            padding: 10px 0; background: rgba(0, 0, 0, 0.2);
+        }
+        .dot { width: 25px; height: 25px; border-radius: 50%; border: 2px solid #000; }
+        .word-art {
+            font-size: clamp(40px, 8vw, 80px); font-weight: bold; color: #ffff00;
+            -webkit-text-stroke: 3px #0000ff; text-shadow: 6px 6px 0px #000000;
+            margin: 30px 0; display: block; transform: scaleY(1.3); line-height: 1.2;
+            text-align: center;
+        }
+        .banner {
+            background: yellow; color: #ff0000; font-size: 32px; font-weight: bold;
+            padding: 10px 40px; border: 4px solid red; display: inline-block;
+            text-shadow: 2px 2px 0 black; margin-bottom: 20px;
+        }
+        .uni-speech {
+            background: #ff0000; color: #0000ff; padding: 50px 30px;
+            margin: 20px auto; width: fit-content;
+            clip-path: polygon(50% 0%, 60% 20%, 85% 5%, 75% 35%, 100% 30%, 85% 50%, 95% 75%, 70% 65%, 75% 95%, 50% 80%, 25% 95%, 30% 65%, 5% 75%, 15% 50%, 0% 30%, 25% 35%, 15% 5%, 40% 20%);
+            animation: slow-float 4s ease-in-out infinite;
+            font-size: 28px; font-weight: bold; text-align: center; line-height: 1.2;
+        }
+        @keyframes slow-float {
+            0%, 100% { transform: scale(1) rotate(-3deg); }
+            50% { transform: scale(1.1) rotate(3deg); }
+        }
+        .thumbs-up-man {
+            width: 300px; border: 5px solid white;
+            box-shadow: 10px 10px 0px black; margin: 20px;
+        }
+        .marquee-top {
+            width: 100%; background: #000; color: #00ff00; padding: 10px; font-size: 22px; border-bottom: 2px solid #fff;
+        }
 
-        /* UI Overlays */
-        .ui-panel { position: absolute; bottom: 30px; width: 100%; display: flex; justify-content: space-between; padding: 0 30px; box-sizing: border-box; pointer-events: none; z-index: 20; }
-        .d-pad { display: grid; grid-template-columns: repeat(3, 60px); grid-template-rows: repeat(3, 60px); gap: 8px; pointer-events: auto; }
-        .action-group { display: flex; flex-direction: column; gap: 15px; pointer-events: auto; }
-        
-        .btn {
-            width: 60px; height: 60px; background: rgba(0, 0, 0, 0.4);
-            border: 3px solid rgba(255, 255, 255, 0.3); border-radius: 12px;
-            display: flex; align-items: center; justify-content: center;
-            color: white; font-size: 20px; font-weight: bold; user-select: none;
-            backdrop-filter: blur(4px);
+        /* ボタンデザイン */
+        .btn-container {
+            display: flex; flex-direction: column; gap: 25px; margin: 30px 0; width: 90%; max-width: 500px;
         }
-        .btn:active { background: rgba(255, 255, 255, 0.4); transform: scale(0.95); }
-        .btn-wide { width: 130px; font-size: 16px; border-color: #ffd700; }
-        .btn-jump { background: rgba(255, 215, 0, 0.2); border-color: #ffd700; }
+        .ultra-link {
+            text-decoration: none; padding: 25px; font-size: 35px; font-weight: bold;
+            color: #fff; background: linear-gradient(45deg, #ff00ff, #00ffff);
+            border: 10px outset #ff00ff; border-radius: 20px;
+            text-shadow: 4px 4px 0 #000;
+            animation: vibe 0.15s infinite;
+            display: block; text-align: center;
+            transition: 0.2s;
+        }
+        .ultra-link:hover {
+            filter: hue-rotate(180deg); transform: scale(1.1);
+            border-style: inset;
+        }
+        @keyframes vibe {
+            0% { transform: translate(0,0); }
+            33% { transform: translate(3px, -2px); }
+            66% { transform: translate(-3px, 2px); }
+            100% { transform: translate(0,0); }
+        }
     </style>
 </head>
 <body>
-    <div id="crosshair"></div>
-    
-    <div class="ui-panel">
-        <div class="d-pad">
-            <div></div><div class="btn" id="up">▲</div><div></div>
-            <div class="btn" id="left">◀</div><div class="btn btn-jump" id="jump">J</div><div class="btn" id="right">▶</div>
-            <div></div><div class="btn" id="down">▼</div><div></div>
-        </div>
-        <div class="action-group">
-            <div class="btn btn-wide" id="add">BLOCK PLACE</div>
-            <div class="btn btn-wide" id="rem">BLOCK BREAK</div>
+    <div class="marquee-top">
+        <marquee scrollamount="12">
+            最強サイトにようこそ！あなたは <img src="https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fhrmk-gg.github.io&count_bg=%23000000&title_bg=%23000000&icon=&icon_color=%23E7E7E7&title=hits&edge_flat=false" style="vertical-align: middle;"> 人目の訪問者です！！
+        </marquee>
+    </div>
+
+    <div class="dots-line">
+        <div class="dot" style="background: red;"></div>
+        <div class="dot" style="background: blue;"></div>
+        <div class="dot" style="background: yellow;"></div>
+        <div class="dot" style="background: green;"></div>
+        <div class="dot" style="background: purple;"></div>
+    </div>
+
+    <span class="word-art">最強サイトへ<br>ようこそ！！</span>
+
+    <div class="banner">
+        ★☆ 自作ゲームコーナー ☆★
+    </div>
+
+    <div class="btn-container">
+        <a href="https://hrmk-gg.github.io/othello/" class="ultra-link">【極・オセロ】<br>ONLINE対応</a>
+        <a href="https://hrmk-gg.github.io/tetris" class="ultra-link" style="filter: hue-rotate(90deg);">【テトリス】<br>簡単な操作</a>
+    </div>
+
+    <div style="display: flex; align-items: center; justify-content: center; flex-wrap: wrap;">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Hands_up_white_background.jpg/640px-Hands_up_white_background.jpg" alt="👍" class="thumbs-up-man">
+        
+        <div class="uni-speech">
+            ゆっくりし<br>ていってね！
         </div>
     </div>
 
-    <script type="importmap">
-        { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
-    </script>
-
-    <script type="module">
-        import * as THREE from 'three';
-
-        // --- 初期設定 ---
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x73C2FB);
-        scene.fog = new THREE.Fog(0x73C2FB, 10, 50);
-
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
-        document.body.appendChild(renderer.domElement);
-
-        // --- テクスチャ生成 (Canvasでドット絵を作る) ---
-        function createTexture(color1, color2) {
-            const canvas = document.createElement('canvas');
-            canvas.width = 16; canvas.height = 16;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = color1; ctx.fillRect(0,0,16,16);
-            for(let i=0; i<32; i++){
-                ctx.fillStyle = color2;
-                ctx.fillRect(Math.random()*16, Math.random()*16, 2, 2);
-            }
-            const tex = new THREE.CanvasTexture(canvas);
-            tex.magFilter = THREE.NearestFilter; // ドットをクッキリさせる
-            return tex;
-        }
-
-        const grassTex = createTexture('#5ead3a', '#4e8d2f');
-        const dirtTex = createTexture('#8b4513', '#5d2e0d');
-        const grassMat = new THREE.MeshLambertMaterial({ map: grassTex });
-        const dirtMat = new THREE.MeshLambertMaterial({ map: dirtTex });
-
-        // --- ワールド生成 ---
-        const geometry = new THREE.BoxGeometry(1, 1, 1);
-        const blocks = [];
-        for (let x = -15; x < 15; x++) {
-            for (let z = -15; z < 15; z++) {
-                const b = new THREE.Mesh(geometry, grassMat);
-                b.position.set(x, 0, z);
-                scene.add(b); blocks.push(b);
-            }
-        }
-
-        const light = new THREE.DirectionalLight(0xffffff, 1.2);
-        light.position.set(10, 20, 10);
-        scene.add(light, new THREE.AmbientLight(0xffffff, 0.5));
-
-        camera.position.set(0, 2, 5);
-        let yVelocity = 0;
-        let isGrounded = true;
-
-        // --- 操作ロジック ---
-        let move = { f:0, b:0, l:0, r:0 };
-        const lookSpeed = 0.006;
-        let lastX, lastY;
-
-        window.addEventListener('touchstart', e => { 
-            if(e.target.tagName === 'CANVAS'){ lastX = e.touches[0].pageX; lastY = e.touches[0].pageY; }
-        });
-        window.addEventListener('touchmove', e => {
-            if(e.target.tagName === 'CANVAS'){
-                const dx = e.touches[0].pageX - lastX;
-                const dy = e.touches[0].pageY - lastY;
-                camera.rotation.y -= dx * lookSpeed;
-                camera.rotation.x -= dy * lookSpeed;
-                camera.rotation.x = Math.max(-1.5, Math.min(1.5, camera.rotation.x));
-                lastX = e.touches[0].pageX; lastY = e.touches[0].pageY;
-            }
-        });
-
-        const bind = (id, k) => {
-            const el = document.getElementById(id);
-            el.ontouchstart = (e) => { e.preventDefault(); move[k] = 1; };
-            el.ontouchend = () => move[k] = 0;
-        };
-        bind('up','f'); bind('down','b'); bind('left','l'); bind('right','r');
-        
-        document.getElementById('jump').ontouchstart = () => { if(isGrounded){ yVelocity = 0.15; isGrounded = false; } };
-
-        // ブロック操作
-        const ray = new THREE.Raycaster();
-        const center = new THREE.Vector2(0,0);
-        const op = (type) => {
-            ray.setFromCamera(center, camera);
-            const hits = ray.intersectObjects(blocks);
-            if(hits.length > 0){
-                const h = hits[0];
-                if(type === 'add'){
-                    const nb = new THREE.Mesh(geometry, dirtMat);
-                    nb.position.copy(h.object.position).add(h.face.normal);
-                    scene.add(nb); blocks.push(nb);
-                } else if(h.object.position.y !== 0){
-                    scene.remove(h.object); blocks.splice(blocks.indexOf(h.object), 1);
-                }
-            }
-        };
-        document.getElementById('add').ontouchstart = (e) => { e.preventDefault(); op('add'); };
-        document.getElementById('rem').ontouchstart = (e) => { e.preventDefault(); op('rem'); };
-
-        // --- ループ ---
-        function animate() {
-            requestAnimationFrame(animate);
-            const dir = new THREE.Vector3(); camera.getWorldDirection(dir);
-            dir.y = 0; dir.normalize();
-            const side = new THREE.Vector3().crossVectors(camera.up, dir).normalize();
-
-            const s = 0.12;
-            if(move.f) camera.position.addScaledVector(dir, s);
-            if(move.b) camera.position.addScaledVector(dir, -s);
-            if(move.l) camera.position.addScaledVector(side, s);
-            if(move.r) camera.position.addScaledVector(side, -s);
-
-            // 重力
-            yVelocity -= 0.008;
-            camera.position.y += yVelocity;
-            if(camera.position.y < 2){ camera.position.y = 2; yVelocity = 0; isGrounded = true; }
-
-            renderer.render(scene, camera);
-        }
-        animate();
-        window.onresize = () => { camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); };
-    </script>
+    <div class="dots-line" style="margin-top: auto;">
+        <div class="dot" style="background: silver;"></div>
+        <div class="dot" style="background: gold;"></div>
+        <div class="dot" style="background: #ffffff;"></div>
+    </div>
 </body>
 </html>
