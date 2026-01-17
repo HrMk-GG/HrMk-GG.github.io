@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Red Button - World Chat</title>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+    <style>
+        :root { --main-red: #ff4b2b; }
+        body { margin: 0; display: flex; height: 100vh; background: #fff; font-family: sans-serif; overflow: hidden; }
+        
+        /* 弾幕コンテナ（ボタンの後ろで流れる） */
+        #danmaku-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 1; /* 0だと背景すぎるので1に */
+        }
+        .comment {
+            position: absolute; white-space: nowrap; font-size: 2rem; font-weight: bold;
+            color: #333; text-shadow: 2px 2px 0 #fff, -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff;
+            animation: flow linear;
+        }
+        @keyframes flow {
+            from { transform: translateX(100vw); }
+            to { transform: translateX(-100%); }
+        }
+
+        /* サイドバー */
+        .sidebar { width: 260px; background: #f9f9f9; border-right: 1px solid #eee; display: flex; flex-direction: column; padding: 20px; z-index: 10; }
+        
+        /* チャット入力（下部） */
+        .chat-input-area {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 10px; z-index: 20; background: rgba(255,255,255,0.8);
+            padding: 10px; border-radius: 50px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        #chat-msg { border: none; padding: 10px 20px; border-radius: 20px; width: 300px; outline: none; font-size: 1rem; }
+        #send-btn { background: var(--main-red); color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; font-weight: bold; }
+
+        /* その他UIは省略しないぜ、合体させるぞ */
+        .main-content { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 5; }
+        #total-counter { font-size: 7rem; font-weight: 900; }
+        #red-button { width: 200px; height: 200px; background: var(--main-red); border: none; border-radius: 50%; cursor: pointer; box-shadow: 0 10px #b32d15; }
+        #red-button:active { transform: translateY(5px); box-shadow: 0 5px #b32d15; }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div id="danmaku-container"></div>
+
+    <div id="login-layer" class="overlay">
+        <button onclick="auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())">Googleログイン</button>
+    </div>
+
+    <div class="sidebar">
+        <h2>RANKINGS</h2>
+        <div id="rank-list">読み込み中...</div>
+        <button onclick="auth.signOut().then(()=>location.reload())" style="margin-top:auto;">ログアウト</button>
+    </div>
+
+    <div class="main-content">
+        <div id="total-counter">0</div>
+        <button id="red-button" disabled></button>
+    </div>
+
+    <div class="chat-input-area">
+        <input type="text" id="chat-msg" placeholder="匿名でコメント...">
+        <button id="send-btn">流す</button>
+    </div>
+
+<script>
+// --- 君のFirebase設定（ここは自分のを入れるんだぜ！） ---
+const firebaseConfig = {
+  apiKey: "AIzaSyBfxHcbZ5OT47BdOBviu8ZvdRHNXbQyn1I",
+  authDomain: "global-button-fc4d8.firebaseapp.com",
+  projectId: "global-button-fc4d8",
+  storageBucket: "global-button-fc4d8.firebasestorage.app",
+  messagingSenderId: "881383326015",
+  appId: "1:881383326015:web:e7868469ffab15d3ec538a",
+  measurementId: "G-YKJ9LYXP6Q"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const auth = firebase.auth();
+
+// 1. 認証監視
+auth.onAuthStateChanged(user => {
+    if (user) {
+        document.getElementById('login-layer').classList.add('hidden');
+        document.getElementById('red-button').disabled = false;
+    } else {
+        document.getElementById('login-layer').classList.remove('hidden');
+    }
+});
+
+// 2. 弾幕を流す処理
+function createComment(text) {
+    const container = document.getElementById('danmaku-container');
+    const el = document.createElement('div');
+    el.className = 'comment';
+    el.innerText = text;
+    
+    // ランダムな高さに配置
+    const top = Math.random() * 80 + 5; // 上下5%〜85%の間
+    el.style.top = top + "%";
+    
+    // 流れる速度をランダムにする (4s〜8s)
+    const duration = Math.random() * 4 + 4;
+    el.style.animationDuration = duration + "s";
+    
+    container.appendChild(el);
+    
+    // 流れ終わったら消す
+    setTimeout(() => el.remove(), duration * 1000);
+}
+
+// 3. チャットの送信
+document.getElementById('send-btn').onclick = async () => {
+    const msg = document.getElementById('chat-msg').value.trim();
+    if (!msg) return;
+    
+    await db.collection("comments").add({
+        text: msg,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    document.getElementById('chat-msg').value = "";
+};
+
+// 4. チャットのリアルタイム受信（ここがニコニコ化の肝！）
+// 最新の1件だけを監視する
+db.collection("comments").orderBy("createdAt", "desc").limit(1).onSnapshot(snapshot => {
+    snapshot.docChanges().forEach(change => {
+        if (change.type === "added") {
+            const data = change.doc.data();
+            if (data.text) createComment(data.text);
+        }
+    });
+});
+
+// カウント処理（省略せずに書いとくぜ！）
+db.collection("global").doc("counter").onSnapshot(doc => {
+    if (doc.exists) document.getElementById('total-counter').innerText = doc.data().count.toLocaleString();
+});
+document.getElementById('red-button').onclick = () => {
+    db.collection("global").doc("counter").update({ count: firebase.firestore.FieldValue.increment(1) });
+};
+</script>
+</body>
+</html>
