@@ -3,44 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OTHELLO PREMIER - 極</title>
+    <title>極・オセロ プレミアム</title>
     <script src="https://www.gstatic.com/firebasejs/9.1.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.1/firebase-database-compat.js"></script>
     <style>
-        :root {
-            --primary: #6366f1; --accent: #a855f7; --bg: #0f172a;
-            --glass: rgba(255, 255, 255, 0.05); --board-color: #1e293b;
-        }
-        body {
-            background: radial-gradient(circle at top left, #1e1b4b, var(--bg));
-            color: #f8fafc; font-family: 'Hiragino Sans', 'Meiryo', sans-serif;
-            margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden;
-        }
-        .glass-card {
-            background: var(--glass); backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px;
-            padding: 30px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            width: 90%; max-width: 400px; text-align: center; position: relative;
-        }
-        h1 { background: linear-gradient(to right, #818cf8, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-top: 0; }
-        button {
-            background: linear-gradient(135deg, var(--primary), var(--accent));
-            color: white; border: none; padding: 14px; font-size: 1rem; font-weight: bold;
-            border-radius: 12px; cursor: pointer; width: 100%; margin: 8px 0; transition: 0.3s;
-        }
-        button:hover { transform: translateY(-2px); filter: brightness(1.1); }
-        input {
-            background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1);
-            color: white; padding: 12px; border-radius: 10px; width: 100%; box-sizing: border-box; margin-bottom: 15px; text-align: center;
-        }
-        .board {
-            display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;
-            background: rgba(255, 255, 255, 0.05); padding: 8px; border-radius: 12px; margin: 20px 0; aspect-ratio: 1/1;
-        }
-        .cell { background: var(--board-color); border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-        .stone { width: 85%; height: 85%; border-radius: 50%; transform: scale(0); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        .black { display: block; background: #000; transform: scale(1); box-shadow: 0 0 10px rgba(0,0,0,0.8); }
-        .white { display: block; background: #fff; transform: scale(1); box-shadow: 0 0 10px rgba(255,255,255,0.5); }
+        :root { --primary: #6366f1; --accent: #a855f7; --bg: #0f172a; --glass: rgba(255, 255, 255, 0.05); --board-color: #1e293b; }
+        body { background: radial-gradient(circle at top left, #1e1b4b, var(--bg)); color: #f8fafc; font-family: sans-serif; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
+        .glass-card { background: var(--glass); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px; padding: 30px; width: 90%; max-width: 400px; text-align: center; }
+        h1 { background: linear-gradient(to right, #818cf8, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        button { background: linear-gradient(135deg, var(--primary), var(--accent)); color: white; border: none; padding: 14px; font-size: 1rem; font-weight: bold; border-radius: 12px; cursor: pointer; width: 100%; margin: 8px 0; transition: 0.3s; }
+        button:disabled { filter: grayscale(1); cursor: not-allowed; }
+        input { background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); color: white; padding: 12px; border-radius: 10px; width: 100%; box-sizing: border-box; margin-bottom: 15px; text-align: center; }
+        .board { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; background: rgba(255, 255, 255, 0.05); padding: 8px; border-radius: 12px; margin: 20px 0; aspect-ratio: 1/1; }
+        .cell { background: var(--board-color); border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; aspect-ratio: 1/1; }
+        .stone { width: 85%; height: 85%; border-radius: 50%; transform: scale(0); transition: 0.4s; }
+        .black { display: block; background: #000; transform: scale(1); box-shadow: 0 0 10px #000; }
+        .white { display: block; background: #fff; transform: scale(1); box-shadow: 0 0 10px #fff; }
         .hidden { display: none !important; }
         .status-badge { background: var(--glass); padding: 5px 15px; border-radius: 20px; font-size: 0.8rem; margin-bottom: 10px; }
     </style>
@@ -50,55 +28,54 @@
     <div class="glass-card">
         <div id="sc-login">
             <h1>極・オセロ</h1>
-            <input type="text" id="in-name" maxlength="10" placeholder="名前を入力">
+            <input type="text" id="in-name" placeholder="名前を入力">
             <button onclick="toMenu()">ゲーム開始</button>
         </div>
 
         <div id="sc-menu" class="hidden">
-            <div class="status-badge">プレイヤー: <span id="disp-name"></span></div>
-            <button onclick="changeScreen('sc-cpu')">CPU対戦</button>
+            <div class="status-badge"><span id="disp-name"></span> さん</div>
+            <button onclick="startCPU()">CPU対戦</button>
             <button onclick="changeScreen('sc-online')">オンライン対戦</button>
             <button onclick="changeScreen('sc-set')">設定</button>
-        </div>
-
-        <div id="sc-cpu" class="hidden">
-            <h1>CPUレベル</h1>
-            <button onclick="startG('cpu','weak')">弱い</button>
-            <button onclick="startG('cpu','normal')">普通</button>
-            <button onclick="startG('cpu','strong')">強い</button>
-            <button onclick="changeScreen('sc-menu')" style="background:var(--glass)">戻る</button>
         </div>
 
         <div id="sc-online" class="hidden">
             <h1>オンライン</h1>
             <button onclick="createRoom()">部屋を作る</button>
-            <p>または</p>
-            <input type="text" id="in-room" maxlength="5" placeholder="5桁コード">
+            <input type="text" id="in-room" placeholder="5桁コード">
             <button onclick="joinRoom()">参加する</button>
             <p id="wait-msg"></p>
             <button onclick="changeScreen('sc-menu')" style="background:var(--glass)">戻る</button>
         </div>
 
+        <div id="sc-jan" class="hidden">
+            <h1>先攻決め</h1>
+            <p id="jan-info">出す手を選んでね！</p>
+            <div style="display:flex; gap:10px;">
+                <button class="j-btn" onclick="setJan(0)">✊</button>
+                <button class="j-btn" onclick="setJan(1)">✌️</button>
+                <button class="j-btn" onclick="setJan(2)">🖐️</button>
+            </div>
+        </div>
+
         <div id="sc-game" class="hidden">
-            <div class="status-badge" id="turn-txt">黒の番です</div>
+            <div class="status-badge" id="turn-txt">黒の番</div>
             <div id="board" class="board"></div>
             <div style="display:flex; justify-content:space-around;">
                 <span>黒: <b id="cnt-b">2</b></span>
                 <span>白: <b id="cnt-w">2</b></span>
             </div>
-            <button onclick="location.reload()" style="margin-top:15px; background:var(--glass)">終了</button>
+            <button onclick="location.reload()" style="margin-top:10px; background:var(--glass)">終了</button>
         </div>
 
         <div id="sc-set" class="hidden">
             <h1>設定</h1>
-            <p>盤面の色</p>
             <input type="color" id="col-pick" value="#1e293b" onchange="upCol()">
             <button onclick="changeScreen('sc-menu')">戻る</button>
         </div>
     </div>
 
     <script>
-        // --- Firebase設定 ---
         const firebaseConfig = {
             apiKey: "AIzaSyBYb9uXyjA7XJdRiYjcA3VBlSVgLh0C1fw",
             authDomain: "hrmk-othello.firebaseapp.com",
@@ -111,11 +88,9 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // --- 変数管理 ---
-        let myName = "", mySide = 'black', turn = 'black', mode = 'cpu', level = 'weak', roomID = "";
+        let myName = "", mySide = 'black', turn = 'black', mode = 'cpu', roomID = "", myRole = "";
         let boardState = Array(64).fill(null);
 
-        // --- 画面切り替え ---
         function changeScreen(id) {
             document.querySelectorAll('.glass-card > div').forEach(d => d.classList.add('hidden'));
             document.getElementById(id).classList.remove('hidden');
@@ -127,77 +102,111 @@
             changeScreen('sc-menu');
         }
 
-        function upCol() {
-            document.documentElement.style.setProperty('--board-color', document.getElementById('col-pick').value);
-        }
+        function upCol() { document.documentElement.style.setProperty('--board-color', document.getElementById('col-pick').value); }
 
-        // --- オンライン通信 ---
+        // --- オンライン & じゃんけんロジック ---
         function createRoom() {
             roomID = Math.random().toString(36).substring(2, 7).toUpperCase();
-            mySide = 'black';
-            firebase.database().ref('rooms/' + roomID).set({ host: myName, status: 'wait', board: "" });
+            myRole = 'host';
+            db.ref('rooms/' + roomID).set({ status: 'wait' });
             document.getElementById('wait-msg').innerText = "コード: " + roomID + " 待機中...";
-            listenRoom();
+            db.ref('rooms/' + roomID).on('value', s => {
+                if (s.val()?.status === 'ready') changeScreen('sc-jan');
+                if (s.val()?.status === 'play') syncGame(s.val());
+            });
         }
 
         function joinRoom() {
             roomID = document.getElementById('in-room').value.toUpperCase();
-            mySide = 'white';
-            firebase.database().ref('rooms/' + roomID).update({ guest: myName, status: 'play' });
-            startG('online');
-        }
-
-        function listenRoom() {
-            firebase.database().ref('rooms/' + roomID).on('value', (s) => {
-                const data = s.val();
-                if (data && data.status === 'play') startG('online');
-                if (data && data.board) syncBoard(data.board, data.turn);
+            myRole = 'guest';
+            db.ref('rooms/' + roomID).update({ status: 'ready' });
+            changeScreen('sc-jan');
+            db.ref('rooms/' + roomID).on('value', s => {
+                if (s.val()?.status === 'play') syncGame(s.val());
             });
         }
 
-        // --- ゲーム論理 ---
-        function startG(m, l) {
-            mode = m; level = l;
+        function setJan(hand) {
+            db.ref(`rooms/${roomID}/jan/${myRole}`).set(hand);
+            document.getElementById('jan-info').innerText = "相手を待っています...";
+            document.querySelectorAll('.j-btn').forEach(b => b.disabled = true);
+            
+            db.ref(`rooms/${roomID}/jan`).on('value', s => {
+                const h = s.val();
+                if (h && h.host !== undefined && h.guest !== undefined) {
+                    judgeJan(h.host, h.guest);
+                }
+            });
+        }
+
+        function judgeJan(h, g) {
+            if (h === g) {
+                document.getElementById('jan-info').innerText = "あいこ！もう一度！";
+                document.querySelectorAll('.j-btn').forEach(b => b.disabled = false);
+                db.ref(`rooms/${roomID}/jan`).remove();
+                return;
+            }
+            // ホスト視点の勝ち判定: 0>1, 1>2, 2>0
+            const hostWins = (h === 0 && g === 1) || (h === 1 && g === 2) || (h === 2 && g === 0);
+            if (myRole === 'host') {
+                mySide = hostWins ? 'black' : 'white';
+            } else {
+                mySide = hostWins ? 'white' : 'black';
+            }
+            if (myRole === 'host') {
+                db.ref('rooms/' + roomID).update({ status: 'play', turn: 'black', board: JSON.stringify(initBoard()) });
+            }
+        }
+
+        function startCPU() {
+            mode = 'cpu'; mySide = 'black';
+            boardState = initBoard();
             changeScreen('sc-game');
-            boardState.fill(null);
-            boardState[27] = 'white'; boardState[28] = 'black';
-            boardState[35] = 'black'; boardState[36] = 'white';
+            render();
+        }
+
+        function initBoard() {
+            let b = Array(64).fill(null);
+            b[27]='white'; b[28]='black'; b[35]='black'; b[36]='white';
+            return b;
+        }
+
+        function syncGame(data) {
+            mode = 'online';
+            boardState = JSON.parse(data.board);
+            turn = data.turn;
+            changeScreen('sc-game');
             render();
         }
 
         function render() {
             const b = document.getElementById('board'); b.innerHTML = "";
-            let bc = 0, wc = 0;
+            let bc=0, wc=0;
             boardState.forEach((s, i) => {
                 const c = document.createElement('div'); c.className = 'cell';
-                const st = document.createElement('div'); st.className = 'stone' + (s ? ' ' + s : '');
+                const st = document.createElement('div'); st.className = 'stone ' + s;
                 if(s==='black') bc++; if(s==='white') wc++;
                 c.onclick = () => clickCell(i);
                 c.appendChild(st); b.appendChild(c);
             });
-            document.getElementById('cnt-b').innerText = bc;
-            document.getElementById('cnt-w').innerText = wc;
-            document.getElementById('turn-txt').innerText = (turn === 'black' ? "黒" : "白") + "の番";
+            document.getElementById('cnt-b').innerText = bc; document.getElementById('cnt-w').innerText = wc;
+            document.getElementById('turn-txt').innerText = (turn === 'black' ? "黒" : "白") + "の番" + (turn === mySide ? " (あなた)" : "");
         }
 
         function clickCell(i) {
-            if (mode === 'online' && turn !== mySide) return;
-            if (boardState[i]) return;
+            if (turn !== mySide || boardState[i]) return;
             const flips = getFlips(i, turn);
             if (flips.length > 0) {
                 boardState[i] = turn;
                 flips.forEach(idx => boardState[idx] = turn);
                 turn = (turn === 'black' ? 'white' : 'black');
                 if (mode === 'online') {
-                    firebase.database().ref('rooms/' + roomID).update({ board: JSON.stringify(boardState), turn: turn });
+                    db.ref('rooms/' + roomID).update({ board: JSON.stringify(boardState), turn: turn });
+                } else {
+                    render();
+                    if (turn === 'white') setTimeout(cpuPlay, 600);
                 }
-                render();
-                if (mode === 'cpu' && turn === 'white') setTimeout(cpuPlay, 600);
             }
-        }
-
-        function syncBoard(bStr, t) {
-            boardState = JSON.parse(bStr); turn = t; render();
         }
 
         function getFlips(idx, color) {
@@ -206,11 +215,9 @@
             const dirs = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
             const r = Math.floor(idx/8), c = idx%8;
             dirs.forEach(([dr, dc]) => {
-                let tr = r + dr, tc = c + dc, temp = [];
-                while (tr>=0 && tr<8 && tc>=0 && tc<8 && boardState[tr*8+tc] === opp) {
-                    temp.push(tr*8+tc); tr += dr; tc += dc;
-                }
-                if (tr>=0 && tr<8 && tc>=0 && tc<8 && boardState[tr*8+tc] === color) flips.push(...temp);
+                let tr=r+dr, tc=c+dc, temp=[];
+                while(tr>=0 && tr<8 && tc>=0 && tc<8 && boardState[tr*8+tc] === opp) { temp.push(tr*8+tc); tr+=dr; tc+=dc; }
+                if(tr>=0 && tr<8 && tc>=0 && tc<8 && boardState[tr*8+tc] === color) flips.push(...temp);
             });
             return flips;
         }
@@ -218,7 +225,7 @@
         function cpuPlay() {
             let moves = [];
             boardState.forEach((s, i) => { if(!s && getFlips(i, 'white').length > 0) moves.push(i); });
-            if (moves.length > 0) clickCell(moves[Math.floor(Math.random() * moves.length)]);
+            if (moves.length > 0) clickCell(moves[0]);
             else { turn = 'black'; render(); }
         }
     </script>
