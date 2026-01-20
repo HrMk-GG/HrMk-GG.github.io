@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚡祝日爆破カウントダウン⚡</title>
+    <style>
+        body {
+            background-color: #000;
+            color: #fff;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+            font-family: 'Arial Black', sans-serif;
+            background: radial-gradient(circle, #222 0%, #000 100%);
+        }
+
+        /* 虹色に光り輝くタイトル */
+        .title {
+            font-size: 32px;
+            background: linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+            background-size: 200% auto;
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: rainbow 2s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        /* カウントダウンのメインエリア */
+        #display-area {
+            text-align: center;
+            padding: 50px;
+            border: 10px double #ff00ff;
+            box-shadow: 0 0 50px #ff00ff, inset 0 0 30px #ff00ff;
+            background: rgba(255, 255, 255, 0.05);
+            animation: vibe 0.05s infinite;
+        }
+
+        #holiday-name {
+            font-size: 40px;
+            color: #00ffff;
+            text-shadow: 0 0 20px #00ffff;
+            margin-bottom: 10px;
+        }
+
+        .countdown-wrap { font-size: 100px; color: #ff0000; }
+
+        #days {
+            font-size: 180px;
+            text-shadow: 0 0 40px #ff0000, 0 0 80px #ff0000;
+        }
+
+        /* 下の動くテロップ */
+        .footer-marquee {
+            position: fixed; bottom: 0; width: 100%;
+            background: red; color: white; padding: 10px;
+            font-size: 24px; font-weight: bold;
+        }
+
+        @keyframes rainbow { to { background-position: 200% center; } }
+        @keyframes vibe { 0% { transform: translate(0,0); } 50% { transform: translate(3px, 2px); } 100% { transform: translate(0,0); } }
+    </style>
+</head>
+<body>
+
+    <div class="title">🔥 NEXT HOLIDAY SURVIVAL 🔥</div>
+
+    <div id="display-area">
+        <div id="holiday-name">祝日を取得中...</div>
+        <div class="countdown-wrap">
+            あと <span id="days">?</span> 日
+        </div>
+    </div>
+
+    <div class="footer-marquee">
+        <marquee scrollamount="15">仕事なんてしてる場合じゃねえ！休みを待て！！休日はすぐそこだ！！祝日API接続中... 2026年度版完全対応！！</marquee>
+    </div>
+
+    <script>
+        async function getNextHoliday() {
+            try {
+                const res = await fetch('https://holidays-jp.github.io/api/v1/date.json');
+                const holidays = await res.json();
+                
+                const now = new Date();
+                const todayStr = now.toISOString().split('T')[0];
+                
+                let nextDate = null;
+                let nextName = "";
+                
+                for (const [date, name] of Object.entries(holidays)) {
+                    if (date > todayStr) {
+                        nextDate = new Date(date);
+                        nextName = name;
+                        break;
+                    }
+                }
+
+                if (nextDate) {
+                    const diff = nextDate - now;
+                    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+                    
+                    document.getElementById('holiday-name').innerText = `【${nextName}】まで`;
+                    document.getElementById('days').innerText = days;
+                }
+            } catch (e) {
+                document.getElementById('holiday-name').innerText = "エラー！明日が祝日だと思え！";
+            }
+        }
+        getNextHoliday();
+    </script>
+</body>
+</html>
