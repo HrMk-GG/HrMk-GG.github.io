@@ -3,96 +3,103 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>⚡祝日爆破カウントダウン⚡</title>
+    <title>⚡祝日カウントダウン・マルチテーマ⚡</title>
     <style>
+        /* --- 共通設定 --- */
         body {
-            background-color: #000;
-            color: #fff;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            overflow: hidden;
-            font-family: 'Arial Black', sans-serif;
-            background: radial-gradient(circle, #222 0%, #000 100%);
+            margin: 0; padding: 0;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            height: 100vh; transition: all 0.5s ease; /* 切り替えをスムーズに */
+            font-family: sans-serif; overflow: hidden;
         }
 
-        /* 虹色に光り輝くタイトル */
-        .title {
-            font-size: 32px;
-            background: linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
-            background-size: 200% auto;
-            background-clip: text;
+        /* --- 左上のセレクトボックス --- */
+        #theme-selector {
+            position: fixed; top: 20px; left: 20px;
+            z-index: 1000; padding: 10px;
+            font-weight: bold; border-radius: 5px;
+            cursor: pointer;
+        }
+
+        /* --- ① Rainbowテーマ（いつもの最強スタイル） --- */
+        body.rainbow {
+            background: radial-gradient(circle, #222 0%, #000 100%);
+            color: #fff;
+        }
+        .rainbow #display-area {
+            border: 10px double #ff00ff;
+            box-shadow: 0 0 50px #ff00ff;
+            animation: vibe 0.05s infinite;
+            background: rgba(255, 255, 255, 0.05); padding: 50px;
+        }
+        .rainbow #days {
+            font-size: 150px; color: #ff0000;
+            text-shadow: 0 0 40px #ff0000; font-family: 'Arial Black';
+        }
+
+        /* --- ② Basicテーマ（懐かしのWindows 95風） --- */
+        body.basic {
+            background-color: #008080; /* あの緑色 */
+            color: #000; font-family: "MS UI Gothic", sans-serif;
+        }
+        .basic #display-area {
+            background: #c0c0c0;
+            border: 3px outset #fff;
+            padding: 40px; box-shadow: 4px 4px 0 #000;
+        }
+        .basic #days { font-size: 120px; color: #000080; }
+
+        /* --- ③ Modernテーマ（今風のスタイリッシュ） --- */
+        body.modern {
+            background-color: #f8f9fa;
+            color: #212529; font-family: 'Helvetica Neue', Arial, sans-serif;
+        }
+        .modern #display-area {
+            background: #ffffff;
+            border-radius: 30px;
+            padding: 60px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        .modern #days {
+            font-size: 140px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            animation: rainbow 2s linear infinite;
-            margin-bottom: 20px;
         }
 
-        /* カウントダウンのメインエリア */
-        #display-area {
-            text-align: center;
-            padding: 50px;
-            border: 10px double #ff00ff;
-            box-shadow: 0 0 50px #ff00ff, inset 0 0 30px #ff00ff;
-            background: rgba(255, 255, 255, 0.05);
-            animation: vibe 0.05s infinite;
-        }
-
-        #holiday-name {
-            font-size: 40px;
-            color: #00ffff;
-            text-shadow: 0 0 20px #00ffff;
-            margin-bottom: 10px;
-        }
-
-        .countdown-wrap { font-size: 100px; color: #ff0000; }
-
-        #days {
-            font-size: 180px;
-            text-shadow: 0 0 40px #ff0000, 0 0 80px #ff0000;
-        }
-
-        /* 下の動くテロップ */
-        .footer-marquee {
-            position: fixed; bottom: 0; width: 100%;
-            background: red; color: white; padding: 10px;
-            font-size: 24px; font-weight: bold;
-        }
-
-        @keyframes rainbow { to { background-position: 200% center; } }
+        /* アニメーション */
         @keyframes vibe { 0% { transform: translate(0,0); } 50% { transform: translate(3px, 2px); } 100% { transform: translate(0,0); } }
     </style>
 </head>
-<body>
-
-    <div class="title">🔥 NEXT HOLIDAY SURVIVAL 🔥</div>
+<body class="rainbow"> <select id="theme-selector" onchange="changeTheme(this.value)">
+        <option value="rainbow">🌈 Rainbow</option>
+        <option value="basic">💾 Basic</option>
+        <option value="modern">📱 Modern</option>
+    </select>
 
     <div id="display-area">
-        <div id="holiday-name">祝日を取得中...</div>
-        <div class="countdown-wrap">
+        <div id="holiday-name" style="font-size: 30px; margin-bottom: 20px;">祝日を取得中...</div>
+        <div style="font-size: 40px; font-weight: bold;">
             あと <span id="days">?</span> 日
         </div>
     </div>
 
-    <div class="footer-marquee">
-        <marquee scrollamount="15">仕事なんてしてる場合じゃねえ！休みを待て！！休日はすぐそこだ！！祝日API接続中... 2026年度版完全対応！！</marquee>
-    </div>
-
     <script>
+        // テーマ切り替え関数
+        function changeTheme(themeName) {
+            document.body.className = themeName;
+        }
+
+        // 祝日API取得
         async function getNextHoliday() {
             try {
                 const res = await fetch('https://holidays-jp.github.io/api/v1/date.json');
                 const holidays = await res.json();
-                
                 const now = new Date();
                 const todayStr = now.toISOString().split('T')[0];
                 
-                let nextDate = null;
-                let nextName = "";
-                
+                let nextDate = null, nextName = "";
                 for (const [date, name] of Object.entries(holidays)) {
                     if (date > todayStr) {
                         nextDate = new Date(date);
@@ -100,16 +107,13 @@
                         break;
                     }
                 }
-
                 if (nextDate) {
                     const diff = nextDate - now;
-                    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-                    
                     document.getElementById('holiday-name').innerText = `【${nextName}】まで`;
-                    document.getElementById('days').innerText = days;
+                    document.getElementById('days').innerText = Math.ceil(diff / (1000 * 60 * 60 * 24));
                 }
             } catch (e) {
-                document.getElementById('holiday-name').innerText = "エラー！明日が祝日だと思え！";
+                document.getElementById('holiday-name').innerText = "エラー！明日が休みだ！";
             }
         }
         getNextHoliday();
