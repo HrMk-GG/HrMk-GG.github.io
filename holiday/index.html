@@ -3,120 +3,110 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>⚡祝日カウントダウン・マルチテーマ⚡</title>
+    <title>祝日爆破</title>
     <style>
-        /* --- 共通設定 --- */
         body {
             margin: 0; padding: 0;
             display: flex; flex-direction: column;
             align-items: center; justify-content: center;
-            height: 100vh; transition: all 0.5s ease; /* 切り替えをスムーズに */
-            font-family: sans-serif; overflow: hidden;
+            height: 100vh; overflow: hidden;
+            background-color: #000;
+            transition: background 0.5s;
         }
 
-        /* --- 左上のセレクトボックス --- */
         #theme-selector {
-            position: fixed; top: 20px; left: 20px;
-            z-index: 1000; padding: 10px;
-            font-weight: bold; border-radius: 5px;
-            cursor: pointer;
+            position: fixed; top: 20px; left: 20px; z-index: 1000;
         }
 
-        /* --- ① Rainbowテーマ（いつもの最強スタイル） --- */
-        body.rainbow {
-            background: radial-gradient(circle, #222 0%, #000 100%);
-            color: #fff;
-        }
-        .rainbow #display-area {
-            border: 10px double #ff00ff;
-            box-shadow: 0 0 50px #ff00ff;
-            animation: vibe 0.05s infinite;
-            background: rgba(255, 255, 255, 0.05); padding: 50px;
-        }
-        .rainbow #days {
-            font-size: 150px; color: #ff0000;
-            text-shadow: 0 0 40px #ff0000; font-family: 'Arial Black';
-        }
-
-        /* --- ② Basicテーマ（懐かしのWindows 95風） --- */
-        body.basic {
-            background-color: #008080; /* あの緑色 */
-            color: #000; font-family: "MS UI Gothic", sans-serif;
-        }
-        .basic #display-area {
-            background: #c0c0c0;
-            border: 3px outset #fff;
-            padding: 40px; box-shadow: 4px 4px 0 #000;
-        }
-        .basic #days { font-size: 120px; color: #000080; }
-
-        /* --- ③ Modernテーマ（今風のスタイリッシュ） --- */
-        body.modern {
-            background-color: #f8f9fa;
-            color: #212529; font-family: 'Helvetica Neue', Arial, sans-serif;
-        }
-        .modern #display-area {
-            background: #ffffff;
-            border-radius: 30px;
-            padding: 60px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-        }
-        .modern #days {
-            font-size: 140px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        .rainbow-text {
+            background: linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);
+            background-size: 200% auto;
+            background-clip: text;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            animation: rainbow-move 1s linear infinite;
+            font-weight: 900;
+            text-align: center;
         }
 
-        /* アニメーション */
-        @keyframes vibe { 0% { transform: translate(0,0); } 50% { transform: translate(3px, 2px); } 100% { transform: translate(0,0); } }
+        #display-area {
+            padding: 60px;
+            border: 15px solid;
+            border-image: linear-gradient(45deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000) 1;
+            background: rgba(0, 0, 0, 0.9);
+        }
+
+        #days {
+            font-size: 200px;
+            display: block;
+            line-height: 1;
+        }
+
+        @keyframes rainbow-move { to { background-position: 200% center; } }
+        
+        .vibe-low { animation: vibe 0.2s infinite; }
+        .vibe-mid { animation: vibe 0.08s infinite; filter: contrast(150%); }
+        .vibe-high { animation: vibe 0.02s infinite; filter: contrast(200%) hue-rotate(90deg); }
+
+        @keyframes vibe {
+            0% { transform: translate(0,0); }
+            25% { transform: translate(8px, -8px); }
+            50% { transform: translate(-8px, 8px); }
+            75% { transform: translate(8px, 8px); }
+            100% { transform: translate(0,0); }
+        }
+
+        body.basic { background: #008080 !important; }
+        .basic .rainbow-text { -webkit-text-fill-color: #000; background: none; }
+        .basic #display-area { background: #c0c0c0; border: 4px outset #fff; animation: none; }
+
+        body.modern { background: #fff !important; }
+        .modern .rainbow-text { -webkit-text-fill-color: #333; background: none; }
+        .modern #display-area { background: #fff; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.1); animation: none; border-radius: 20px; }
     </style>
 </head>
-<body class="rainbow"> <select id="theme-selector" onchange="changeTheme(this.value)">
-        <option value="rainbow">🌈 Rainbow</option>
-        <option value="basic">💾 Basic</option>
-        <option value="modern">📱 Modern</option>
+<body class="rainbow">
+
+    <select id="theme-selector" onchange="document.body.className = this.value">
+        <option value="rainbow">rainbow</option>
+        <option value="basic">basic</option>
+        <option value="modern">modern</option>
     </select>
 
-    <div id="display-area">
-        <div id="holiday-name" style="font-size: 30px; margin-bottom: 20px;">祝日を取得中...</div>
-        <div style="font-size: 40px; font-weight: bold;">
-            あと <span id="days">?</span> 日
+    <div id="display-area" class="vibe-low">
+        <div id="holiday-name" class="rainbow-text" style="font-size: 40px; margin-bottom: 20px;">FETCHING...</div>
+        <div class="rainbow-text" style="font-size: 60px;">
+            あと <span id="days" class="rainbow-text">?</span> 日
         </div>
     </div>
 
     <script>
-        // テーマ切り替え関数
-        function changeTheme(themeName) {
-            document.body.className = themeName;
-        }
-
-        // 祝日API取得
-        async function getNextHoliday() {
+        async function getHoliday() {
             try {
                 const res = await fetch('https://holidays-jp.github.io/api/v1/date.json');
-                const holidays = await res.json();
+                const data = await res.json();
                 const now = new Date();
-                const todayStr = now.toISOString().split('T')[0];
+                const today = now.toISOString().split('T')[0];
                 
-                let nextDate = null, nextName = "";
-                for (const [date, name] of Object.entries(holidays)) {
-                    if (date > todayStr) {
-                        nextDate = new Date(date);
-                        nextName = name;
-                        break;
-                    }
+                let nDate = null, nName = "";
+                for (const [d, n] of Object.entries(data)) {
+                    if (d > today) { nDate = new Date(d); nName = n; break; }
                 }
-                if (nextDate) {
-                    const diff = nextDate - now;
-                    document.getElementById('holiday-name').innerText = `【${nextName}】まで`;
-                    document.getElementById('days').innerText = Math.ceil(diff / (1000 * 60 * 60 * 24));
+
+                if (nDate) {
+                    const diff = Math.ceil((nDate - now) / 86400000);
+                    document.getElementById('holiday-name').innerText = nName;
+                    document.getElementById('days').innerText = diff;
+
+                    const area = document.getElementById('display-area');
+                    if (diff <= 1) { area.className = "vibe-high"; document.body.style.background = "#f00"; }
+                    else if (diff <= 3) { area.className = "vibe-mid"; document.body.style.background = "#400"; }
                 }
             } catch (e) {
-                document.getElementById('holiday-name').innerText = "エラー！明日が休みだ！";
+                document.getElementById('holiday-name').innerText = "ERROR";
             }
         }
-        getNextHoliday();
+        getHoliday();
     </script>
 </body>
 </html>
