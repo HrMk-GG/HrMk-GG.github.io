@@ -95,7 +95,8 @@
         const SKYWAY_APP_ID = "86266f8a-a0de-449d-b00e-6639c2659542"; 
 
         const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
+        // ★ここを修正！エラーに出ているURLを指定するよ★
+        const db = getDatabase(app, "https://othello-hrmk-default-rtdb.asia-southeast1.firebasedatabase.app");
 
         const THEMES = { "ALL": [["カフェラテ", "カフェオレ"], ["パンケーキ", "ホットケーキ"], ["醤油", "めんつゆ"], ["ポテトチップス", "フライドポテト"], ["唐揚げ", "竜田揚げ"], ["ラーメン", "つけ麺"], ["一目惚れ", "片思い"], ["浮気", "不倫"], ["算数", "数学"], ["宿題", "課題"]] };
 
@@ -145,7 +146,10 @@
                 listenToRoom(rid);
                 showPage('page-lobby');
                 setTimeout(() => initVoiceChat(rid), 500);
-            } catch (e) { alert("接続エラー！ルールの期限が切れてるかも？"); }
+            } catch (e) { 
+                console.error(e);
+                alert("Firebaseエラー！コンソールをチェックしてね。"); 
+            }
         };
 
         window.handleJoinRoom = async () => {
@@ -179,7 +183,7 @@
                     showPage('page-game');
                     if(state.isHost) startTimer(rid);
                 }
-                if(data.status === 'voting' && (document.getElementById('page-game').classList.contains('active'))) {
+                if(data.status === 'voting' && document.getElementById('page-game').classList.contains('active')) {
                     setupVoteUI(data.players);
                     showPage('page-vote');
                 }
