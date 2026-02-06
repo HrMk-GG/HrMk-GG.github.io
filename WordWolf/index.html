@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ワードウルフ 🐺 V1.1 (Specialized Themes)</title>
+    <title>ワードウルフ 🐺 V1.1 (Stable Edition)</title>
     <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700;800&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -12,6 +12,7 @@
         }
         body { font-family: 'M PLUS Rounded 1c', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
         
+        /* バージョン表示：手動で書き換え可能 */
         .version-badge {
             position: fixed; top: 15px; left: 15px;
             background: rgba(0, 0, 0, 0.08); padding: 5px 12px; border-radius: 20px;
@@ -54,7 +55,7 @@
     </style>
 </head>
 <body>
-    <div class="version-badge" id="app-version">V1.0</div>
+    <div class="version-badge" id="app-version">V1.1.0</div>
     <div id="voice-overlay"></div>
     <div id="toast">コピーしたよ！🔗</div>
 
@@ -137,13 +138,6 @@
         let localStream = null;
         let peers = {};
         let audioContext = null;
-
-        function handleVersion() {
-            let playCount = parseInt(localStorage.getItem('wolf_play_count') || "0");
-            document.getElementById('app-version').innerText = `V1.${playCount}`;
-            localStorage.setItem('wolf_play_count', playCount + 1);
-        }
-        handleVersion();
 
         const THEMES = {
             food: {
@@ -313,10 +307,8 @@
             } else {
                 pair = selectFromGenre(THEMES[genre]);
             }
-
             const words = Math.random() > 0.5 ? [pair[0], pair[1]] : [pair[1], pair[0]];
             const sessionTopics = { 1: TOPIC_MASTER[1][Math.floor(Math.random() * 2)], 2: TOPIC_MASTER[2][Math.floor(Math.random() * 2)], 3: TOPIC_MASTER[3][Math.floor(Math.random() * 2)] };
-
             onValue(ref(db, `rooms/${state.roomId}/players`), (snap) => {
                 const ids = Object.keys(snap.val()).sort(() => 0.5 - Math.random());
                 const updates = { status: 'playing', timer: 300, topics: sessionTopics, currentTopicNum: 0 };
@@ -326,7 +318,7 @@
         };
 
         function selectFromGenre(g) {
-            const isClassic = Math.random() < 0.7; // 7:3の比率
+            const isClassic = Math.random() < 0.7;
             const pool = isClassic ? g.classic : g.human;
             return pool[Math.floor(Math.random() * pool.length)];
         }
