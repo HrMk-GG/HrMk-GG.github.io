@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ワードウルフ 🐺 V1.2.0 (Full Custom)</title>
+    <title>ワードウルフ 🐺 V1.3.0 (Invite Optimized)</title>
     <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700;800&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -56,10 +56,13 @@
         .btn-mic { width: 55px; height: 55px; border-radius: 30px; font-size: 1.4rem; display: flex; align-items: center; justify-content: center; }
         
         #toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 10px 25px; border-radius: 50px; font-size: 0.9rem; opacity: 0; transition: 0.5s; z-index: 2000; }
+        
+        /* 招待用ポップアップ */
+        #page-invite-nick { background: var(--primary); box-shadow: 0 10px 0 #D4B42E; }
     </style>
 </head>
 <body>
-    <div class="version-badge" id="app-version">V1.2.0</div>
+    <div class="version-badge" id="app-version">V1.3.0</div>
     <div id="voice-overlay"></div>
     <div id="toast">コピーしたよ！🔗</div>
 
@@ -70,6 +73,13 @@
         <div style="text-align:center; margin:10px; color:#aaa;">ーー または ーー</div>
         <input type="text" id="input-room-id" placeholder="5桁のコード" maxlength="5">
         <button class="btn btn-sub" onclick="handleJoinRoom()">参加する 🚪</button>
+    </div>
+
+    <div id="page-invite-nick" class="page">
+        <h1 style="color:#856600;">招待されました！🐺</h1>
+        <p style="text-align:center; font-weight:800; color:#856600;">ニックネームを決めてね！</p>
+        <input type="text" id="input-invite-nickname" placeholder="お名前！" maxlength="8" style="border-color:#856600;">
+        <button class="btn btn-sub" onclick="handleJoinFromInvite()" style="background:#856600; box-shadow:0 6px 0 #5a4500;">ロビーへ入る 🚀</button>
     </div>
 
     <div id="page-lobby" class="page">
@@ -93,8 +103,8 @@
                 <div class="setting-item" style="flex: 1;">
                     <span class="setting-label">人狼：</span>
                     <select id="select-wolf-count">
-                        <option value="1">🐺 1人</option>
-                        <option value="2">🐺🐺 2人</option>
+                        <option value="1">1人</option>
+                        <option value="2">2人</option>
                     </select>
                 </div>
                 <div class="setting-item" style="flex: 1;">
@@ -147,14 +157,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, set, onValue, update, runTransaction, onDisconnect, push, onChildAdded } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyAbZPrLSIygyIABnUGAHOigM9QmXdGRa8g",
-            authDomain: "othello-hrmk.firebaseapp.com",
-            projectId: "othello-hrmk",
-            storageBucket: "othello-hrmk.firebasestorage.app",
-            messagingSenderId: "804527745152",
-            appId: "1:804527745152:web:0ab51db1cc348000801e65"
-        };
+        const firebaseConfig = { apiKey: "AIzaSyAbZPrLSIygyIABnUGAHOigM9QmXdGRa8g", authDomain: "othello-hrmk.firebaseapp.com", projectId: "othello-hrmk", storageBucket: "othello-hrmk.firebasestorage.app", messagingSenderId: "804527745152", appId: "1:804527745152:web:0ab51db1cc348000801e65" };
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app, "https://othello-hrmk-default-rtdb.asia-southeast1.firebasedatabase.app");
 
@@ -163,7 +166,6 @@
         let peers = {};
         let audioContext = null;
 
-        // --- お題データ ---
         const THEMES = {
             food: { classic: [["しょうゆ", "めんつゆ"], ["うどん", "そば"], ["マヨネーズ", "ケチャップ"], ["マクドナルド", "モスバーガー"], ["コーヒー", "紅茶"], ["リンゴ", "梨"], ["おにぎり", "パン"]], human: [["偏食が激しそうな人", "食へのこだわりが強すぎる人"], ["自炊が完璧そうな人", "毎日外食してそうな人"], ["マヨラーそうな人", "激辛好きそうな人"]] },
             love: { classic: [["恋人", "結婚相手"], ["デート", "同棲"], ["告白", "プロポーズ"], ["手料理", "外食デート"], ["遊園地", "映画館"], ["サプライズ", "安定した日常"], ["一目惚れ", "徐々に好きになる"]], human: [["浮気しそうな人", "嫉妬深そうな人"], ["恋人に甘えそうな人", "恋人を振り回しそうな人"], ["束縛が激しそうな人", "自由を愛しそうな人"]] },
@@ -175,40 +177,17 @@
         };
 
         const TOPIC_MASTER = {
-            1: [
-                "そのワードを「漢字一文字」で表すと何？",
-                "最近それを食べたり、見たりしたのはいつ？（飲食系なら味の感想も！）",
-                "そのワードの「イメージカラー」をせーので言おう！",
-                "それを「3文字」で表現するなら？（例：あまいもの、ふるいもの）",
-                "共通の知り合いで、一番それが似合う（または近い）のは誰？"
-            ],
-            2: [
-                "それの「値段」って、だいたいどれくらいだと思う？",
-                "それの「重さ」や「サイズ感」をジェスチャーで表してみて！",
-                "それを擬音（オノマトペ）で表すとどんな感じ？",
-                "一日のうち、それを一番意識するのは何時ごろ？",
-                "それを持っている（またはしている）時、どんな気分になる？"
-            ],
-            3: [
-                "それを「一言で褒める」なら、なんて言う？",
-                "逆に、それの「困るところ」を一つ挙げるとしたら？",
-                "もしそれが「学校の教科」だとしたら、何だと思う？",
-                "それを「別のもの」に例えるなら、何に近い？",
-                "今の会話を聞いて、自分のワードと周りのワードにズレを感じる？"
-            ]
+            1: ["そのワードを「漢字一文字」で表すと何？", "最近それを食べたり、見たりしたのはいつ？", "そのワードの「イメージカラー」をせーので言おう！", "それを「3文字」で表現するなら？", "共通の知り合いで、一番それが似合うのは誰？"],
+            2: ["それの「値段」って、だいたいどれくらいだと思う？", "それの「重さ」や「サイズ感」をジェスチャーで！", "それを擬音（オノマトペ）で表すとどんな感じ？", "一日のうち、それを一番意識するのは何時ごろ？", "それを持っている時、どんな気分になる？"],
+            3: ["それを「一言で褒める」なら、なんて言う？", "逆に、それの「困るところ」を一つ挙げると？", "もしそれが「学校の教科」だとしたら、何？", "それを「別のもの」に例えるなら、何に近い？", "周りのワードにズレを感じる？"]
         };
 
-        // --- 初期化 & URLパラメータチェック ---
         window.addEventListener('load', () => {
             const params = new URLSearchParams(window.location.search);
             const rid = params.get('room');
             if (rid) {
-                document.getElementById('input-room-id').value = rid;
-                const savedNick = localStorage.getItem('wolf_nick');
-                if (savedNick) {
-                    document.getElementById('input-nickname').value = savedNick;
-                    handleJoinRoom();
-                }
+                state.roomId = rid;
+                showPage('page-invite-nick'); // 招待時は専用の入力画面へ
             }
         });
 
@@ -217,92 +196,30 @@
             setTimeout(() => document.getElementById(id).classList.add('active'), 50);
         };
 
-        // --- ボイスチャット ---
-        window.initSimpleVoice = async () => {
-            try {
-                localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                document.getElementById('btn-start-voice').style.display = "none";
-                document.getElementById('btn-mic-lobby').style.display = "flex";
-                monitorVolume(localStream, state.myId);
-                onValue(ref(db, `rooms/${state.roomId}/players`), (snap) => {
-                    const players = snap.val();
-                    for(let id in players) if(id !== state.myId && !peers[id]) callUser(id);
-                }, { onlyOnce: true });
-                listenForSignals();
-            } catch (e) { alert("マイクを許可してね！"); }
+        window.handleJoinFromInvite = () => {
+            const nick = document.getElementById('input-invite-nickname').value || "ゲスト";
+            joinProcess(state.roomId, nick);
         };
 
-        function monitorVolume(stream, userId) {
-            const source = audioContext.createMediaStreamSource(stream);
-            const processor = audioContext.createScriptProcessor(2048, 1, 1);
-            source.connect(processor); processor.connect(audioContext.destination);
-            processor.onaudioprocess = (e) => {
-                const input = e.inputBuffer.getChannelData(0);
-                let sum = 0; for (let i = 0; i < input.length; i++) sum += input[i] * input[i];
-                const rms = Math.sqrt(sum / input.length);
-                const el = document.getElementById(`voice-user-${userId}`);
-                if (el) rms > 0.05 ? el.classList.add('speaking') : el.classList.remove('speaking');
-            };
-        }
-
-        async function callUser(userId) {
-            const pc = createPeerConnection(userId);
-            const offer = await pc.createOffer(); await pc.setLocalDescription(offer);
-            push(ref(db, `rooms/${state.roomId}/signals/${userId}`), { from: state.myId, type: 'offer', sdp: offer.sdp });
-        }
-
-        function listenForSignals() {
-            onChildAdded(ref(db, `rooms/${state.roomId}/signals/${state.myId}`), async (snap) => {
-                const data = snap.val();
-                let pc = peers[data.from] || createPeerConnection(data.from);
-                if (data.type === 'offer') {
-                    await pc.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: data.sdp }));
-                    const answer = await pc.createAnswer(); await pc.setLocalDescription(answer);
-                    push(ref(db, `rooms/${state.roomId}/signals/${data.from}`), { from: state.myId, type: 'answer', sdp: data.sdp });
-                } else if (data.type === 'answer') await pc.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: data.sdp }));
-                else if (data.type === 'ice-candidate') await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
-            });
-        }
-
-        function createPeerConnection(userId) {
-            const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
-            peers[userId] = pc;
-            localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-            pc.onicecandidate = (e) => e.candidate && push(ref(db, `rooms/${state.roomId}/signals/${userId}`), { from: state.myId, type: 'ice-candidate', candidate: e.candidate.toJSON() });
-            pc.ontrack = (e) => {
-                const audio = document.createElement('audio'); audio.srcObject = e.streams[0]; audio.autoplay = true; document.body.appendChild(audio);
-                monitorVolume(e.streams[0], userId);
-            };
-            return pc;
-        }
-
-        window.toggleMic = () => {
-            localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled;
-            const enabled = localStream.getAudioTracks()[0].enabled;
-            [document.getElementById('btn-mic-lobby'), document.getElementById('btn-mic-game')].forEach(b => {
-                b.innerText = enabled ? "🎙️" : "🔇"; b.style.background = enabled ? "var(--secondary)" : "var(--accent)";
-            });
-        };
-
-        // --- 部屋管理 ---
-        window.handleCreateRoom = async () => {
-            const nick = document.getElementById('input-nickname').value || "ゲスト";
-            localStorage.setItem('wolf_nick', nick);
-            const rid = Math.random().toString(36).substring(2, 7).toUpperCase();
-            state = { ...state, roomId: rid, myId: "p_"+Date.now(), nickname: nick, isHost: true };
-            await set(ref(db, 'rooms/' + rid), { status: 'waiting', timer: 300, players: { [state.myId]: { name: nick, role: '', word: '' } } });
-            onDisconnect(ref(db, `rooms/${rid}/players/${state.myId}`)).remove();
-            listenToRoom(rid); showPage('page-lobby');
-        };
-
-        window.handleJoinRoom = async () => {
+        window.handleJoinRoom = () => {
             const rid = document.getElementById('input-room-id').value.toUpperCase();
             const nick = document.getElementById('input-nickname').value || "ゲスト";
             if (!rid) return alert("部屋コードを入力してね！");
-            localStorage.setItem('wolf_nick', nick);
+            joinProcess(rid, nick);
+        };
+
+        async function joinProcess(rid, nick) {
             state = { ...state, roomId: rid, myId: "p_"+Date.now(), nickname: nick, isHost: false };
             await update(ref(db, `rooms/${rid}/players/${state.myId}`), { name: nick, role: '', word: '' });
+            onDisconnect(ref(db, `rooms/${rid}/players/${state.myId}`)).remove();
+            listenToRoom(rid); showPage('page-lobby');
+        }
+
+        window.handleCreateRoom = async () => {
+            const nick = document.getElementById('input-nickname').value || "ゲスト";
+            const rid = Math.random().toString(36).substring(2, 7).toUpperCase();
+            state = { ...state, roomId: rid, myId: "p_"+Date.now(), nickname: nick, isHost: true };
+            await set(ref(db, 'rooms/' + rid), { status: 'waiting', timer: 300, players: { [state.myId]: { name: nick, role: '', word: '' } } });
             onDisconnect(ref(db, `rooms/${rid}/players/${state.myId}`)).remove();
             listenToRoom(rid); showPage('page-lobby');
         };
@@ -336,69 +253,72 @@
             }, 1000);
         }
 
-        // --- ゲーム進行 ---
         window.handleStartGame = () => {
             const genre = document.getElementById('select-genre').value;
             const wolfCount = parseInt(document.getElementById('select-wolf-count').value);
             const setTime = parseInt(document.getElementById('select-timer').value);
-            
-            let pair;
-            if(genre === 'random') {
-                const allGenres = Object.values(THEMES);
-                pair = selectFromGenre(allGenres[Math.floor(Math.random() * allGenres.length)]);
-            } else {
-                pair = selectFromGenre(THEMES[genre]);
-            }
+            let pair = selectFromGenre(genre === 'random' ? Object.values(THEMES)[Math.floor(Math.random()*7)] : THEMES[genre]);
             const words = Math.random() > 0.5 ? [pair[0], pair[1]] : [pair[1], pair[0]];
-            const sessionTopics = { 
-                1: TOPIC_MASTER[1][Math.floor(Math.random() * TOPIC_MASTER[1].length)], 
-                2: TOPIC_MASTER[2][Math.floor(Math.random() * TOPIC_MASTER[2].length)], 
-                3: TOPIC_MASTER[3][Math.floor(Math.random() * TOPIC_MASTER[3].length)] 
-            };
-
+            const sessionTopics = { 1: TOPIC_MASTER[1][Math.floor(Math.random()*5)], 2: TOPIC_MASTER[2][Math.floor(Math.random()*5)], 3: TOPIC_MASTER[3][Math.floor(Math.random()*5)] };
             onValue(ref(db, `rooms/${state.roomId}/players`), (snap) => {
-                const players = snap.val();
-                const ids = Object.keys(players).sort(() => 0.5 - Math.random());
-                if(ids.length < 3 && wolfCount > 1) return alert("人狼2人は、4人以上必要だよ！");
-                
+                const ids = Object.keys(snap.val()).sort(() => 0.5 - Math.random());
+                if(ids.length < 3 && wolfCount > 1) return alert("人狼2人は4人以上必要！");
                 const updates = { status: 'playing', timer: setTime, topics: sessionTopics, currentTopicNum: 0 };
-                ids.forEach((id, i) => {
-                    const isWolf = i < wolfCount;
-                    updates[`/players/${id}/role`] = isWolf ? 'wolf' : 'citizen';
-                    updates[`/players/${id}/word`] = isWolf ? words[1] : words[0];
-                    updates[`/players/${id}/vote`] = '';
-                });
+                ids.forEach((id, i) => { const isWolf = i < wolfCount; updates[`/players/${id}/role`] = isWolf ? 'wolf' : 'citizen'; updates[`/players/${id}/word`] = isWolf ? words[1] : words[0]; updates[`/players/${id}/vote`] = ''; });
                 update(ref(db, `rooms/${state.roomId}`), updates);
             }, { onlyOnce: true });
         };
 
-        function selectFromGenre(g) {
-            const pool = Math.random() < 0.7 ? g.classic : g.human;
-            return pool[Math.floor(Math.random() * pool.length)];
-        }
-
+        function selectFromGenre(g) { return (Math.random() < 0.7 ? g.classic : g.human)[Math.floor(Math.random() * (Math.random() < 0.7 ? g.classic.length : g.human.length))]; }
         window.sendTopicRequest = (num) => update(ref(db, `rooms/${state.roomId}`), { currentTopicNum: num });
         window.handleGoToVote = () => update(ref(db, `rooms/${state.roomId}`), { status: 'voting' });
         function setupVoteUI(players) { document.getElementById('vote-container').innerHTML = Object.entries(players).filter(([id]) => id !== state.myId).map(([id, p]) => `<div class="btn btn-sub" onclick="castVote('${id}')">${p.name}</div>`).join(''); }
         window.castVote = (tid) => { update(ref(db, `rooms/${state.roomId}/players/${state.myId}`), { vote: tid }); onValue(ref(db, `rooms/${state.roomId}/players`), (snap) => { if(Object.values(snap.val()).every(p => p.vote !== "")) update(ref(db, `rooms/${state.roomId}`), { status: 'result' }); }, { onlyOnce: true }); };
-        
-        function showResult(data) {
-            const wolves = Object.values(data.players).filter(p => p.role === 'wolf');
-            const wolfNames = wolves.map(w => w.name).join(' と ');
-            document.getElementById('result-info').innerHTML = `人狼は <b>${wolfNames}</b> でした！<br><div style="font-size:0.9rem; margin-top:10px; color:#666;">人狼のお題：${wolves[0].word}</div>`;
-            showPage('page-result');
+        function showResult(data) { const wolves = Object.values(data.players).filter(p => p.role === 'wolf'); document.getElementById('result-info').innerHTML = `人狼は <b>${wolves.map(w=>w.name).join(' と ')}</b> でした！<br><div style="font-size:0.9rem; margin-top:10px; color:#666;">人狼お題：${wolves[0].word}</div>`; showPage('page-result'); }
+        window.handleRestart = () => { if(state.isHost) update(ref(db, `rooms/${state.roomId}`), { status: 'waiting', timer: 300 }); showPage('page-lobby'); };
+        window.copyInviteURL = () => { const url = `${window.location.origin}${window.location.pathname}?room=${state.roomId}`; navigator.clipboard.writeText(url).then(() => { const t = document.getElementById('toast'); t.style.opacity = "1"; setTimeout(() => t.style.opacity = "0", 2000); }); };
+
+        window.initSimpleVoice = async () => {
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                document.getElementById('btn-start-voice').style.display = "none";
+                document.getElementById('btn-mic-lobby').style.display = "flex";
+                monitorVolume(localStream, state.myId);
+                onValue(ref(db, `rooms/${state.roomId}/players`), (snap) => { for(let id in snap.val()) if(id !== state.myId && !peers[id]) callUser(id); }, { onlyOnce: true });
+                onChildAdded(ref(db, `rooms/${state.roomId}/signals/${state.myId}`), async (snap) => {
+                    const data = snap.val(); let pc = peers[data.from] || createPeerConnection(data.from);
+                    if (data.type === 'offer') { await pc.setRemoteDescription(new RTCSessionDescription(data)); const answer = await pc.createAnswer(); await pc.setLocalDescription(answer); push(ref(db, `rooms/${state.roomId}/signals/${data.from}`), { from: state.myId, type: 'answer', sdp: answer.sdp }); }
+                    else if (data.type === 'answer') await pc.setRemoteDescription(new RTCSessionDescription(data));
+                    else if (data.type === 'ice-candidate') await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+                });
+            } catch (e) { alert("マイクを許可してね！"); }
+        };
+
+        function createPeerConnection(userId) {
+            const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+            peers[userId] = pc;
+            localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+            pc.onicecandidate = (e) => e.candidate && push(ref(db, `rooms/${state.roomId}/signals/${userId}`), { from: state.myId, type: 'ice-candidate', candidate: e.candidate.toJSON() });
+            pc.ontrack = (e) => { const audio = document.createElement('audio'); audio.srcObject = e.streams[0]; audio.autoplay = true; document.body.appendChild(audio); monitorVolume(e.streams[0], userId); };
+            return pc;
         }
 
-        window.handleRestart = () => { if(state.isHost) update(ref(db, `rooms/${state.roomId}`), { status: 'waiting', timer: 300 }); showPage('page-lobby'); };
-        
-        window.copyInviteURL = () => {
-            const url = `${window.location.origin}${window.location.pathname}?room=${state.roomId}`;
-            navigator.clipboard.writeText(url).then(() => {
-                const t = document.getElementById('toast');
-                t.style.opacity = "1";
-                setTimeout(() => t.style.opacity = "0", 2000);
-            });
-        };
+        async function callUser(userId) { const pc = createPeerConnection(userId); const offer = await pc.createOffer(); await pc.setLocalDescription(offer); push(ref(db, `rooms/${state.roomId}/signals/${userId}`), { from: state.myId, type: 'offer', sdp: offer.sdp }); }
+
+        function monitorVolume(stream, userId) {
+            const source = audioContext.createMediaStreamSource(stream);
+            const processor = audioContext.createScriptProcessor(2048, 1, 1);
+            source.connect(processor); processor.connect(audioContext.destination);
+            processor.onaudioprocess = (e) => {
+                const input = e.inputBuffer.getChannelData(0);
+                let sum = 0; for (let i = 0; i < input.length; i++) sum += input[i] * input[i];
+                const el = document.getElementById(`voice-user-${userId}`);
+                if (el) Math.sqrt(sum / input.length) > 0.05 ? el.classList.add('speaking') : el.classList.remove('speaking');
+            };
+        }
+
+        window.toggleMic = () => { localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled; const enabled = localStream.getAudioTracks()[0].enabled; [document.getElementById('btn-mic-lobby'), document.getElementById('btn-mic-game')].forEach(b => { b.innerText = enabled ? "🎙️" : "🔇"; b.style.background = enabled ? "var(--secondary)" : "var(--accent)"; }); };
     </script>
 </body>
 </html>
