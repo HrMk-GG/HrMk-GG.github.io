@@ -107,10 +107,7 @@
         };
 
         async function initVoiceChat(rid) {
-            if (typeof skyway_room === 'undefined') {
-                console.error("SkyWay SDK not loaded");
-                return;
-            }
+            if (typeof skyway_room === 'undefined') return;
             try {
                 const { SkyWayContext, SkyWayRoom, SkyWayStreamFactory } = skyway_room;
                 const context = await SkyWayContext.Create(SKYWAY_APP_ID);
@@ -147,11 +144,8 @@
                 });
                 listenToRoom(rid);
                 showPage('page-lobby');
-                setTimeout(() => initVoiceChat(rid), 500); // 画面遷移後に初期化
-            } catch (e) { 
-                console.error(e);
-                alert("Firebase接続エラー！Realtime Databaseのルールを確認してね。"); 
-            }
+                setTimeout(() => initVoiceChat(rid), 500);
+            } catch (e) { alert("接続エラー！ルールの期限が切れてるかも？"); }
         };
 
         window.handleJoinRoom = async () => {
@@ -185,7 +179,7 @@
                     showPage('page-game');
                     if(state.isHost) startTimer(rid);
                 }
-                if(data.status === 'voting' && (document.getElementById('page-game').classList.contains('active') || document.getElementById('page-vote').classList.contains('active') === false)) {
+                if(data.status === 'voting' && (document.getElementById('page-game').classList.contains('active'))) {
                     setupVoteUI(data.players);
                     showPage('page-vote');
                 }
