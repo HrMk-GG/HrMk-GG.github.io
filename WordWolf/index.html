@@ -19,24 +19,13 @@
         .btn-accent { background: var(--accent); color: var(--white); box-shadow: 0 6px 0 #D14D4D; }
         .btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.1); }
         input, select { width: 100%; padding: 12px; margin: 8px 0; border: 3px solid var(--primary); border-radius: 15px; font-family: inherit; font-size: 1rem; box-sizing: border-box; background: #FFFBEB; }
-        .room-id-display { background: #eee; padding: 10px; border-radius: 15px; font-size: 1.5rem; text-align: center; letter-spacing: 3px; margin-bottom: 20px; font-weight: 800; }
+        .room-id-display { background: #eee; padding: 10px; border-radius: 15px; font-size: 1.5rem; text-align: center; letter-spacing: 3px; margin-bottom: 20px; font-weight: 800; cursor: pointer; }
         .timer-display { font-size: 4rem; text-align: center; color: var(--accent); text-shadow: 3px 3px 0 #FFD93D; margin: 10px 0; }
         .word-card { background: var(--primary); padding: 25px; border-radius: 25px; text-align: center; font-size: 2rem; margin: 20px 0; border: 4px dashed #856600; }
-
-        /* 右上の喋ってる人リスト */
-        #voice-overlay {
-            position: fixed; top: 20px; right: 20px; display: flex; flex-direction: column; align-items: flex-end; z-index: 1000; pointer-events: none;
-        }
-        .voice-user {
-            background: rgba(0,0,0,0.1); color: #888; padding: 8px 15px; border-radius: 20px; margin-bottom: 5px; font-weight: 800; font-size: 0.9rem;
-            transition: all 0.2s ease; opacity: 0.5; transform: scale(1);
-        }
-        .voice-user.speaking {
-            background: var(--secondary); color: white; opacity: 1; transform: scale(1.1) translateX(-5px); box-shadow: 0 4px 10px rgba(107, 203, 119, 0.4);
-            animation: bounce 0.4s infinite alternate;
-        }
+        #voice-overlay { position: fixed; top: 20px; right: 20px; display: flex; flex-direction: column; align-items: flex-end; z-index: 1000; pointer-events: none; }
+        .voice-user { background: rgba(0,0,0,0.1); color: #888; padding: 8px 15px; border-radius: 20px; margin-bottom: 5px; font-weight: 800; font-size: 0.9rem; transition: all 0.2s ease; opacity: 0.5; transform: scale(1); }
+        .voice-user.speaking { background: var(--secondary); color: white; opacity: 1; transform: scale(1.1) translateX(-5px); box-shadow: 0 4px 10px rgba(107, 203, 119, 0.4); animation: bounce 0.4s infinite alternate; }
         @keyframes bounce { from { transform: scale(1.1) translateY(0); } to { transform: scale(1.1) translateY(-3px); } }
-
         .mic-controls { display: flex; flex-direction: column; align-items: center; margin-bottom: 15px; }
         .btn-mic { width: 60px; height: 60px; border-radius: 30px; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; }
         #voice-status { font-size: 0.7rem; color: #aaa; margin-top: 5px; }
@@ -48,16 +37,26 @@
 
     <div id="page-home" class="page active">
         <h1>🐺 Word Wolf</h1>
+        <div id="direct-join-msg" style="display:none; text-align:center; margin-bottom:15px; color:var(--secondary); font-weight:800;">
+            招待URLから参加中！✨
+        </div>
         <input type="text" id="input-nickname" placeholder="ニックネーム！" maxlength="8">
-        <button class="btn btn-main" onclick="handleCreateRoom()">部屋を作る ✨</button>
-        <div style="text-align:center; margin:10px; color:#aaa;">ーー または ーー</div>
-        <input type="text" id="input-room-id" placeholder="5桁のコード" maxlength="5">
-        <button class="btn btn-sub" onclick="handleJoinRoom()">参加する 🚪</button>
+        <div id="home-main-actions">
+            <button class="btn btn-main" onclick="handleCreateRoom()">部屋を作る ✨</button>
+            <div style="text-align:center; margin:10px; color:#aaa;">ーー または ーー</div>
+            <input type="text" id="input-room-id" placeholder="5桁のコード" maxlength="5">
+            <button class="btn btn-sub" onclick="handleJoinRoom()">参加する 🚪</button>
+        </div>
+        <div id="home-direct-actions" style="display:none;">
+            <button class="btn btn-sub" onclick="handleJoinRoomDirect()">この部屋に参加 🚪</button>
+            <button class="btn btn-main" style="background:#ddd; color:#888; box-shadow: 0 6px 0 #bbb;" onclick="cancelDirectJoin()">新しく部屋を作る</button>
+        </div>
     </div>
 
     <div id="page-lobby" class="page">
         <h1>待機ロビー 🕒</h1>
-        <div class="room-id-display" id="display-room-id">-----</div>
+        <div class="room-id-display" id="display-room-id" onclick="copyInviteURL()" title="クリックして招待URLをコピー">-----</div>
+        <div style="text-align:center; font-size:0.7rem; color:#aaa; margin-bottom:15px;">↑クリックで招待URLをコピー✨</div>
         <div class="mic-controls">
             <button id="btn-start-voice" class="btn btn-sub" onclick="initSimpleVoice()">🎤 マイクを有効にする</button>
             <button id="btn-mic-lobby" class="btn btn-sub btn-mic" onclick="toggleMic()" style="display:none;">🎙️</button>
@@ -93,7 +92,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, set, onValue, update, runTransaction, onDisconnect, push, onChildAdded } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { getDatabase, ref, set, onValue, update, runTransaction, onDisconnect, push, onChildAdded } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.app";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAbZPrLSIygyIABnUGAHOigM9QmXdGRa8g",
@@ -111,32 +110,43 @@
         let peers = {};
         let audioContext = null;
 
+        // URLから部屋IDを取得
+        window.onload = () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const rId = urlParams.get('room');
+            if (rId && rId.length === 5) {
+                document.getElementById('direct-join-msg').style.display = 'block';
+                document.getElementById('home-main-actions').style.display = 'none';
+                document.getElementById('home-direct-actions').style.display = 'block';
+                document.getElementById('input-room-id').value = rId.toUpperCase();
+            }
+        };
+
+        window.cancelDirectJoin = () => {
+            window.history.replaceState({}, '', window.location.pathname);
+            document.getElementById('direct-join-msg').style.display = 'none';
+            document.getElementById('home-main-actions').style.display = 'block';
+            document.getElementById('home-direct-actions').style.display = 'none';
+        };
+
         window.showPage = (id) => {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             setTimeout(() => document.getElementById(id).classList.add('active'), 50);
         };
 
-        // --- ボイスチャット & 音量検知 ---
         window.initSimpleVoice = async () => {
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                
                 document.getElementById('btn-start-voice').style.display = "none";
                 document.getElementById('btn-mic-lobby').style.display = "flex";
                 document.getElementById('voice-status').innerText = "マイク有効中 🎤";
-
-                // 自分自身の音量を監視
                 monitorVolume(localStream, state.myId);
-
                 const playersRef = ref(db, `rooms/${state.roomId}/players`);
                 onValue(playersRef, (snap) => {
                     const players = snap.val();
-                    for(let id in players) {
-                        if(id !== state.myId && !peers[id]) callUser(id);
-                    }
+                    for(let id in players) if(id !== state.myId && !peers[id]) callUser(id);
                 }, { onlyOnce: true });
-
                 listenForSignals();
             } catch (e) { alert("マイク許可が必要です"); }
         };
@@ -146,19 +156,14 @@
             const processor = audioContext.createScriptProcessor(2048, 1, 1);
             source.connect(processor);
             processor.connect(audioContext.destination);
-
             processor.onaudioprocess = (e) => {
                 const input = e.inputBuffer.getChannelData(0);
                 let sum = 0;
                 for (let i = 0; i < input.length; i++) sum += input[i] * input[i];
                 const rms = Math.sqrt(sum / input.length);
-                const isSpeaking = rms > 0.05; // 喋っている判定のしきい値
-                
+                const isSpeaking = rms > 0.05;
                 const el = document.getElementById(`voice-user-${userId}`);
-                if (el) {
-                    if (isSpeaking) el.classList.add('speaking');
-                    else el.classList.remove('speaking');
-                }
+                if (el) isSpeaking ? el.classList.add('speaking') : el.classList.remove('speaking');
             };
         }
 
@@ -178,11 +183,8 @@
                     const answer = await pc.createAnswer();
                     await pc.setLocalDescription(answer);
                     push(ref(db, `rooms/${state.roomId}/signals/${data.from}`), { from: state.myId, type: 'answer', sdp: answer.sdp });
-                } else if (data.type === 'answer') {
-                    await pc.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: data.sdp }));
-                } else if (data.type === 'ice-candidate') {
-                    await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
-                }
+                } else if (data.type === 'answer') await pc.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: data.sdp }));
+                else if (data.type === 'ice-candidate') await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
             });
         }
 
@@ -190,14 +192,9 @@
             const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
             peers[userId] = pc;
             localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-            pc.onicecandidate = (e) => {
-                if (e.candidate) push(ref(db, `rooms/${state.roomId}/signals/${userId}`), { from: state.myId, type: 'ice-candidate', candidate: e.candidate.toJSON() });
-            };
+            pc.onicecandidate = (e) => e.candidate && push(ref(db, `rooms/${state.roomId}/signals/${userId}`), { from: state.myId, type: 'ice-candidate', candidate: e.candidate.toJSON() });
             pc.ontrack = (e) => {
-                const audio = document.createElement('audio');
-                audio.srcObject = e.streams[0];
-                audio.autoplay = true;
-                document.body.appendChild(audio);
+                const audio = document.createElement('audio'); audio.srcObject = e.streams[0]; audio.autoplay = true; document.body.appendChild(audio);
                 monitorVolume(e.streams[0], userId);
             };
             return pc;
@@ -213,19 +210,22 @@
             });
         };
 
-        // --- ゲーム管理 ---
+        window.copyInviteURL = () => {
+            const url = `${window.location.origin}${window.location.pathname}?room=${state.roomId}`;
+            navigator.clipboard.writeText(url).then(() => alert("招待URLをコピーしたよ！友達に送ってね！🔗✨"));
+        };
+
         window.handleCreateRoom = async () => {
             const nick = document.getElementById('input-nickname').value || "ゲスト";
             const rid = Math.random().toString(36).substring(2, 7).toUpperCase();
             state = { ...state, roomId: rid, myId: "p_"+Date.now(), nickname: nick, isHost: true };
-            await set(ref(db, 'rooms/' + rid), {
-                status: 'waiting', timer: 300, hostId: state.myId,
-                players: { [state.myId]: { name: nick, role: '', word: '', vote: '' } }
-            });
+            await set(ref(db, 'rooms/' + rid), { status: 'waiting', timer: 300, hostId: state.myId, players: { [state.myId]: { name: nick, role: '', word: '', vote: '' } } });
             onDisconnect(ref(db, `rooms/${rid}/players/${state.myId}`)).remove();
             listenToRoom(rid);
             showPage('page-lobby');
         };
+
+        window.handleJoinRoomDirect = () => handleJoinRoom();
 
         window.handleJoinRoom = async () => {
             const rid = document.getElementById('input-room-id').value.toUpperCase();
@@ -240,33 +240,20 @@
 
         function listenToRoom(rid) {
             onValue(ref(db, 'rooms/' + rid), (snap) => {
-                const data = snap.val();
-                if(!data) return;
+                const data = snap.val(); if(!data) return;
                 document.getElementById('display-room-id').innerText = rid;
-                
-                // 右上の音声表示リストを更新
                 const overlay = document.getElementById('voice-overlay');
-                const players = data.players || {};
-                overlay.innerHTML = Object.entries(players).map(([id, p]) => `
-                    <div id="voice-user-${id}" class="voice-user">${p.name}</div>
-                `).join('');
-
+                overlay.innerHTML = Object.entries(data.players || {}).map(([id, p]) => `<div id="voice-user-${id}" class="voice-user">${p.name}</div>`).join('');
                 document.getElementById('host-controls').style.display = (state.isHost && data.status === 'waiting') ? 'block' : 'none';
                 document.getElementById('guest-msg').style.display = state.isHost ? 'none' : 'block';
-                
                 const m = Math.floor(data.timer / 60); const s = data.timer % 60;
                 document.getElementById('display-timer').innerText = `${m}:${s < 10 ? '0'+s : s}`;
-                
                 if(data.status === 'playing' && !document.getElementById('page-game').classList.contains('active')) {
                     document.getElementById('display-my-word').innerText = data.players[state.myId]?.word || "...";
                     showPage('page-game');
                     if(state.isHost) startTimer(rid);
                 }
-                if(data.status === 'playing' && document.getElementById('page-vote').classList.contains('active')) showPage('page-game');
-                if(data.status === 'voting' && document.getElementById('page-game').classList.contains('active')) {
-                    setupVoteUI(data.players);
-                    showPage('page-vote');
-                }
+                if(data.status === 'voting' && document.getElementById('page-game').classList.contains('active')) { setupVoteUI(data.players); showPage('page-vote'); }
                 if(data.status === 'result') showResult(data);
             });
         }
@@ -282,54 +269,23 @@
         }
 
         window.handleStartGame = () => {
-            const THEMES = [["カフェラテ", "カフェオレ"], ["パンケーキ", "ホットケーキ"], ["醤油", "めんつゆ"]];
+            const THEMES = [["カフェラテ", "カフェオレ"], ["パンケーキ", "ホットケーキ"], ["醤油", "めんつゆ"], ["プロレス", "相撲"], ["リンゴ", "ナシ"]];
             const pair = THEMES[Math.floor(Math.random() * THEMES.length)];
             const words = Math.random() > 0.5 ? [pair[0], pair[1]] : [pair[1], pair[0]];
             onValue(ref(db, `rooms/${state.roomId}/players`), (snap) => {
-                const players = snap.val();
-                const ids = Object.keys(players);
-                const shuffled = ids.sort(() => 0.5 - Math.random());
+                const ids = Object.keys(snap.val()).sort(() => 0.5 - Math.random());
                 const updates = { status: 'playing', timer: 300 };
-                ids.forEach((id, i) => {
-                    updates[`/players/${id}/role`] = (i === 0) ? 'wolf' : 'citizen';
-                    updates[`/players/${id}/word`] = (i === 0) ? words[1] : words[0];
-                    updates[`/players/${id}/vote`] = '';
-                });
+                ids.forEach((id, i) => { updates[`/players/${id}/role`] = (i === 0) ? 'wolf' : 'citizen'; updates[`/players/${id}/word`] = (i === 0) ? words[1] : words[0]; updates[`/players/${id}/vote`] = ''; });
                 update(ref(db, `rooms/${state.roomId}`), updates);
             }, { onlyOnce: true });
         };
 
-        window.handleSuddenDeath = () => {
-            update(ref(db, `rooms/${state.roomId}`), { status: 'playing', timer: 60 });
-            if(state.isHost) startTimer(state.roomId);
-        };
-        
+        window.handleSuddenDeath = () => { update(ref(db, `rooms/${state.roomId}`), { status: 'playing', timer: 60 }); if(state.isHost) startTimer(state.roomId); };
         window.handleGoToVote = () => update(ref(db, `rooms/${state.roomId}`), { status: 'voting' });
-
-        function setupVoteUI(players) {
-            const container = document.getElementById('vote-container');
-            container.innerHTML = Object.entries(players).filter(([id]) => id !== state.myId).map(([id, p]) => `
-                <div class="btn btn-sub" onclick="castVote('${id}')">${p.name}</div>
-            `).join('');
-        }
-
-        window.castVote = (tid) => {
-            update(ref(db, `rooms/${state.roomId}/players/${state.myId}`), { vote: tid });
-            onValue(ref(db, `rooms/${state.roomId}/players`), (snap) => {
-                if(Object.values(snap.val()).every(p => p.vote !== "")) update(ref(db, `rooms/${state.roomId}`), { status: 'result' });
-            }, { onlyOnce: true });
-        };
-
-        function showResult(data) {
-            const wolf = Object.values(data.players).find(p => p.role === 'wolf')?.name;
-            document.getElementById('result-info').innerHTML = `人狼は <b>${wolf}</b> でした！`;
-            showPage('page-result');
-        }
-
-        window.handleRestart = () => {
-            if(state.isHost) update(ref(db, `rooms/${state.roomId}`), { status: 'waiting', timer: 300 });
-            showPage('page-lobby');
-        };
+        function setupVoteUI(players) { document.getElementById('vote-container').innerHTML = Object.entries(players).filter(([id]) => id !== state.myId).map(([id, p]) => `<div class="btn btn-sub" onclick="castVote('${id}')">${p.name}</div>`).join(''); }
+        window.castVote = (tid) => { update(ref(db, `rooms/${state.roomId}/players/${state.myId}`), { vote: tid }); onValue(ref(db, `rooms/${state.roomId}/players`), (snap) => { if(Object.values(snap.val()).every(p => p.vote !== "")) update(ref(db, `rooms/${state.roomId}`), { status: 'result' }); }, { onlyOnce: true }); };
+        function showResult(data) { const wolf = Object.values(data.players).find(p => p.role === 'wolf')?.name; document.getElementById('result-info').innerHTML = `人狼は <b>${wolf}</b> でした！`; showPage('page-result'); }
+        window.handleRestart = () => { if(state.isHost) update(ref(db, `rooms/${state.roomId}`), { status: 'waiting', timer: 300 }); showPage('page-lobby'); };
     </script>
 </body>
 </html>
