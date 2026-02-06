@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ワードウルフ 🐺 V1.5</title>
+    <title>ワードウルフ 🐺</title>
     <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700;800&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -12,32 +12,28 @@
         }
         body { font-family: 'M PLUS Rounded 1c', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
         
-        /* バージョン表記のスタイル */
         .version-badge {
-            position: fixed;
-            top: 15px;
-            left: 15px;
-            background: rgba(0, 0, 0, 0.05);
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 800;
-            color: #888;
-            z-index: 1000;
-            pointer-events: none;
+            position: fixed; top: 15px; left: 15px;
+            background: rgba(0, 0, 0, 0.08); padding: 5px 12px; border-radius: 20px;
+            font-size: 0.75rem; font-weight: 800; color: #777; z-index: 1000;
+            pointer-events: none; backdrop-filter: blur(4px);
         }
 
         .page { position: absolute; width: 90%; max-width: 450px; padding: 25px; background: var(--white); border-radius: 30px; box-shadow: 0 10px 0 #E6D5A9; opacity: 0; transform: translateY(30px) scale(0.9); pointer-events: none; transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1); box-sizing: border-box; max-height: 90vh; overflow-y: auto; }
         .page.active { opacity: 1; transform: translateY(0) scale(1); pointer-events: all; }
+        
         .btn { display: block; width: 100%; padding: 15px; margin: 10px 0; border: none; border-radius: 50px; font-size: 1.1rem; font-weight: 800; cursor: pointer; transition: 0.2s; text-align: center; box-sizing: border-box; }
         .btn-main { background: var(--primary); color: #856600; box-shadow: 0 6px 0 #D4B42E; }
         .btn-sub { background: var(--secondary); color: var(--white); box-shadow: 0 6px 0 #4FA659; }
         .btn-accent { background: var(--accent); color: var(--white); box-shadow: 0 6px 0 #D14D4D; }
         .btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.1); }
+        
         input, select { width: 100%; padding: 12px; margin: 8px 0; border: 3px solid var(--primary); border-radius: 15px; font-family: inherit; font-size: 1rem; box-sizing: border-box; background: #FFFBEB; font-weight: 800; color: var(--text); }
-        .room-id-display { background: #eee; padding: 15px; border-radius: 15px; font-size: 1.8rem; text-align: center; letter-spacing: 5px; margin-bottom: 5px; font-weight: 800; color: #555; cursor: pointer; transition: 0.3s; }
+        .room-id-display { background: #eee; padding: 15px; border-radius: 15px; font-size: 1.8rem; text-align: center; letter-spacing: 5px; margin-bottom: 5px; font-weight: 800; color: #555; cursor: pointer; }
         .timer-display { font-size: 3.5rem; text-align: center; color: var(--accent); text-shadow: 3px 3px 0 #FFD93D; margin: 5px 0; }
         .word-card { background: var(--primary); padding: 20px; border-radius: 25px; text-align: center; font-size: 1.6rem; margin: 10px 0; border: 4px dashed #856600; line-height: 1.4; }
+        
+        /* 話題提供エリア */
         .topic-area { background: #fdfdfd; padding: 15px; border-radius: 20px; margin: 15px 0; border: 3px solid var(--primary); }
         .topic-btns { display: flex; gap: 10px; justify-content: center; margin-bottom: 10px; }
         .btn-topic { width: 50px; height: 50px; border-radius: 15px; border: none; font-size: 1.2rem; font-weight: 800; cursor: pointer; box-shadow: 0 4px 0 #bbb; transition: 0.1s; }
@@ -46,45 +42,42 @@
         .btn-t2 { background: #A0E9FF; color: #007799; }
         .btn-t3 { background: #B6EA6D; color: #3E5E00; }
         #display-topic { font-size: 0.95rem; text-align: center; color: #444; min-height: 3em; display: flex; align-items: center; justify-content: center; font-weight: 800; padding: 5px; background: #fff; border-radius: 10px; }
+
+        /* ボイスオーバーレイ */
         #voice-overlay { position: fixed; top: 20px; right: 20px; display: flex; flex-direction: column; align-items: flex-end; z-index: 1000; pointer-events: none; }
         .voice-user { background: rgba(0,0,0,0.1); color: #888; padding: 8px 15px; border-radius: 20px; margin-bottom: 5px; font-weight: 800; font-size: 0.8rem; }
-        .voice-user.speaking { background: var(--secondary); color: white; opacity: 1; transform: scale(1.1) translateX(-5px); box-shadow: 0 4px 10px rgba(107, 203, 119, 0.4); animation: bounce 0.4s infinite alternate; }
+        .voice-user.speaking { background: var(--secondary); color: white; transform: scale(1.1); animation: bounce 0.4s infinite alternate; }
         @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-3px); } }
-        .mic-controls { display: flex; flex-direction: column; align-items: center; margin-bottom: 15px; }
+        
+        .mic-controls { display: flex; flex-direction: column; align-items: center; margin: 15px 0; }
         .btn-mic { width: 55px; height: 55px; border-radius: 30px; font-size: 1.4rem; display: flex; align-items: center; justify-content: center; }
+        
         #toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 10px 25px; border-radius: 50px; font-size: 0.9rem; opacity: 0; transition: 0.5s; z-index: 2000; }
     </style>
 </head>
 <body>
-    <div class="version-badge">V1.5</div>
+    <div class="version-badge" id="app-version">V1.0</div>
     <div id="voice-overlay"></div>
     <div id="toast">コピーしたよ！🔗</div>
 
     <div id="page-home" class="page active">
         <h1>🐺 Word Wolf</h1>
         <input type="text" id="input-nickname" placeholder="ニックネーム！" maxlength="8">
-        <div id="home-main-actions">
-            <button class="btn btn-main" onclick="handleCreateRoom()">部屋を作る ✨</button>
-            <div style="text-align:center; margin:10px; color:#aaa;">ーー または ーー</div>
-            <input type="text" id="input-room-id" placeholder="5桁のコード" maxlength="5">
-            <button class="btn btn-sub" onclick="handleJoinRoom()">参加する 🚪</button>
-        </div>
+        <button class="btn btn-main" onclick="handleCreateRoom()">部屋を作る ✨</button>
+        <div style="text-align:center; margin:10px; color:#aaa;">ーー または ーー</div>
+        <input type="text" id="input-room-id" placeholder="5桁のコード" maxlength="5">
+        <button class="btn btn-sub" onclick="handleJoinRoom()">参加する 🚪</button>
     </div>
 
     <div id="page-lobby" class="page">
         <h1>待機ロビー 🕒</h1>
         <div class="room-id-display" id="display-room-id" onclick="copyInviteURL()">-----</div>
         <div id="host-settings" style="display:none;">
-            <label style="font-size: 0.8rem; font-weight: 800; color: #888;">テーマを選択：</label>
+            <label style="font-size: 0.8rem; font-weight: 800; color: #888;">ジャンル：</label>
             <select id="select-genre">
-                <option value="food">🍔 飲食・グルメ</option>
-                <option value="love">💖 恋愛・結婚</option>
-                <option value="play">🎮 遊び・趣味</option>
-                <option value="school">🏫 学校・仕事</option>
-                <option value="life">🏠 生活・習慣</option>
-                <option value="place">🗺️ 場所・施設</option>
-                <option value="emotion">🤔 感情・抽象的</option>
-                <option value="random">🎲 全混ぜランダム</option>
+                <option value="balanced">⚖️ 黄金比率（モノ6：ヒト4）</option>
+                <option value="classic">🍲 王道モノ系（100%）</option>
+                <option value="human">👥 人間観察系（100%）</option>
             </select>
             <button class="btn btn-accent" onclick="handleStartGame()">ゲーム開始！🚀</button>
         </div>
@@ -113,7 +106,6 @@
 
     <div id="page-vote" class="page">
         <h1>投票タイム 🗳️</h1>
-        <button class="btn btn-accent" onclick="handleSuddenDeath()">⚡ サドンデス (+1分)</button>
         <div id="vote-container" style="margin-top:20px;"></div>
     </div>
 
@@ -143,28 +135,31 @@
         let peers = {};
         let audioContext = null;
 
-        const THEME_DATA = {
-            food: [["カフェラテ", "カフェオレ"], ["うどん", "そば"], ["偏食が激しそうな人", "食にこだわりが強そうな人"], ["高級料理が似合う人", "ジャンクフードが似合う人"], ["自炊が完璧そうな人", "毎日外食してそうな人"], ["マヨラーそうな人", "甘党そうな人"]],
-            love: [["浮気", "不倫"], ["初恋", "元恋人"], ["束縛が激しそうな人", "嫉妬深そうな人"], ["一途そうな人", "すぐ目移りしそうな人"], ["恋人に甘えそうな人", "恋人を振り回しそうな人"], ["モテすぎて困ってそうな人", "押しに弱そうな人"]],
-            play: [["YouTube", "Netflix"], ["ゲーム", "ボドゲ"], ["インドア派な人", "アウトドア派な人"], ["多趣味そうな人", "一つのことを極めそうな人"], ["ギャンブルが強そうな人", "くじ運が絶望的な人"], ["常に流行を追ってそうな人", "マイナーな趣味を持ってそうな人"]],
-            school: [["宿題", "課題"], ["先生", "上司"], ["成績が学年トップそうな人", "運動神経が化け物そうな人"], ["会議で寝てそうな人", "影のリーダーっぽい人"], ["残業が多そうな人", "定時で光の速さで帰りそうな人"], ["文系っぽい人", "理系っぽい人"]],
-            life: [["シャンプー", "リンス"], ["布団", "ベッド"], ["朝に弱そうな人", "夜更かしが限界突破してそうな人"], ["部屋がゴミ屋敷そうな人", "潔癖症そうな人"], ["貯金が1億円ありそうな人", "給料日前はもやし生活そうな人"], ["常に冷静沈着な人", "実は小心者そうな人"]],
-            place: [["映画館", "プラネタリウム"], ["海", "プール"], ["世界一周してそうな人", "近所のコンビニしか行かなそうな人"], ["無人島で生き残りそうな人", "都会じゃないと生きていけなそうな人"], ["迷子になりやすい人", "方向感覚が野生並みな人"]],
-            emotion: [["信頼", "安心"], ["理想", "幻想"], ["秘密が多そうな人", "嘘を隠し通せそうな人"], ["怒ると静かになる人", "怒ると語彙力がなくなる人"], ["褒められると伸びる人", "プレッシャーに強い人"]],
-            random: []
-        };
-        THEME_DATA.random = [].concat(...Object.values(THEME_DATA));
+        // 🚀 自動バージョンアップ
+        function handleVersion() {
+            let playCount = parseInt(localStorage.getItem('wolf_play_count') || "0");
+            document.getElementById('app-version').innerText = `V1.${playCount}`;
+            localStorage.setItem('wolf_play_count', playCount + 1);
+        }
+        handleVersion();
 
+        // 🍲 お題データ（黄金比率）
+        const CLASSIC_THEMES = [["しょうゆ", "めんつゆ"], ["うどん", "そば"], ["リンゴ", "梨"], ["マヨネーズ", "ケチャップ"], ["マクドナルド", "モスバーガー"], ["海", "プール"], ["映画館", "プラネタリウム"], ["ディズニーランド", "USJ"], ["おにぎり", "パン"], ["コーヒー", "紅茶"], ["ドラえもん", "アンパンマン"], ["夏", "冬"], ["焼肉", "寿司"], ["Twitter", "Instagram"], ["山", "川"]];
+        const HUMAN_THEMES = [["偏食が激しそうな人", "食にこだわりが強そうな人"], ["浮気しそうな人", "嫉妬深そうな人"], ["部屋がゴミ屋敷そうな人", "潔癖症そうな人"], ["朝に弱そうな人", "夜更かしが限界な人"], ["貯金が1億円ありそうな人", "給料日前もやし生活な人"], ["嘘が上手そうな人", "すぐ顔に出る人"], ["モテそうな人", "押しに弱そうな人"], ["文系っぽい人", "理系っぽい人"], ["アウトドア派な人", "インドア派な人"], ["多趣味そうな人", "無趣味そうな人"]];
         const TOPIC_MASTER = {
-            1: ["この中で一番お題に当てはまりそうな人は誰？", "最近それを意識（体験）したのはいつ？", "正直、今一番怪しい人を指差して！"],
-            2: ["自分にとってそれは日常でどれくらい大事？", "自分がそれを選ぶときの最大の基準は？", "今の自分のワード、かなり自信ある？"],
-            3: ["それのイメージカラーをせーので言おう！", "それが擬人化したら、どんな性格だと思う？", "それの値段、このメンバーで競り落とすならいくら？"]
+            1: ["最近それを意識（体験）したのはいつ？", "正直、今一番怪しい人を指差して！"],
+            2: ["自分にとってそれは日常でどれくらい大事？", "今の自分のワード、かなり自信ある？"],
+            3: ["それのイメージカラーをせーので言おう！", "それが擬人化したら、どんな性格だと思う？"]
+        };
+
+        window.showPage = (id) => {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            setTimeout(() => document.getElementById(id).classList.add('active'), 50);
         };
 
         window.sendTopicRequest = (num) => { update(ref(db, `rooms/${state.roomId}`), { currentTopicNum: num }); };
-        window.onload = () => { const rId = new URLSearchParams(window.location.search).get('room'); if (rId) document.getElementById('input-room-id').value = rId.toUpperCase(); };
-        window.showPage = (id) => { document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); setTimeout(() => document.getElementById(id).classList.add('active'), 50); };
 
+        // 🎤 ボイスチャット関連
         window.initSimpleVoice = async () => {
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -206,7 +201,7 @@
                 if (data.type === 'offer') {
                     await pc.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: data.sdp }));
                     const answer = await pc.createAnswer(); await pc.setLocalDescription(answer);
-                    push(ref(db, `rooms/${state.roomId}/signals/${data.from}`), { from: state.myId, type: 'answer', sdp: data.sdp });
+                    push(ref(db, `rooms/${state.roomId}/signals/${data.from}`), { from: state.myId, type: 'answer', sdp: answer.sdp });
                 } else if (data.type === 'answer') await pc.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: data.sdp }));
                 else if (data.type === 'ice-candidate') await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
             });
@@ -232,17 +227,12 @@
             });
         };
 
-        window.copyInviteURL = () => {
-            navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}?room=${state.roomId}`).then(() => {
-                const t = document.getElementById('toast'); t.style.opacity = "1"; setTimeout(() => t.style.opacity = "0", 2000);
-            });
-        };
-
+        // 🏠 部屋管理
         window.handleCreateRoom = async () => {
             const nick = document.getElementById('input-nickname').value || "ゲスト";
             const rid = Math.random().toString(36).substring(2, 7).toUpperCase();
             state = { ...state, roomId: rid, myId: "p_"+Date.now(), nickname: nick, isHost: true };
-            await set(ref(db, 'rooms/' + rid), { status: 'waiting', timer: 300, players: { [state.myId]: { name: nick, role: '', word: '', vote: '' } } });
+            await set(ref(db, 'rooms/' + rid), { status: 'waiting', timer: 300, players: { [state.myId]: { name: nick, role: '', word: '' } } });
             onDisconnect(ref(db, `rooms/${rid}/players/${state.myId}`)).remove();
             listenToRoom(rid); showPage('page-lobby');
         };
@@ -251,7 +241,7 @@
             const rid = document.getElementById('input-room-id').value.toUpperCase();
             const nick = document.getElementById('input-nickname').value || "ゲスト";
             state = { ...state, roomId: rid, myId: "p_"+Date.now(), nickname: nick, isHost: false };
-            await update(ref(db, `rooms/${rid}/players/${state.myId}`), { name: nick, role: '', word: '', vote: '' });
+            await update(ref(db, `rooms/${rid}/players/${state.myId}`), { name: nick, role: '', word: '' });
             onDisconnect(ref(db, `rooms/${rid}/players/${state.myId}`)).remove();
             listenToRoom(rid); showPage('page-lobby');
         };
@@ -265,10 +255,11 @@
                 document.getElementById('guest-msg').style.display = state.isHost ? 'none' : 'block';
                 const m = Math.floor(data.timer / 60); const s = data.timer % 60;
                 document.getElementById('display-timer').innerText = `${m}:${s < 10 ? '0'+s : s}`;
+                
                 if (data.currentTopicNum && data.topics) document.getElementById('display-topic').innerText = data.topics[data.currentTopicNum];
+
                 if(data.status === 'playing' && !document.getElementById('page-game').classList.contains('active')) {
                     document.getElementById('display-my-word').innerText = data.players[state.myId]?.word || "...";
-                    document.getElementById('display-topic').innerText = "誰かがボタンを押すと話題が出るよ！";
                     showPage('page-game'); if(state.isHost) startTimer(rid);
                 }
                 if(data.status === 'voting' && document.getElementById('page-game').classList.contains('active')) { setupVoteUI(data.players); showPage('page-vote'); }
@@ -287,11 +278,12 @@
         }
 
         window.handleStartGame = () => {
-            const genre = document.getElementById('select-genre').value;
-            const themes = THEME_DATA[genre];
-            const pair = themes[Math.floor(Math.random() * themes.length)];
+            const mode = document.getElementById('select-genre').value;
+            let pool = (mode === 'balanced') ? [...CLASSIC_THEMES.sort(() => 0.5 - Math.random()).slice(0, 6), ...HUMAN_THEMES.sort(() => 0.5 - Math.random()).slice(0, 4)] : (mode === 'classic' ? CLASSIC_THEMES : HUMAN_THEMES);
+            const pair = pool[Math.floor(Math.random() * pool.length)];
             const words = Math.random() > 0.5 ? [pair[0], pair[1]] : [pair[1], pair[0]];
-            const sessionTopics = { 1: TOPIC_MASTER[1][Math.floor(Math.random() * TOPIC_MASTER[1].length)], 2: TOPIC_MASTER[2][Math.floor(Math.random() * TOPIC_MASTER[2].length)], 3: TOPIC_MASTER[3][Math.floor(Math.random() * TOPIC_MASTER[3].length)] };
+            const sessionTopics = { 1: TOPIC_MASTER[1][Math.floor(Math.random() * 2)], 2: TOPIC_MASTER[2][Math.floor(Math.random() * 2)], 3: TOPIC_MASTER[3][Math.floor(Math.random() * 2)] };
+
             onValue(ref(db, `rooms/${state.roomId}/players`), (snap) => {
                 const ids = Object.keys(snap.val()).sort(() => 0.5 - Math.random());
                 const updates = { status: 'playing', timer: 300, topics: sessionTopics, currentTopicNum: 0 };
@@ -300,12 +292,12 @@
             }, { onlyOnce: true });
         };
 
-        window.handleSuddenDeath = () => { update(ref(db, `rooms/${state.roomId}`), { status: 'playing', timer: 60 }); if(state.isHost) startTimer(state.roomId); };
         window.handleGoToVote = () => update(ref(db, `rooms/${state.roomId}`), { status: 'voting' });
         function setupVoteUI(players) { document.getElementById('vote-container').innerHTML = Object.entries(players).filter(([id]) => id !== state.myId).map(([id, p]) => `<div class="btn btn-sub" onclick="castVote('${id}')">${p.name}</div>`).join(''); }
         window.castVote = (tid) => { update(ref(db, `rooms/${state.roomId}/players/${state.myId}`), { vote: tid }); onValue(ref(db, `rooms/${state.roomId}/players`), (snap) => { if(Object.values(snap.val()).every(p => p.vote !== "")) update(ref(db, `rooms/${state.roomId}`), { status: 'result' }); }, { onlyOnce: true }); };
-        function showResult(data) { const wolf = Object.values(data.players).find(p => p.role === 'wolf'); const citizen = Object.values(data.players).find(p => p.role === 'citizen'); document.getElementById('result-info').innerHTML = `人狼は <b>${wolf.name}</b> でした！<br><div style="font-size:0.9rem; margin-top:10px; color:#666;">市民：${citizen.word}<br>人狼：${wolf.word}</div>`; showPage('page-result'); }
+        function showResult(data) { const wolf = Object.values(data.players).find(p => p.role === 'wolf'); document.getElementById('result-info').innerHTML = `人狼は <b>${wolf.name}</b> でした！<br><div style="font-size:0.9rem; margin-top:10px; color:#666;">人狼：${wolf.word}</div>`; showPage('page-result'); }
         window.handleRestart = () => { if(state.isHost) update(ref(db, `rooms/${state.roomId}`), { status: 'waiting', timer: 300 }); showPage('page-lobby'); };
+        window.copyInviteURL = () => { navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}?room=${state.roomId}`).then(() => { const t = document.getElementById('toast'); t.style.opacity = "1"; setTimeout(() => t.style.opacity = "0", 2000); }); };
     </script>
 </body>
 </html>
