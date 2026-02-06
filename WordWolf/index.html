@@ -43,7 +43,7 @@
     <div id="page-lobby" class="page">
         <h1>待機ロビー 🕒</h1>
         <div class="room-id-display" id="display-room-id">-----</div>
-        <div id="voice-status" style="text-align:center; font-size:0.8rem; color:var(--secondary); margin-bottom:10px;">🎤 ボイス接続中...</div>
+        <div id="voice-status" style="text-align:center; font-size:0.8rem; color:var(--secondary); margin-bottom:10px;">🎤 ボイス接続準備中...</div>
         <ul id="lobby-player-list" class="user-list"></ul>
         <div id="host-controls" style="display:none;" class="setting-box">
             <h3>ゲーム設定 ⚙️</h3>
@@ -107,7 +107,10 @@
         };
 
         async function initVoiceChat(rid) {
-            if (typeof skyway_room === 'undefined') return;
+            if (typeof skyway_room === 'undefined') {
+                console.error("SkyWay SDK not loaded");
+                return;
+            }
             try {
                 const { SkyWayContext, SkyWayRoom, SkyWayStreamFactory } = skyway_room;
                 const context = await SkyWayContext.Create(SKYWAY_APP_ID);
@@ -128,7 +131,7 @@
                 document.getElementById('voice-status').innerText = "🎤 ボイスチャット有効";
             } catch (e) { 
                 console.error("SkyWay Error:", e); 
-                document.getElementById('voice-status').innerText = "❌ ボイス接続失敗（設定を確認してね）";
+                document.getElementById('voice-status').innerText = "❌ ボイス接続失敗";
             }
         }
 
@@ -143,9 +146,12 @@
                     players: { [state.myId]: { name: nick, role: '', word: '', vote: '' } }
                 });
                 listenToRoom(rid);
-                initVoiceChat(rid); // 失敗しても次は進む
                 showPage('page-lobby');
-            } catch (e) { alert("Firebase接続エラー！ルールを確認してね。"); }
+                setTimeout(() => initVoiceChat(rid), 500); // 画面遷移後に初期化
+            } catch (e) { 
+                console.error(e);
+                alert("Firebase接続エラー！Realtime Databaseのルールを確認してね。"); 
+            }
         };
 
         window.handleJoinRoom = async () => {
@@ -157,8 +163,8 @@
             try {
                 await update(ref(db, `rooms/${rid}/players/${state.myId}`), { name: nick, role: '', word: '', vote: '' });
                 listenToRoom(rid);
-                initVoiceChat(rid);
                 showPage('page-lobby');
+                setTimeout(() => initVoiceChat(rid), 500);
             } catch (e) { alert("部屋が見つからないよ！"); }
         };
 
@@ -173,12 +179,13 @@
                 document.getElementById('guest-msg').style.display = state.isHost ? 'none' : 'block';
                 const m = Math.floor(data.timer / 60); const s = data.timer % 60;
                 document.getElementById('display-timer').innerText = `${m}:${s < 10 ? '0'+s : s}`;
+                
                 if(data.status === 'playing' && document.getElementById('page-lobby').classList.contains('active')) {
                     document.getElementById('display-my-word').innerText = data.players[state.myId].word;
                     showPage('page-game');
                     if(state.isHost) startTimer(rid);
                 }
-                if(data.status === 'voting' && document.getElementById('page-game').classList.contains('active')) {
+                if(data.status === 'voting' && (document.getElementById('page-game').classList.contains('active') || document.getElementById('page-vote').classList.contains('active') === false)) {
                     setupVoteUI(data.players);
                     showPage('page-vote');
                 }
@@ -191,7 +198,10 @@
             state.timerInterval = setInterval(() => {
                 runTransaction(ref(db, `rooms/${rid}/timer`), (t) => {
                     if(t === null) return 0;
-                    if(t <= 0) { handleGoToVote(); return 0; }
+                    if(t <= 0) { 
+                        update(ref(db, `rooms/${rid}`), { status: 'voting' });
+                        return 0; 
+                    }
                     return t - 1;
                 });
             }, 1000);
@@ -202,6 +212,7 @@
             const gameTime = parseInt(document.getElementById('set-time').value);
             const pair = THEMES.ALL[Math.floor(Math.random() * THEMES.ALL.length)];
             const words = Math.random() > 0.5 ? [pair[0], pair[1]] : [pair[1], pair[0]];
+            
             onValue(ref(db, `rooms/${state.roomId}/players`), (snap) => {
                 const players = snap.val();
                 const ids = Object.keys(players);
@@ -236,6 +247,7 @@
         function checkAllVoted() {
             onValue(ref(db, `rooms/${state.roomId}`), (snap) => {
                 const data = snap.val();
+                if(!data) return;
                 const players = Object.values(data.players);
                 if(players.every(p => p.vote !== "")) update(ref(db, `rooms/${state.roomId}`), { status: 'result' });
             }, { onlyOnce: true });
