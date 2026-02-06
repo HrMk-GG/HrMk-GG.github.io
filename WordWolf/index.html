@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ワードウルフ 🐺 話題ボタン搭載版</title>
+    <title>ワードウルフ 🐺 CREATE BY HrMk</title>
     <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700;800&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -22,34 +22,29 @@
         .room-id-display { background: #eee; padding: 15px; border-radius: 15px; font-size: 1.8rem; text-align: center; letter-spacing: 5px; margin-bottom: 5px; font-weight: 800; color: #555; cursor: pointer; transition: 0.3s; }
         .timer-display { font-size: 3.5rem; text-align: center; color: var(--accent); text-shadow: 3px 3px 0 #FFD93D; margin: 5px 0; }
         .word-card { background: var(--primary); padding: 20px; border-radius: 25px; text-align: center; font-size: 1.6rem; margin: 10px 0; border: 4px dashed #856600; line-height: 1.4; }
-        
-        /* 話題ボタンのスタイル */
-        .topic-area { background: #f0f0f0; padding: 15px; border-radius: 20px; margin: 15px 0; border: 2px solid #ddd; }
+        .topic-area { background: #fdfdfd; padding: 15px; border-radius: 20px; margin: 15px 0; border: 3px solid var(--primary); position: relative; }
         .topic-btns { display: flex; gap: 10px; justify-content: center; margin-bottom: 10px; }
-        .btn-topic { width: 50px; height: 50px; border-radius: 15px; border: none; font-size: 1.2rem; font-weight: 800; cursor: pointer; box-shadow: 0 4px 0 #bbb; transition: 0.1s; display: flex; align-items: center; justify-content: center; }
+        .btn-topic { width: 50px; height: 50px; border-radius: 15px; border: none; font-size: 1.2rem; font-weight: 800; cursor: pointer; box-shadow: 0 4px 0 #bbb; transition: 0.1s; }
         .btn-topic:active { transform: translateY(2px); box-shadow: 0 2px 0 #bbb; }
         .btn-t1 { background: #FF9EAA; color: white; }
         .btn-t2 { background: #A0E9FF; color: #007799; }
         .btn-t3 { background: #B6EA6D; color: #3E5E00; }
-        #display-topic { font-size: 0.9rem; text-align: center; color: #666; min-height: 2.4em; display: flex; align-items: center; justify-content: center; font-weight: 800; }
-
+        #display-topic { font-size: 0.95rem; text-align: center; color: #444; min-height: 3em; display: flex; align-items: center; justify-content: center; font-weight: 800; padding: 5px; background: #fff; border-radius: 10px; }
         #voice-overlay { position: fixed; top: 20px; right: 20px; display: flex; flex-direction: column; align-items: flex-end; z-index: 1000; pointer-events: none; }
-        .voice-user { background: rgba(0,0,0,0.1); color: #888; padding: 8px 15px; border-radius: 20px; margin-bottom: 5px; font-weight: 800; font-size: 0.8rem; transition: all 0.2s ease; opacity: 0.5; }
+        .voice-user { background: rgba(0,0,0,0.1); color: #888; padding: 8px 15px; border-radius: 20px; margin-bottom: 5px; font-weight: 800; font-size: 0.8rem; }
         .voice-user.speaking { background: var(--secondary); color: white; opacity: 1; transform: scale(1.1) translateX(-5px); box-shadow: 0 4px 10px rgba(107, 203, 119, 0.4); animation: bounce 0.4s infinite alternate; }
-        @keyframes bounce { from { transform: scale(1.1) translateY(0); } to { transform: scale(1.1) translateY(-3px); } }
+        @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-3px); } }
         .mic-controls { display: flex; flex-direction: column; align-items: center; margin-bottom: 15px; }
         .btn-mic { width: 55px; height: 55px; border-radius: 30px; font-size: 1.4rem; display: flex; align-items: center; justify-content: center; }
         #toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 10px 25px; border-radius: 50px; font-size: 0.9rem; opacity: 0; transition: 0.5s; z-index: 2000; }
     </style>
 </head>
 <body>
-
     <div id="voice-overlay"></div>
     <div id="toast">コピーしたよ！🔗</div>
 
     <div id="page-home" class="page active">
         <h1>🐺 Word Wolf</h1>
-        <div id="direct-join-msg" style="display:none; text-align:center; margin-bottom:15px; color:var(--secondary); font-weight:800;">招待コードを受信したよ！✨</div>
         <input type="text" id="input-nickname" placeholder="ニックネーム！" maxlength="8">
         <div id="home-main-actions">
             <button class="btn btn-main" onclick="handleCreateRoom()">部屋を作る ✨</button>
@@ -57,19 +52,13 @@
             <input type="text" id="input-room-id" placeholder="5桁のコード" maxlength="5">
             <button class="btn btn-sub" onclick="handleJoinRoom()">参加する 🚪</button>
         </div>
-        <div id="home-direct-actions" style="display:none;">
-            <button class="btn btn-sub" onclick="handleJoinRoomDirect()">この部屋に参加 🚪</button>
-            <button class="btn btn-main" style="background:#ddd; color:#888; box-shadow: 0 6px 0 #bbb;" onclick="cancelDirectJoin()">新しく部屋を作る</button>
-        </div>
     </div>
 
     <div id="page-lobby" class="page">
         <h1>待機ロビー 🕒</h1>
         <div class="room-id-display" id="display-room-id" onclick="copyInviteURL()">-----</div>
-        <div style="text-align:center; font-size:0.7rem; color:#aaa; margin-bottom:15px;">↑URLをコピーして友達を呼ぼう✨</div>
-        
         <div id="host-settings" style="display:none;">
-            <label style="font-size: 0.8rem; font-weight: 800; color: #888;">テーマを選択：</label>
+            <label style="font-size: 0.8rem; font-weight: 800; color: #888;">テーマ：</label>
             <select id="select-genre">
                 <option value="attribute">👤 自分たち（属性）</option>
                 <option value="food">🍔 飲食・グルメ</option>
@@ -86,27 +75,23 @@
             <button class="btn btn-accent" onclick="handleStartGame()">ゲーム開始！🚀</button>
         </div>
         <div id="guest-msg" style="text-align:center; color:#888; margin: 20px 0;">ホストの開始を待っています...</div>
-
         <div class="mic-controls">
             <button id="btn-start-voice" class="btn btn-sub" onclick="initSimpleVoice()">🎤 マイクを有効にする</button>
             <button id="btn-mic-lobby" class="btn btn-sub btn-mic" onclick="toggleMic()" style="display:none;">🎙️</button>
-            <div id="voice-status">ボイス未接続</div>
         </div>
     </div>
 
     <div id="page-game" class="page">
         <h1>あなたのお題 🤫</h1>
         <div class="word-card" id="display-my-word">...</div>
-        
         <div class="topic-area">
             <div class="topic-btns">
-                <button class="btn-topic btn-t1" onclick="generateTopic(1)">①</button>
-                <button class="btn-topic btn-t2" onclick="generateTopic(2)">②</button>
-                <button class="btn-topic btn-t3" onclick="generateTopic(3)">③</button>
+                <button class="btn-topic btn-t1" onclick="sendTopicRequest(1)">①</button>
+                <button class="btn-topic btn-t2" onclick="sendTopicRequest(2)">②</button>
+                <button class="btn-topic btn-t3" onclick="sendTopicRequest(3)">③</button>
             </div>
-            <div id="display-topic">話題に困ったらボタンを押してね！</div>
+            <div id="display-topic">誰かがボタンを押すとここに話題が出るよ！</div>
         </div>
-
         <div class="timer-display" id="display-timer">05:00</div>
         <div class="mic-controls"><button id="btn-mic-game" class="btn btn-sub btn-mic" onclick="toggleMic()">🎙️</button></div>
         <button class="btn btn-main" onclick="handleGoToVote()">話し合い終了 ✋</button>
@@ -159,28 +144,19 @@
         };
         THEME_DATA.random = [].concat(...Object.values(THEME_DATA));
 
-        // 話題リスト
-        const TOPICS = {
-            1: ["この中で一番当てはまりそうな人は誰？", "最近それをした（見た、食べた）のはいつ？", "それのどこが一番好き？", "正直、今疑ってる人は誰？", "今の話を聞いて、違和感を感じた人は？"],
-            2: ["私はそれを選ぶとき、ここを重視するよ！", "自分にとっては、日常に欠かせないものかな！", "さっきの誰かの発言、自分とは少し違う気がする...", "私はどちらかというと、これに近いタイプかも！", "自分の今のワード、かなり自信あるよ！"],
-            3: ["それのイメージカラーをせーので言おう！", "それのイメージを漢字一文字で表すと何？", "もしそれが無人島に一つだけ持って行けるなら？", "それが擬人化したらどんな性格だと思う？", "それの値段はいくらくらいだと思う？"]
+        const TOPIC_MASTER = {
+            1: ["この中で一番お題に当てはまりそうな人は誰？", "最近それを体験した（見た、食べた）のはいつ？", "それのどこが一番魅力的（または嫌）だと思う？", "正直、今一番怪しいと思っている人を指差して！"],
+            2: ["自分にとって、それは日常でどれくらい必要？", "自分がそれを選ぶときの一番のこだわりは？", "さっきの誰かの発言に、少し違和感を感じた？", "自分がそのお題に対して持っている「強いイメージ」は？"],
+            3: ["それのイメージカラーを「せーの」で言おう！", "それのイメージを漢字一文字で表すと何？", "それがもし魔法で消えたら、世界はどうなる？", "それの値段、このメンバーで競り落とすならいくら？"]
         };
 
-        window.generateTopic = (type) => {
-            const list = TOPICS[type];
-            const msg = list[Math.floor(Math.random() * list.length)];
-            document.getElementById('display-topic').innerText = msg;
+        window.sendTopicRequest = (num) => {
+            update(ref(db, `rooms/${state.roomId}`), { currentTopicNum: num });
         };
 
         window.onload = () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const rId = urlParams.get('room');
-            if (rId) {
-                document.getElementById('direct-join-msg').style.display = 'block';
-                document.getElementById('home-main-actions').style.display = 'none';
-                document.getElementById('home-direct-actions').style.display = 'block';
-                document.getElementById('input-room-id').value = rId.toUpperCase();
-            }
+            const rId = new URLSearchParams(window.location.search).get('room');
+            if (rId) document.getElementById('input-room-id').value = rId.toUpperCase();
         };
 
         window.showPage = (id) => {
@@ -194,7 +170,6 @@
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 document.getElementById('btn-start-voice').style.display = "none";
                 document.getElementById('btn-mic-lobby').style.display = "flex";
-                document.getElementById('voice-status').innerText = "マイク有効中 🎤";
                 monitorVolume(localStream, state.myId);
                 onValue(ref(db, `rooms/${state.roomId}/players`), (snap) => {
                     const players = snap.val();
@@ -230,7 +205,7 @@
                 if (data.type === 'offer') {
                     await pc.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: data.sdp }));
                     const answer = await pc.createAnswer(); await pc.setLocalDescription(answer);
-                    push(ref(db, `rooms/${state.roomId}/signals/${data.from}`), { from: state.myId, type: 'answer', sdp: answer.sdp });
+                    push(ref(db, `rooms/${state.roomId}/signals/${data.from}`), { from: state.myId, type: 'answer', sdp: data.sdp });
                 } else if (data.type === 'answer') await pc.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: data.sdp }));
                 else if (data.type === 'ice-candidate') await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
             });
@@ -257,8 +232,7 @@
         };
 
         window.copyInviteURL = () => {
-            const url = `${window.location.origin}${window.location.pathname}?room=${state.roomId}`;
-            navigator.clipboard.writeText(url).then(() => {
+            navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}?room=${state.roomId}`).then(() => {
                 const t = document.getElementById('toast'); t.style.opacity = "1"; setTimeout(() => t.style.opacity = "0", 2000);
             });
         };
@@ -267,18 +241,14 @@
             const nick = document.getElementById('input-nickname').value || "ゲスト";
             const rid = Math.random().toString(36).substring(2, 7).toUpperCase();
             state = { ...state, roomId: rid, myId: "p_"+Date.now(), nickname: nick, isHost: true };
-            await set(ref(db, 'rooms/' + rid), { status: 'waiting', timer: 300, hostId: state.myId, players: { [state.myId]: { name: nick, role: '', word: '', vote: '' } } });
+            await set(ref(db, 'rooms/' + rid), { status: 'waiting', timer: 300, players: { [state.myId]: { name: nick, role: '', word: '', vote: '' } } });
             onDisconnect(ref(db, `rooms/${rid}/players/${state.myId}`)).remove();
             listenToRoom(rid); showPage('page-lobby');
         };
 
-        window.handleJoinRoomDirect = () => handleJoinRoom();
-        window.cancelDirectJoin = () => { window.history.replaceState({}, '', window.location.pathname); location.reload(); };
-
         window.handleJoinRoom = async () => {
             const rid = document.getElementById('input-room-id').value.toUpperCase();
             const nick = document.getElementById('input-nickname').value || "ゲスト";
-            if(rid.length !== 5) return;
             state = { ...state, roomId: rid, myId: "p_"+Date.now(), nickname: nick, isHost: false };
             await update(ref(db, `rooms/${rid}/players/${state.myId}`), { name: nick, role: '', word: '', vote: '' });
             onDisconnect(ref(db, `rooms/${rid}/players/${state.myId}`)).remove();
@@ -289,15 +259,20 @@
             onValue(ref(db, 'rooms/' + rid), (snap) => {
                 const data = snap.val(); if(!data) return;
                 document.getElementById('display-room-id').innerText = rid;
-                const overlay = document.getElementById('voice-overlay');
-                overlay.innerHTML = Object.entries(data.players || {}).map(([id, p]) => `<div id="voice-user-${id}" class="voice-user">${p.name}</div>`).join('');
+                document.getElementById('voice-overlay').innerHTML = Object.entries(data.players || {}).map(([id, p]) => `<div id="voice-user-${id}" class="voice-user">${p.name}</div>`).join('');
                 document.getElementById('host-settings').style.display = (state.isHost && data.status === 'waiting') ? 'block' : 'none';
                 document.getElementById('guest-msg').style.display = state.isHost ? 'none' : 'block';
                 const m = Math.floor(data.timer / 60); const s = data.timer % 60;
                 document.getElementById('display-timer').innerText = `${m}:${s < 10 ? '0'+s : s}`;
+                
+                // 話題の同期表示
+                if (data.currentTopicNum && data.topics) {
+                    document.getElementById('display-topic').innerText = data.topics[data.currentTopicNum];
+                }
+
                 if(data.status === 'playing' && !document.getElementById('page-game').classList.contains('active')) {
                     document.getElementById('display-my-word').innerText = data.players[state.myId]?.word || "...";
-                    document.getElementById('display-topic').innerText = "話題に困ったらボタンを押してね！";
+                    document.getElementById('display-topic').innerText = "誰かがボタンを押すとここに話題が出るよ！";
                     showPage('page-game'); if(state.isHost) startTimer(rid);
                 }
                 if(data.status === 'voting' && document.getElementById('page-game').classList.contains('active')) { setupVoteUI(data.players); showPage('page-vote'); }
@@ -320,9 +295,17 @@
             const themes = THEME_DATA[genre];
             const pair = themes[Math.floor(Math.random() * themes.length)];
             const words = Math.random() > 0.5 ? [pair[0], pair[1]] : [pair[1], pair[0]];
+            
+            // この試合用の話題を3つ固定
+            const sessionTopics = {
+                1: TOPIC_MASTER[1][Math.floor(Math.random() * TOPIC_MASTER[1].length)],
+                2: TOPIC_MASTER[2][Math.floor(Math.random() * TOPIC_MASTER[2].length)],
+                3: TOPIC_MASTER[3][Math.floor(Math.random() * TOPIC_MASTER[3].length)]
+            };
+
             onValue(ref(db, `rooms/${state.roomId}/players`), (snap) => {
                 const ids = Object.keys(snap.val()).sort(() => 0.5 - Math.random());
-                const updates = { status: 'playing', timer: 300 };
+                const updates = { status: 'playing', timer: 300, topics: sessionTopics, currentTopicNum: 0 };
                 ids.forEach((id, i) => { updates[`/players/${id}/role`] = (i === 0) ? 'wolf' : 'citizen'; updates[`/players/${id}/word`] = (i === 0) ? words[1] : words[0]; updates[`/players/${id}/vote`] = ''; });
                 update(ref(db, `rooms/${state.roomId}`), updates);
             }, { onlyOnce: true });
