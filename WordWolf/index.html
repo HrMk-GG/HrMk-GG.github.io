@@ -25,9 +25,9 @@
         .user-list li { background: #F3F4F6; margin: 8px 0; padding: 12px 20px; border-radius: 20px; display: flex; justify-content: space-between; align-items: center; list-style: none; }
         .timer-display { font-size: 4rem; text-align: center; color: var(--accent); text-shadow: 3px 3px 0 #FFD93D; margin: 10px 0; }
         .word-card { background: var(--primary); padding: 25px; border-radius: 25px; text-align: center; font-size: 2rem; margin: 20px 0; border: 4px dashed #856600; }
-        .setting-box { background: #f9f9f9; padding: 15px; border-radius: 20px; margin: 15px 0; border: 2px solid #eee; }
-        .mic-controls { display: flex; justify-content: center; margin-bottom: 15px; }
+        .mic-controls { display: flex; flex-direction: column; align-items: center; margin-bottom: 15px; }
         .btn-mic { width: 60px; height: 60px; border-radius: 30px; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; }
+        #voice-status { font-size: 0.8rem; margin-top: 5px; color: #888; }
     </style>
 </head>
 <body>
@@ -46,20 +46,15 @@
         <div class="room-id-display" id="display-room-id">-----</div>
         
         <div class="mic-controls">
-            <button id="btn-mic-lobby" class="btn btn-sub btn-mic" onclick="toggleMic()">🎙️</button>
+            <button id="btn-start-voice" class="btn btn-sub" onclick="manualInitVoice()">🎤 ボイスを開始する</button>
+            <button id="btn-mic-lobby" class="btn btn-sub btn-mic" onclick="toggleMic()" style="display:none;">🎙️</button>
+            <div id="voice-status">ボイス未接続</div>
         </div>
-        <div id="voice-status" style="text-align:center; font-size:0.8rem; color:var(--secondary); margin-bottom:10px;">🎤 ボイス接続準備中...</div>
 
         <ul id="lobby-player-list" class="user-list"></ul>
         <div id="host-controls" style="display:none;" class="setting-box">
             <h3>ゲーム設定 ⚙️</h3>
             <label>人狼の数: <input type="number" id="set-wolf-count" value="1" min="1"></label>
-            <label>話し合い時間: 
-                <select id="set-time">
-                    <option value="60">1分</option><option value="180">3分</option>
-                    <option value="300" selected>5分</option><option value="600">10分</option>
-                </select>
-            </label>
             <button class="btn btn-accent" onclick="handleStartGame()">ゲーム開始！🚀</button>
         </div>
         <div id="guest-msg" style="text-align:center; color:#888;">ホストの設定を待っています...</div>
@@ -100,18 +95,16 @@
             projectId: "othello-hrmk",
             storageBucket: "othello-hrmk.firebasestorage.app",
             messagingSenderId: "804527745152",
-            appId: "1:804527745152:web:0ab51db1cc348000801e65",
-            measurementId: "G-ZJX6L6ZEFL"
+            appId: "1:804527745152:web:0ab51db1cc348000801e65"
         };
         const SKYWAY_APP_ID = "86266f8a-a0de-449d-b00e-6639c2659542"; 
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app, "https://othello-hrmk-default-rtdb.asia-southeast1.firebasedatabase.app");
 
-        const THEMES = { "ALL": [["カフェラテ", "カフェオレ"], ["パンケーキ", "ホットケーキ"], ["醤油", "めんつゆ"], ["ポテトチップス", "フライドポテト"], ["唐揚げ", "竜田揚げ"], ["ラーメン", "つけ麺"], ["一目惚れ", "片思い"], ["浮気", "不倫"], ["算数", "数学"], ["宿題", "課題"]] };
+        const THEMES = { "ALL": [["カフェラテ", "カフェオレ"], ["パンケーキ", "ホットケーキ"], ["醤油", "めんつゆ"], ["ラーメン", "つけ麺"], ["一目惚れ", "片思い"]] };
 
         let state = { roomId: "", myId: "", nickname: "", isHost: false, timerInterval: null };
-        let audioStream = null;
         let audioPublication = null;
 
         window.showPage = (id) => {
@@ -119,16 +112,23 @@
             setTimeout(() => document.getElementById(id).classList.add('active'), 50);
         };
 
-        async function initVoiceChat(rid) {
-            if (typeof skyway_room === 'undefined') return;
+        // ユーザーがクリックして明示的に開始
+        window.manualInitVoice = async () => {
+            const status = document.getElementById('voice-status');
+            status.innerText = "接続中...";
+            
+            if (typeof skyway_room === 'undefined') {
+                status.innerText = "エラー: ライブラリ未読込";
+                return;
+            }
+
             try {
                 const { SkyWayContext, SkyWayRoom, SkyWayStreamFactory } = skyway_room;
                 const context = await SkyWayContext.Create(SKYWAY_APP_ID);
-                const room = await SkyWayRoom.FindOrCreate(context, { type: 'p2p', name: rid });
+                const room = await SkyWayRoom.FindOrCreate(context, { type: 'p2p', name: state.roomId });
                 const member = await room.join();
                 
                 const { audio } = await SkyWayStreamFactory.createMicrophoneAudioAndCameraStream();
-                audioStream = audio;
                 audioPublication = await member.publish(audio);
                 
                 room.onPublicationsByAnyMemberAdded.add(({ publication }) => {
@@ -141,27 +141,27 @@
                         });
                     }
                 });
-                document.getElementById('voice-status').innerText = "🎤 ボイスチャット接続完了！";
+
+                document.getElementById('btn-start-voice').style.display = "none";
+                document.getElementById('btn-mic-lobby').style.display = "flex";
+                status.innerText = "ボイス接続完了！ 🎙️";
+                status.style.color = "var(--secondary)";
             } catch (e) { 
-                console.error("SkyWay Error:", e); 
-                document.getElementById('voice-status').innerText = "❌ マイクを許可してね！";
+                console.error(e); 
+                status.innerText = "エラー: マイク許可を確認してね";
+                status.style.color = "var(--accent)";
             }
-        }
+        };
 
         window.toggleMic = async () => {
             if (!audioPublication) return;
+            const btns = [document.getElementById('btn-mic-lobby'), document.getElementById('btn-mic-game')];
             if (audioPublication.state === 'enabled') {
                 await audioPublication.disable();
-                document.getElementById('btn-mic-lobby').innerText = "🔇";
-                document.getElementById('btn-mic-game').innerText = "🔇";
-                document.getElementById('btn-mic-lobby').style.background = "#FF6B6B";
-                document.getElementById('btn-mic-game').style.background = "#FF6B6B";
+                btns.forEach(b => { b.innerText = "🔇"; b.style.background = "#FF6B6B"; });
             } else {
                 await audioPublication.enable();
-                document.getElementById('btn-mic-lobby').innerText = "🎙️";
-                document.getElementById('btn-mic-game').innerText = "🎙️";
-                document.getElementById('btn-mic-lobby').style.background = "#6BCB77";
-                document.getElementById('btn-mic-game').style.background = "#6BCB77";
+                btns.forEach(b => { b.innerText = "🎙️"; b.style.background = "#6BCB77"; });
             }
         };
 
@@ -169,19 +169,15 @@
             const nick = document.getElementById('input-nickname').value || "ゲスト";
             const rid = Math.random().toString(36).substring(2, 7).toUpperCase();
             state = { ...state, roomId: rid, myId: "p_"+Date.now(), nickname: nick, isHost: true };
-            
             try {
-                const roomRef = ref(db, 'rooms/' + rid);
-                const playerRef = ref(db, `rooms/${rid}/players/${state.myId}`);
-                await set(roomRef, {
+                await set(ref(db, 'rooms/' + rid), {
                     status: 'waiting', timer: 300, hostId: state.myId,
                     players: { [state.myId]: { name: nick, role: '', word: '', vote: '' } }
                 });
-                onDisconnect(playerRef).remove();
+                onDisconnect(ref(db, `rooms/${rid}/players/${state.myId}`)).remove();
                 listenToRoom(rid);
                 showPage('page-lobby');
-                initVoiceChat(rid);
-            } catch (e) { alert("Firebaseエラー！コンソールを確認してね。"); }
+            } catch (e) { alert("Firebaseエラー"); }
         };
 
         window.handleJoinRoom = async () => {
@@ -189,35 +185,31 @@
             const nick = document.getElementById('input-nickname').value || "ゲスト";
             if(rid.length !== 5) return;
             state = { ...state, roomId: rid, myId: "p_"+Date.now(), nickname: nick, isHost: false };
-
             try {
-                const playerRef = ref(db, `rooms/${rid}/players/${state.myId}`);
-                await update(playerRef, { name: nick, role: '', word: '', vote: '' });
-                onDisconnect(playerRef).remove();
+                await update(ref(db, `rooms/${rid}/players/${state.myId}`), { name: nick, role: '', word: '', vote: '' });
+                onDisconnect(ref(db, `rooms/${rid}/players/${state.myId}`)).remove();
                 listenToRoom(rid);
                 showPage('page-lobby');
-                initVoiceChat(rid);
-            } catch (e) { alert("部屋が見つからないよ！"); }
+            } catch (e) { alert("部屋が見つかりません"); }
         };
 
         function listenToRoom(rid) {
             document.getElementById('display-room-id').innerText = rid;
-            onValue(ref(db, 'rooms/' + rid), (snapshot) => {
-                const data = snapshot.val();
+            onValue(ref(db, 'rooms/' + rid), (snap) => {
+                const data = snap.val();
                 if(!data) return;
                 const list = document.getElementById('lobby-player-list');
-                list.innerHTML = Object.values(data.players || {}).map(p => `<li>${p.name} <span class="voice-badge">ON</span></li>`).join('');
+                list.innerHTML = Object.values(data.players || {}).map(p => `<li>${p.name}</li>`).join('');
                 document.getElementById('host-controls').style.display = (state.isHost && data.status === 'waiting') ? 'block' : 'none';
                 document.getElementById('guest-msg').style.display = state.isHost ? 'none' : 'block';
                 const m = Math.floor(data.timer / 60); const s = data.timer % 60;
                 document.getElementById('display-timer').innerText = `${m}:${s < 10 ? '0'+s : s}`;
                 
-                if(data.status === 'playing' && document.getElementById('page-lobby').classList.contains('active')) {
+                if(data.status === 'playing' && !document.getElementById('page-game').classList.contains('active')) {
                     document.getElementById('display-my-word').innerText = data.players[state.myId]?.word || "...";
                     showPage('page-game');
                     if(state.isHost) startTimer(rid);
                 }
-                // サドンデスから戻る時のためのフラグ管理
                 if(data.status === 'playing' && document.getElementById('page-vote').classList.contains('active')) {
                     showPage('page-game');
                 }
@@ -233,31 +225,22 @@
             if(state.timerInterval) clearInterval(state.timerInterval);
             state.timerInterval = setInterval(() => {
                 runTransaction(ref(db, `rooms/${rid}/timer`), (t) => {
-                    if(t === null) return 0;
-                    if(t <= 0) { 
-                        update(ref(db, `rooms/${rid}`), { status: 'voting' });
-                        clearInterval(state.timerInterval);
-                        return 0; 
-                    }
+                    if(t <= 0) { update(ref(db, `rooms/${rid}`), { status: 'voting' }); clearInterval(state.timerInterval); return 0; }
                     return t - 1;
                 });
             }, 1000);
         }
 
         window.handleStartGame = () => {
-            const wolfCount = parseInt(document.getElementById('set-wolf-count').value);
-            const gameTime = parseInt(document.getElementById('set-time').value);
             const pair = THEMES.ALL[Math.floor(Math.random() * THEMES.ALL.length)];
             const words = Math.random() > 0.5 ? [pair[0], pair[1]] : [pair[1], pair[0]];
-            
             onValue(ref(db, `rooms/${state.roomId}/players`), (snap) => {
                 const players = snap.val();
                 const ids = Object.keys(players);
                 const shuffled = ids.sort(() => 0.5 - Math.random());
-                const wolfIds = shuffled.slice(0, wolfCount);
-                const updates = { status: 'playing', timer: gameTime };
-                ids.forEach(id => {
-                    const isWolf = wolfIds.includes(id);
+                const updates = { status: 'playing', timer: 300 };
+                ids.forEach((id, i) => {
+                    const isWolf = i === 0; // 1人目だけ人狼
                     updates[`/players/${id}/role`] = isWolf ? 'wolf' : 'citizen';
                     updates[`/players/${id}/word`] = isWolf ? words[1] : words[0];
                     updates[`/players/${id}/vote`] = '';
@@ -268,7 +251,6 @@
 
         window.handleSuddenDeath = () => {
             update(ref(db, `rooms/${state.roomId}`), { status: 'playing', timer: 60 });
-            // ホストならタイマーを再開
             if(state.isHost) startTimer(state.roomId);
         };
         
@@ -277,27 +259,20 @@
         function setupVoteUI(players) {
             const container = document.getElementById('vote-container');
             container.innerHTML = Object.entries(players).filter(([id]) => id !== state.myId).map(([id, p]) => `
-                <div class="vote-item btn btn-sub" onclick="castVote('${id}')">${p.name}</div>
+                <div class="btn btn-sub" onclick="castVote('${id}')">${p.name}</div>
             `).join('');
         }
 
-        window.castVote = (targetId) => {
-            update(ref(db, `rooms/${state.roomId}/players/${state.myId}`), { vote: targetId });
-            checkAllVoted();
+        window.castVote = (tid) => {
+            update(ref(db, `rooms/${state.roomId}/players/${state.myId}`), { vote: tid });
+            onValue(ref(db, `rooms/${state.roomId}/players`), (snap) => {
+                if(Object.values(snap.val()).every(p => p.vote !== "")) update(ref(db, `rooms/${state.roomId}`), { status: 'result' });
+            }, { onlyOnce: true });
         };
 
-        function checkAllVoted() {
-            onValue(ref(db, `rooms/${state.roomId}`), (snap) => {
-                const data = snap.val();
-                if(!data) return;
-                const players = Object.values(data.players);
-                if(players.every(p => p.vote !== "")) update(ref(db, `rooms/${state.roomId}`), { status: 'result' });
-            }, { onlyOnce: true });
-        }
-
         function showResult(data) {
-            const wolfNames = Object.values(data.players).filter(p => p.role === 'wolf').map(p => p.name).join(', ');
-            document.getElementById('result-info').innerHTML = `人狼は <b>${wolfNames}</b> でした！`;
+            const wolf = Object.values(data.players).find(p => p.role === 'wolf')?.name;
+            document.getElementById('result-info').innerHTML = `人狼は <b>${wolf}</b> でした！`;
             document.getElementById('result-details').innerHTML = Object.values(data.players).map(p => `<li>${p.name} [${p.role === 'wolf' ? '人狼' : '市民'}]</li>`).join('');
             showPage('page-result');
         }
