@@ -26,7 +26,8 @@
         .timer-display { font-size: 4rem; text-align: center; color: var(--accent); text-shadow: 3px 3px 0 #FFD93D; margin: 10px 0; }
         .word-card { background: var(--primary); padding: 25px; border-radius: 25px; text-align: center; font-size: 2rem; margin: 20px 0; border: 4px dashed #856600; }
         .setting-box { background: #f9f9f9; padding: 15px; border-radius: 20px; margin: 15px 0; border: 2px solid #eee; }
-        .voice-badge { font-size: 0.7rem; background: var(--secondary); color: white; padding: 2px 8px; border-radius: 10px; }
+        .mic-controls { display: flex; justify-content: center; margin-bottom: 15px; }
+        .btn-mic { width: 60px; height: 60px; border-radius: 30px; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
@@ -43,7 +44,12 @@
     <div id="page-lobby" class="page">
         <h1>待機ロビー 🕒</h1>
         <div class="room-id-display" id="display-room-id">-----</div>
+        
+        <div class="mic-controls">
+            <button id="btn-mic-lobby" class="btn btn-sub btn-mic" onclick="toggleMic()">🎙️</button>
+        </div>
         <div id="voice-status" style="text-align:center; font-size:0.8rem; color:var(--secondary); margin-bottom:10px;">🎤 ボイス接続準備中...</div>
+
         <ul id="lobby-player-list" class="user-list"></ul>
         <div id="host-controls" style="display:none;" class="setting-box">
             <h3>ゲーム設定 ⚙️</h3>
@@ -63,6 +69,11 @@
         <h1>あなたのお題 🤫</h1>
         <div class="word-card" id="display-my-word">...</div>
         <div class="timer-display" id="display-timer">05:00</div>
+        
+        <div class="mic-controls">
+            <button id="btn-mic-game" class="btn btn-sub btn-mic" onclick="toggleMic()">🎙️</button>
+        </div>
+
         <button class="btn btn-main" onclick="handleGoToVote()">話し合い終了 ✋</button>
     </div>
 
@@ -81,7 +92,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, set, onValue, update, runTransaction, onDisconnect, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { getDatabase, ref, set, onValue, update, runTransaction, onDisconnect } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAbZPrLSIygyIABnUGAHOigM9QmXdGRa8g",
@@ -100,6 +111,8 @@
         const THEMES = { "ALL": [["カフェラテ", "カフェオレ"], ["パンケーキ", "ホットケーキ"], ["醤油", "めんつゆ"], ["ポテトチップス", "フライドポテト"], ["唐揚げ", "竜田揚げ"], ["ラーメン", "つけ麺"], ["一目惚れ", "片思い"], ["浮気", "不倫"], ["算数", "数学"], ["宿題", "課題"]] };
 
         let state = { roomId: "", myId: "", nickname: "", isHost: false, timerInterval: null };
+        let audioStream = null;
+        let audioPublication = null;
 
         window.showPage = (id) => {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -113,10 +126,13 @@
                 const context = await SkyWayContext.Create(SKYWAY_APP_ID);
                 const room = await SkyWayRoom.FindOrCreate(context, { type: 'p2p', name: rid });
                 const member = await room.join();
+                
                 const { audio } = await SkyWayStreamFactory.createMicrophoneAudioAndCameraStream();
-                await member.publish(audio);
+                audioStream = audio;
+                audioPublication = await member.publish(audio);
+                
                 room.onPublicationsByAnyMemberAdded.add(({ publication }) => {
-                    if (publication.contentType === 'audio') {
+                    if (publication.contentType === 'audio' && publication.publisherId !== member.id) {
                         member.subscribe(publication).then(({ stream }) => {
                             const audioEl = document.createElement('audio');
                             audioEl.srcObject = new MediaStream([stream.track]);
@@ -125,12 +141,29 @@
                         });
                     }
                 });
-                document.getElementById('voice-status').innerText = "🎤 ボイスチャット有効";
+                document.getElementById('voice-status').innerText = "🎤 ボイスチャット接続完了！";
             } catch (e) { 
                 console.error("SkyWay Error:", e); 
-                document.getElementById('voice-status').innerText = "❌ ボイス接続失敗";
+                document.getElementById('voice-status').innerText = "❌ マイクを許可してね！";
             }
         }
+
+        window.toggleMic = async () => {
+            if (!audioPublication) return;
+            if (audioPublication.state === 'enabled') {
+                await audioPublication.disable();
+                document.getElementById('btn-mic-lobby').innerText = "🔇";
+                document.getElementById('btn-mic-game').innerText = "🔇";
+                document.getElementById('btn-mic-lobby').style.background = "#FF6B6B";
+                document.getElementById('btn-mic-game').style.background = "#FF6B6B";
+            } else {
+                await audioPublication.enable();
+                document.getElementById('btn-mic-lobby').innerText = "🎙️";
+                document.getElementById('btn-mic-game').innerText = "🎙️";
+                document.getElementById('btn-mic-lobby').style.background = "#6BCB77";
+                document.getElementById('btn-mic-game').style.background = "#6BCB77";
+            }
+        };
 
         window.handleCreateRoom = async () => {
             const nick = document.getElementById('input-nickname').value || "ゲスト";
@@ -140,21 +173,15 @@
             try {
                 const roomRef = ref(db, 'rooms/' + rid);
                 const playerRef = ref(db, `rooms/${rid}/players/${state.myId}`);
-                
                 await set(roomRef, {
                     status: 'waiting', timer: 300, hostId: state.myId,
                     players: { [state.myId]: { name: nick, role: '', word: '', vote: '' } }
                 });
-
-                // ★ブラウザを閉じたらプレイヤーを削除する予約
                 onDisconnect(playerRef).remove();
-                // ★ホストが閉じたら部屋ごと消す（任意で。残したいならここを消す）
-                onDisconnect(roomRef).remove();
-
                 listenToRoom(rid);
                 showPage('page-lobby');
-                setTimeout(() => initVoiceChat(rid), 500);
-            } catch (e) { alert("接続エラーが発生しました。"); }
+                initVoiceChat(rid);
+            } catch (e) { alert("Firebaseエラー！コンソールを確認してね。"); }
         };
 
         window.handleJoinRoom = async () => {
@@ -166,13 +193,10 @@
             try {
                 const playerRef = ref(db, `rooms/${rid}/players/${state.myId}`);
                 await update(playerRef, { name: nick, role: '', word: '', vote: '' });
-
-                // ★ブラウザを閉じたらプレイヤーを削除する予約
                 onDisconnect(playerRef).remove();
-
                 listenToRoom(rid);
                 showPage('page-lobby');
-                setTimeout(() => initVoiceChat(rid), 500);
+                initVoiceChat(rid);
             } catch (e) { alert("部屋が見つからないよ！"); }
         };
 
@@ -180,14 +204,7 @@
             document.getElementById('display-room-id').innerText = rid;
             onValue(ref(db, 'rooms/' + rid), (snapshot) => {
                 const data = snapshot.val();
-                if(!data) {
-                    // 部屋が消えたら（ホスト退出時など）ホームに戻る
-                    if(!document.getElementById('page-home').classList.contains('active')) {
-                        alert("ホストがいなくなったため、部屋が解散されました。");
-                        location.reload();
-                    }
-                    return;
-                }
+                if(!data) return;
                 const list = document.getElementById('lobby-player-list');
                 list.innerHTML = Object.values(data.players || {}).map(p => `<li>${p.name} <span class="voice-badge">ON</span></li>`).join('');
                 document.getElementById('host-controls').style.display = (state.isHost && data.status === 'waiting') ? 'block' : 'none';
@@ -199,6 +216,10 @@
                     document.getElementById('display-my-word').innerText = data.players[state.myId]?.word || "...";
                     showPage('page-game');
                     if(state.isHost) startTimer(rid);
+                }
+                // サドンデスから戻る時のためのフラグ管理
+                if(data.status === 'playing' && document.getElementById('page-vote').classList.contains('active')) {
+                    showPage('page-game');
                 }
                 if(data.status === 'voting' && document.getElementById('page-game').classList.contains('active')) {
                     setupVoteUI(data.players);
@@ -215,6 +236,7 @@
                     if(t === null) return 0;
                     if(t <= 0) { 
                         update(ref(db, `rooms/${rid}`), { status: 'voting' });
+                        clearInterval(state.timerInterval);
                         return 0; 
                     }
                     return t - 1;
@@ -244,7 +266,12 @@
             }, { onlyOnce: true });
         };
 
-        window.handleSuddenDeath = () => update(ref(db, `rooms/${state.roomId}`), { status: 'playing', timer: 60 });
+        window.handleSuddenDeath = () => {
+            update(ref(db, `rooms/${state.roomId}`), { status: 'playing', timer: 60 });
+            // ホストならタイマーを再開
+            if(state.isHost) startTimer(state.roomId);
+        };
+        
         window.handleGoToVote = () => update(ref(db, `rooms/${state.roomId}`), { status: 'voting' });
 
         function setupVoteUI(players) {
