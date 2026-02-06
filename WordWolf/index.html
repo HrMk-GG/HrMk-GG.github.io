@@ -12,22 +12,17 @@
             --bg: #FFF9CA; --text: #4D4D4D; --white: #ffffff;
         }
         body { font-family: 'M PLUS Rounded 1c', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
-        
-        /* なめらかな画面遷移 🪄 */
         .page { position: absolute; width: 90%; max-width: 450px; padding: 30px; background: var(--white); border-radius: 30px; box-shadow: 0 10px 0 #E6D5A9; opacity: 0; transform: translateY(30px) scale(0.9); pointer-events: none; transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1); box-sizing: border-box; max-height: 90vh; overflow-y: auto; }
         .page.active { opacity: 1; transform: translateY(0) scale(1); pointer-events: all; }
-
         .btn { display: block; width: 100%; padding: 15px; margin: 10px 0; border: none; border-radius: 50px; font-size: 1.1rem; font-weight: 800; cursor: pointer; transition: 0.2s; text-align: center; box-sizing: border-box; }
         .btn-main { background: var(--primary); color: #856600; box-shadow: 0 6px 0 #D4B42E; }
         .btn-sub { background: var(--secondary); color: var(--white); box-shadow: 0 6px 0 #4FA659; }
         .btn-accent { background: var(--accent); color: var(--white); box-shadow: 0 6px 0 #D14D4D; }
         .btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.1); }
-
         input, select { width: 100%; padding: 12px; margin: 8px 0; border: 3px solid var(--primary); border-radius: 15px; font-family: inherit; font-size: 1rem; box-sizing: border-box; background: #FFFBEB; }
         .room-id-display { background: #eee; padding: 10px; border-radius: 15px; font-size: 1.5rem; text-align: center; letter-spacing: 3px; margin-bottom: 20px; font-weight: 800; }
-        .user-list li { background: #F3F4F6; margin: 8px 0; padding: 12px 20px; border-radius: 20px; display: flex; justify-content: space-between; align-items: center; animation: popIn 0.4s ease-out; list-style: none; }
-        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-
+        .user-list { padding: 0; }
+        .user-list li { background: #F3F4F6; margin: 8px 0; padding: 12px 20px; border-radius: 20px; display: flex; justify-content: space-between; align-items: center; list-style: none; }
         .timer-display { font-size: 4rem; text-align: center; color: var(--accent); text-shadow: 3px 3px 0 #FFD93D; margin: 10px 0; }
         .word-card { background: var(--primary); padding: 25px; border-radius: 25px; text-align: center; font-size: 2rem; margin: 20px 0; border: 4px dashed #856600; }
         .setting-box { background: #f9f9f9; padding: 15px; border-radius: 20px; margin: 15px 0; border: 2px solid #eee; }
@@ -49,8 +44,7 @@
         <h1>待機ロビー 🕒</h1>
         <div class="room-id-display" id="display-room-id">-----</div>
         <div id="voice-status" style="text-align:center; font-size:0.8rem; color:var(--secondary); margin-bottom:10px;">🎤 ボイス接続中...</div>
-        <ul id="lobby-player-list" style="padding:0"></ul>
-        
+        <ul id="lobby-player-list" class="user-list"></ul>
         <div id="host-controls" style="display:none;" class="setting-box">
             <h3>ゲーム設定 ⚙️</h3>
             <label>人狼の数: <input type="number" id="set-wolf-count" value="1" min="1"></label>
@@ -75,23 +69,19 @@
     <div id="page-vote" class="page">
         <h1>投票タイム 🗳️</h1>
         <button class="btn btn-accent" id="btn-sudden-death" onclick="handleSuddenDeath()">⚡ サドンデス (残り1分追加)</button>
-        <div id="vote-container"></div>
+        <div id="vote-container" style="margin-top:20px;"></div>
     </div>
 
     <div id="page-result" class="page">
         <h1>結果発表！🎊</h1>
         <div id="result-info" style="text-align:center; font-size:1.2rem; margin-bottom:20px;"></div>
-        <ul id="result-details" style="padding:0"></ul>
+        <ul id="result-details" class="user-list"></ul>
         <button class="btn btn-main" onclick="handleRestart()">もう一度遊ぶ 🔄</button>
     </div>
-
-    <audio id="remote-audio-container" autoplay></audio>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, set, onValue, update, runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-
-        const { SkyWayContext, SkyWayRoom, SkyWayStreamFactory } = skyway_room;
 
         const firebaseConfig = {
             apiKey: "AIzaSyAbZPrLSIygyIABnUGAHOigM9QmXdGRa8g",
@@ -102,14 +92,14 @@
             appId: "1:804527745152:web:0ab51db1cc348000801e65",
             measurementId: "G-ZJX6L6ZEFL"
         };
-        const SKYWAY_APP_ID = "ZfbhNtrmYzMlAJEqRO5iwJpT0lvOG/D3u2zI/8NZY1A="; // ここにSkyWayのApp IDを入れてね！✨
+        const SKYWAY_APP_ID = "86266f8a-a0de-449d-b00e-6639c2659542"; 
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
         const THEMES = { "ALL": [["カフェラテ", "カフェオレ"], ["パンケーキ", "ホットケーキ"], ["醤油", "めんつゆ"], ["ポテトチップス", "フライドポテト"], ["唐揚げ", "竜田揚げ"], ["ラーメン", "つけ麺"], ["一目惚れ", "片思い"], ["浮気", "不倫"], ["算数", "数学"], ["宿題", "課題"]] };
 
-        let state = { roomId: "", myId: "", nickname: "", isHost: false, timerInterval: null, skywayContext: null, skywayRoom: null };
+        let state = { roomId: "", myId: "", nickname: "", isHost: false, timerInterval: null };
 
         window.showPage = (id) => {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -117,13 +107,14 @@
         };
 
         async function initVoiceChat(rid) {
+            if (typeof skyway_room === 'undefined') return;
             try {
+                const { SkyWayContext, SkyWayRoom, SkyWayStreamFactory } = skyway_room;
                 const context = await SkyWayContext.Create(SKYWAY_APP_ID);
                 const room = await SkyWayRoom.FindOrCreate(context, { type: 'p2p', name: rid });
                 const member = await room.join();
                 const { audio } = await SkyWayStreamFactory.createMicrophoneAudioAndCameraStream();
                 await member.publish(audio);
-
                 room.onPublicationsByAnyMemberAdded.add(({ publication }) => {
                     if (publication.contentType === 'audio') {
                         member.subscribe(publication).then(({ stream }) => {
@@ -135,21 +126,26 @@
                     }
                 });
                 document.getElementById('voice-status').innerText = "🎤 ボイスチャット有効";
-            } catch (e) { console.error(e); document.getElementById('voice-status').innerText = "❌ ボイス接続失敗"; }
+            } catch (e) { 
+                console.error("SkyWay Error:", e); 
+                document.getElementById('voice-status').innerText = "❌ ボイス接続失敗（設定を確認してね）";
+            }
         }
 
         window.handleCreateRoom = async () => {
             const nick = document.getElementById('input-nickname').value || "ゲスト";
             const rid = Math.random().toString(36).substring(2, 7).toUpperCase();
             state = { ...state, roomId: rid, myId: "p_"+Date.now(), nickname: nick, isHost: true };
-
-            await set(ref(db, 'rooms/' + rid), {
-                status: 'waiting', timer: 300, hostId: state.myId,
-                players: { [state.myId]: { name: nick, role: '', word: '', vote: '' } }
-            });
-            listenToRoom(rid);
-            initVoiceChat(rid);
-            showPage('page-lobby');
+            
+            try {
+                await set(ref(db, 'rooms/' + rid), {
+                    status: 'waiting', timer: 300, hostId: state.myId,
+                    players: { [state.myId]: { name: nick, role: '', word: '', vote: '' } }
+                });
+                listenToRoom(rid);
+                initVoiceChat(rid); // 失敗しても次は進む
+                showPage('page-lobby');
+            } catch (e) { alert("Firebase接続エラー！ルールを確認してね。"); }
         };
 
         window.handleJoinRoom = async () => {
@@ -158,10 +154,12 @@
             if(rid.length !== 5) return;
             state = { ...state, roomId: rid, myId: "p_"+Date.now(), nickname: nick, isHost: false };
 
-            await update(ref(db, `rooms/${rid}/players/${state.myId}`), { name: nick, role: '', word: '', vote: '' });
-            listenToRoom(rid);
-            initVoiceChat(rid);
-            showPage('page-lobby');
+            try {
+                await update(ref(db, `rooms/${rid}/players/${state.myId}`), { name: nick, role: '', word: '', vote: '' });
+                listenToRoom(rid);
+                initVoiceChat(rid);
+                showPage('page-lobby');
+            } catch (e) { alert("部屋が見つからないよ！"); }
         };
 
         function listenToRoom(rid) {
@@ -169,16 +167,12 @@
             onValue(ref(db, 'rooms/' + rid), (snapshot) => {
                 const data = snapshot.val();
                 if(!data) return;
-
                 const list = document.getElementById('lobby-player-list');
                 list.innerHTML = Object.values(data.players).map(p => `<li>${p.name} <span class="voice-badge">ON</span></li>`).join('');
-
-                document.getElementById('host-controls').style.display = state.isHost ? 'block' : 'none';
+                document.getElementById('host-controls').style.display = (state.isHost && data.status === 'waiting') ? 'block' : 'none';
                 document.getElementById('guest-msg').style.display = state.isHost ? 'none' : 'block';
-
                 const m = Math.floor(data.timer / 60); const s = data.timer % 60;
                 document.getElementById('display-timer').innerText = `${m}:${s < 10 ? '0'+s : s}`;
-
                 if(data.status === 'playing' && document.getElementById('page-lobby').classList.contains('active')) {
                     document.getElementById('display-my-word').innerText = data.players[state.myId].word;
                     showPage('page-game');
@@ -196,6 +190,7 @@
             if(state.timerInterval) clearInterval(state.timerInterval);
             state.timerInterval = setInterval(() => {
                 runTransaction(ref(db, `rooms/${rid}/timer`), (t) => {
+                    if(t === null) return 0;
                     if(t <= 0) { handleGoToVote(); return 0; }
                     return t - 1;
                 });
@@ -207,13 +202,11 @@
             const gameTime = parseInt(document.getElementById('set-time').value);
             const pair = THEMES.ALL[Math.floor(Math.random() * THEMES.ALL.length)];
             const words = Math.random() > 0.5 ? [pair[0], pair[1]] : [pair[1], pair[0]];
-
             onValue(ref(db, `rooms/${state.roomId}/players`), (snap) => {
                 const players = snap.val();
                 const ids = Object.keys(players);
                 const shuffled = ids.sort(() => 0.5 - Math.random());
                 const wolfIds = shuffled.slice(0, wolfCount);
-
                 const updates = { status: 'playing', timer: gameTime };
                 ids.forEach(id => {
                     const isWolf = wolfIds.includes(id);
@@ -225,10 +218,7 @@
             }, { onlyOnce: true });
         };
 
-        window.handleSuddenDeath = () => {
-            update(ref(db, `rooms/${state.roomId}`), { status: 'playing', timer: 60 });
-        };
-
+        window.handleSuddenDeath = () => update(ref(db, `rooms/${state.roomId}`), { status: 'playing', timer: 60 });
         window.handleGoToVote = () => update(ref(db, `rooms/${state.roomId}`), { status: 'voting' });
 
         function setupVoteUI(players) {
@@ -247,9 +237,7 @@
             onValue(ref(db, `rooms/${state.roomId}`), (snap) => {
                 const data = snap.val();
                 const players = Object.values(data.players);
-                if(players.filter(p => p.vote !== "").length >= players.length) {
-                    update(ref(db, `rooms/${state.roomId}`), { status: 'result' });
-                }
+                if(players.every(p => p.vote !== "")) update(ref(db, `rooms/${state.roomId}`), { status: 'result' });
             }, { onlyOnce: true });
         }
 
