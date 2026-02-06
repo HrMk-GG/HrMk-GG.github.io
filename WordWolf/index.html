@@ -18,7 +18,7 @@
         .btn-main { background: var(--primary); color: #856600; box-shadow: 0 6px 0 #D4B42E; }
         .btn-sub { background: var(--secondary); color: var(--white); box-shadow: 0 6px 0 #4FA659; }
         .btn-accent { background: var(--accent); color: var(--white); box-shadow: 0 6px 0 #D14D4D; }
-        .btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.1); }
+        .btn:disabled { background: #ccc; box-shadow: 0 6px 0 #999; cursor: not-allowed; }
         input, select { width: 100%; padding: 12px; margin: 8px 0; border: 3px solid var(--primary); border-radius: 15px; font-family: inherit; font-size: 1rem; box-sizing: border-box; background: #FFFBEB; }
         .room-id-display { background: #eee; padding: 10px; border-radius: 15px; font-size: 1.5rem; text-align: center; letter-spacing: 3px; margin-bottom: 20px; font-weight: 800; }
         .user-list { padding: 0; }
@@ -53,22 +53,18 @@
 
         <ul id="lobby-player-list" class="user-list"></ul>
         <div id="host-controls" style="display:none;" class="setting-box">
-            <h3>ゲーム設定 ⚙️</h3>
-            <label>人狼の数: <input type="number" id="set-wolf-count" value="1" min="1"></label>
             <button class="btn btn-accent" onclick="handleStartGame()">ゲーム開始！🚀</button>
         </div>
-        <div id="guest-msg" style="text-align:center; color:#888;">ホストの設定を待っています...</div>
+        <div id="guest-msg" style="text-align:center; color:#888;">ホストの開始を待っています...</div>
     </div>
 
     <div id="page-game" class="page">
         <h1>あなたのお題 🤫</h1>
         <div class="word-card" id="display-my-word">...</div>
         <div class="timer-display" id="display-timer">05:00</div>
-        
         <div class="mic-controls">
             <button id="btn-mic-game" class="btn btn-sub btn-mic" onclick="toggleMic()">🎙️</button>
         </div>
-
         <button class="btn btn-main" onclick="handleGoToVote()">話し合い終了 ✋</button>
     </div>
 
@@ -103,7 +99,6 @@
         const db = getDatabase(app, "https://othello-hrmk-default-rtdb.asia-southeast1.firebasedatabase.app");
 
         const THEMES = { "ALL": [["カフェラテ", "カフェオレ"], ["パンケーキ", "ホットケーキ"], ["醤油", "めんつゆ"], ["ラーメン", "つけ麺"], ["一目惚れ", "片思い"]] };
-
         let state = { roomId: "", myId: "", nickname: "", isHost: false, timerInterval: null };
         let audioPublication = null;
 
@@ -112,18 +107,22 @@
             setTimeout(() => document.getElementById(id).classList.add('active'), 50);
         };
 
-        // ユーザーがクリックして明示的に開始
         window.manualInitVoice = async () => {
             const status = document.getElementById('voice-status');
-            status.innerText = "接続中...";
+            const btnStart = document.getElementById('btn-start-voice');
             
-            if (typeof skyway_room === 'undefined') {
-                status.innerText = "エラー: ライブラリ未読込";
+            // window.skyway_room を直接確認する
+            if (!window.skyway_room) {
+                status.innerText = "SkyWayを読み込み中...もう一度押してね！";
                 return;
             }
 
+            status.innerText = "マイクを接続中...";
+            btnStart.disabled = true;
+
             try {
-                const { SkyWayContext, SkyWayRoom, SkyWayStreamFactory } = skyway_room;
+                const { SkyWayContext, SkyWayRoom, SkyWayStreamFactory } = window.skyway_room;
+                // トークンを使わずAppIDのみで繋ぐ設定（ダッシュボードで認証OFFにする必要あり）
                 const context = await SkyWayContext.Create(SKYWAY_APP_ID);
                 const room = await SkyWayRoom.FindOrCreate(context, { type: 'p2p', name: state.roomId });
                 const member = await room.join();
@@ -142,26 +141,27 @@
                     }
                 });
 
-                document.getElementById('btn-start-voice').style.display = "none";
+                btnStart.style.display = "none";
                 document.getElementById('btn-mic-lobby').style.display = "flex";
                 status.innerText = "ボイス接続完了！ 🎙️";
-                status.style.color = "var(--secondary)";
+                status.style.color = "#6BCB77";
             } catch (e) { 
-                console.error(e); 
-                status.innerText = "エラー: マイク許可を確認してね";
-                status.style.color = "var(--accent)";
+                console.error("SkyWay Error:", e);
+                status.innerText = "エラー: " + e.message;
+                btnStart.disabled = false;
             }
         };
 
         window.toggleMic = async () => {
             if (!audioPublication) return;
-            const btns = [document.getElementById('btn-mic-lobby'), document.getElementById('btn-mic-game')];
+            const lobbyBtn = document.getElementById('btn-mic-lobby');
+            const gameBtn = document.getElementById('btn-mic-game');
             if (audioPublication.state === 'enabled') {
                 await audioPublication.disable();
-                btns.forEach(b => { b.innerText = "🔇"; b.style.background = "#FF6B6B"; });
+                [lobbyBtn, gameBtn].forEach(b => { b.innerText = "🔇"; b.style.background = "#FF6B6B"; });
             } else {
                 await audioPublication.enable();
-                btns.forEach(b => { b.innerText = "🎙️"; b.style.background = "#6BCB77"; });
+                [lobbyBtn, gameBtn].forEach(b => { b.innerText = "🎙️"; b.style.background = "#6BCB77"; });
             }
         };
 
@@ -240,7 +240,7 @@
                 const shuffled = ids.sort(() => 0.5 - Math.random());
                 const updates = { status: 'playing', timer: 300 };
                 ids.forEach((id, i) => {
-                    const isWolf = i === 0; // 1人目だけ人狼
+                    const isWolf = i === 0;
                     updates[`/players/${id}/role`] = isWolf ? 'wolf' : 'citizen';
                     updates[`/players/${id}/word`] = isWolf ? words[1] : words[0];
                     updates[`/players/${id}/vote`] = '';
