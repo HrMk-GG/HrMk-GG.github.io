@@ -81,7 +81,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, set, onValue, update, runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { getDatabase, ref, set, onValue, update, runTransaction, onDisconnect, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAbZPrLSIygyIABnUGAHOigM9QmXdGRa8g",
@@ -95,7 +95,6 @@
         const SKYWAY_APP_ID = "86266f8a-a0de-449d-b00e-6639c2659542"; 
 
         const app = initializeApp(firebaseConfig);
-        // ★ここを修正！エラーに出ているURLを指定するよ★
         const db = getDatabase(app, "https://othello-hrmk-default-rtdb.asia-southeast1.firebasedatabase.app");
 
         const THEMES = { "ALL": [["カフェラテ", "カフェオレ"], ["パンケーキ", "ホットケーキ"], ["醤油", "めんつゆ"], ["ポテトチップス", "フライドポテト"], ["唐揚げ", "竜田揚げ"], ["ラーメン", "つけ麺"], ["一目惚れ", "片思い"], ["浮気", "不倫"], ["算数", "数学"], ["宿題", "課題"]] };
@@ -139,17 +138,23 @@
             state = { ...state, roomId: rid, myId: "p_"+Date.now(), nickname: nick, isHost: true };
             
             try {
-                await set(ref(db, 'rooms/' + rid), {
+                const roomRef = ref(db, 'rooms/' + rid);
+                const playerRef = ref(db, `rooms/${rid}/players/${state.myId}`);
+                
+                await set(roomRef, {
                     status: 'waiting', timer: 300, hostId: state.myId,
                     players: { [state.myId]: { name: nick, role: '', word: '', vote: '' } }
                 });
+
+                // ★ブラウザを閉じたらプレイヤーを削除する予約
+                onDisconnect(playerRef).remove();
+                // ★ホストが閉じたら部屋ごと消す（任意で。残したいならここを消す）
+                onDisconnect(roomRef).remove();
+
                 listenToRoom(rid);
                 showPage('page-lobby');
                 setTimeout(() => initVoiceChat(rid), 500);
-            } catch (e) { 
-                console.error(e);
-                alert("Firebaseエラー！コンソールをチェックしてね。"); 
-            }
+            } catch (e) { alert("接続エラーが発生しました。"); }
         };
 
         window.handleJoinRoom = async () => {
@@ -159,7 +164,12 @@
             state = { ...state, roomId: rid, myId: "p_"+Date.now(), nickname: nick, isHost: false };
 
             try {
-                await update(ref(db, `rooms/${rid}/players/${state.myId}`), { name: nick, role: '', word: '', vote: '' });
+                const playerRef = ref(db, `rooms/${rid}/players/${state.myId}`);
+                await update(playerRef, { name: nick, role: '', word: '', vote: '' });
+
+                // ★ブラウザを閉じたらプレイヤーを削除する予約
+                onDisconnect(playerRef).remove();
+
                 listenToRoom(rid);
                 showPage('page-lobby');
                 setTimeout(() => initVoiceChat(rid), 500);
@@ -170,16 +180,23 @@
             document.getElementById('display-room-id').innerText = rid;
             onValue(ref(db, 'rooms/' + rid), (snapshot) => {
                 const data = snapshot.val();
-                if(!data) return;
+                if(!data) {
+                    // 部屋が消えたら（ホスト退出時など）ホームに戻る
+                    if(!document.getElementById('page-home').classList.contains('active')) {
+                        alert("ホストがいなくなったため、部屋が解散されました。");
+                        location.reload();
+                    }
+                    return;
+                }
                 const list = document.getElementById('lobby-player-list');
-                list.innerHTML = Object.values(data.players).map(p => `<li>${p.name} <span class="voice-badge">ON</span></li>`).join('');
+                list.innerHTML = Object.values(data.players || {}).map(p => `<li>${p.name} <span class="voice-badge">ON</span></li>`).join('');
                 document.getElementById('host-controls').style.display = (state.isHost && data.status === 'waiting') ? 'block' : 'none';
                 document.getElementById('guest-msg').style.display = state.isHost ? 'none' : 'block';
                 const m = Math.floor(data.timer / 60); const s = data.timer % 60;
                 document.getElementById('display-timer').innerText = `${m}:${s < 10 ? '0'+s : s}`;
                 
                 if(data.status === 'playing' && document.getElementById('page-lobby').classList.contains('active')) {
-                    document.getElementById('display-my-word').innerText = data.players[state.myId].word;
+                    document.getElementById('display-my-word').innerText = data.players[state.myId]?.word || "...";
                     showPage('page-game');
                     if(state.isHost) startTimer(rid);
                 }
