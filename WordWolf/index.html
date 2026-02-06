@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ワードウルフ 🐺</title>
+    <title>ワードウルフ 🐺 ジャンル選択版</title>
     <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700;800&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -11,15 +11,15 @@
             --bg: #FFF9CA; --text: #4D4D4D; --white: #ffffff;
         }
         body { font-family: 'M PLUS Rounded 1c', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
-        .page { position: absolute; width: 90%; max-width: 450px; padding: 30px; background: var(--white); border-radius: 30px; box-shadow: 0 10px 0 #E6D5A9; opacity: 0; transform: translateY(30px) scale(0.9); pointer-events: none; transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1); box-sizing: border-box; max-height: 90vh; overflow-y: auto; }
+        .page { position: absolute; width: 90%; max-width: 450px; padding: 25px; background: var(--white); border-radius: 30px; box-shadow: 0 10px 0 #E6D5A9; opacity: 0; transform: translateY(30px) scale(0.9); pointer-events: none; transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1); box-sizing: border-box; max-height: 90vh; overflow-y: auto; }
         .page.active { opacity: 1; transform: translateY(0) scale(1); pointer-events: all; }
         .btn { display: block; width: 100%; padding: 15px; margin: 10px 0; border: none; border-radius: 50px; font-size: 1.1rem; font-weight: 800; cursor: pointer; transition: 0.2s; text-align: center; box-sizing: border-box; }
         .btn-main { background: var(--primary); color: #856600; box-shadow: 0 6px 0 #D4B42E; }
         .btn-sub { background: var(--secondary); color: var(--white); box-shadow: 0 6px 0 #4FA659; }
         .btn-accent { background: var(--accent); color: var(--white); box-shadow: 0 6px 0 #D14D4D; }
         .btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.1); }
-        input, select { width: 100%; padding: 12px; margin: 8px 0; border: 3px solid var(--primary); border-radius: 15px; font-family: inherit; font-size: 1rem; box-sizing: border-box; background: #FFFBEB; }
-        .room-id-display { background: #eee; padding: 10px; border-radius: 15px; font-size: 1.5rem; text-align: center; letter-spacing: 3px; margin-bottom: 20px; font-weight: 800; cursor: pointer; }
+        input, select { width: 100%; padding: 12px; margin: 8px 0; border: 3px solid var(--primary); border-radius: 15px; font-family: inherit; font-size: 1rem; box-sizing: border-box; background: #FFFBEB; font-weight: 800; color: var(--text); }
+        .room-id-display { background: #eee; padding: 15px; border-radius: 15px; font-size: 1.8rem; text-align: center; letter-spacing: 5px; margin-bottom: 5px; font-weight: 800; color: #555; cursor: pointer; transition: 0.3s; }
         .timer-display { font-size: 4rem; text-align: center; color: var(--accent); text-shadow: 3px 3px 0 #FFD93D; margin: 10px 0; }
         .word-card { background: var(--primary); padding: 25px; border-radius: 25px; text-align: center; font-size: 2rem; margin: 20px 0; border: 4px dashed #856600; }
         #voice-overlay { position: fixed; top: 20px; right: 20px; display: flex; flex-direction: column; align-items: flex-end; z-index: 1000; pointer-events: none; }
@@ -28,18 +28,17 @@
         @keyframes bounce { from { transform: scale(1.1) translateY(0); } to { transform: scale(1.1) translateY(-3px); } }
         .mic-controls { display: flex; flex-direction: column; align-items: center; margin-bottom: 15px; }
         .btn-mic { width: 60px; height: 60px; border-radius: 30px; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; }
-        #voice-status { font-size: 0.7rem; color: #aaa; margin-top: 5px; }
+        #toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 10px 25px; border-radius: 50px; font-size: 0.9rem; opacity: 0; transition: 0.5s; z-index: 2000; }
     </style>
 </head>
 <body>
 
     <div id="voice-overlay"></div>
+    <div id="toast">コピーしたよ！🔗</div>
 
     <div id="page-home" class="page active">
         <h1>🐺 Word Wolf</h1>
-        <div id="direct-join-msg" style="display:none; text-align:center; margin-bottom:15px; color:var(--secondary); font-weight:800;">
-            招待URLから参加中！✨
-        </div>
+        <div id="direct-join-msg" style="display:none; text-align:center; margin-bottom:15px; color:var(--secondary); font-weight:800;">招待コードを受信したよ！✨</div>
         <input type="text" id="input-nickname" placeholder="ニックネーム！" maxlength="8">
         <div id="home-main-actions">
             <button class="btn btn-main" onclick="handleCreateRoom()">部屋を作る ✨</button>
@@ -55,44 +54,57 @@
 
     <div id="page-lobby" class="page">
         <h1>待機ロビー 🕒</h1>
-        <div class="room-id-display" id="display-room-id" onclick="copyInviteURL()" title="クリックして招待URLをコピー">-----</div>
-        <div style="text-align:center; font-size:0.7rem; color:#aaa; margin-bottom:15px;">↑クリックで招待URLをコピー✨</div>
+        <div class="room-id-display" id="display-room-id" onclick="copyInviteURL()">-----</div>
+        <div style="text-align:center; font-size:0.7rem; color:#aaa; margin-bottom:15px;">↑URLをコピーして友達を呼ぼう✨</div>
+        
+        <div id="host-settings" style="display:none;">
+            <label style="font-size: 0.8rem; font-weight: 800; color: #888;">テーマを選択：</label>
+            <select id="select-genre">
+                <option value="food">🍔 飲食・グルメ</option>
+                <option value="love">💖 恋愛・結婚</option>
+                <option value="life">🏠 生活・習慣</option>
+                <option value="play">🎮 遊び・趣味</option>
+                <option value="school">🏫 学校・仕事</option>
+                <option value="animal">🐾 動物・生き物</option>
+                <option value="place">🗺️ 場所・施設</option>
+                <option value="item">📦 持ち物・道具</option>
+                <option value="emotion">🤔 感情・抽象的</option>
+                <option value="random">🎲 全混ぜランダム</option>
+            </select>
+            <button class="btn btn-accent" onclick="handleStartGame()">ゲーム開始！🚀</button>
+        </div>
+        <div id="guest-msg" style="text-align:center; color:#888; margin: 20px 0;">ホストの開始を待っています...</div>
+
         <div class="mic-controls">
             <button id="btn-start-voice" class="btn btn-sub" onclick="initSimpleVoice()">🎤 マイクを有効にする</button>
             <button id="btn-mic-lobby" class="btn btn-sub btn-mic" onclick="toggleMic()" style="display:none;">🎙️</button>
             <div id="voice-status">ボイス未接続</div>
         </div>
-        <div id="host-controls" style="display:none;">
-            <button class="btn btn-accent" onclick="handleStartGame()">ゲーム開始！🚀</button>
-        </div>
-        <div id="guest-msg" style="text-align:center; color:#888;">ホストの開始を待っています...</div>
     </div>
 
     <div id="page-game" class="page">
         <h1>あなたのお題 🤫</h1>
         <div class="word-card" id="display-my-word">...</div>
         <div class="timer-display" id="display-timer">05:00</div>
-        <div class="mic-controls">
-            <button id="btn-mic-game" class="btn btn-sub btn-mic" onclick="toggleMic()">🎙️</button>
-        </div>
+        <div class="mic-controls"><button id="btn-mic-game" class="btn btn-sub btn-mic" onclick="toggleMic()">🎙️</button></div>
         <button class="btn btn-main" onclick="handleGoToVote()">話し合い終了 ✋</button>
     </div>
 
     <div id="page-vote" class="page">
         <h1>投票タイム 🗳️</h1>
-        <button class="btn btn-accent" onclick="handleSuddenDeath()">⚡ サドンデス (残り1分追加)</button>
+        <button class="btn btn-accent" onclick="handleSuddenDeath()">⚡ サドンデス (+1分)</button>
         <div id="vote-container" style="margin-top:20px;"></div>
     </div>
 
     <div id="page-result" class="page">
         <h1>結果発表！🎊</h1>
-        <div id="result-info" style="text-align:center; font-size:1.2rem; margin-bottom:20px;"></div>
+        <div id="result-info" style="text-align:center; font-size:1.4rem; margin-bottom:20px;"></div>
         <button class="btn btn-main" onclick="handleRestart()">もう一度遊ぶ 🔄</button>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, set, onValue, update, runTransaction, onDisconnect, push, onChildAdded } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.app";
+        import { getDatabase, ref, set, onValue, update, runTransaction, onDisconnect, push, onChildAdded } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAbZPrLSIygyIABnUGAHOigM9QmXdGRa8g",
@@ -110,23 +122,29 @@
         let peers = {};
         let audioContext = null;
 
-        // URLから部屋IDを取得
+        const THEME_DATA = {
+            food: [["カフェラテ", "カフェオレ"], ["パンケーキ", "ホットケーキ"], ["醤油", "めんつゆ"], ["ラーメン", "つけ麺"], ["マヨネーズ", "ケチャップ"], ["うどん", "そば"], ["焼肉", "しゃぶしゃぶ"], ["いちご", "さくらんぼ"], ["おにぎり", "サンドイッチ"], ["ポテトチップス", "じゃがりこ"]],
+            love: [["一目惚れ", "片思い"], ["デート", "お出かけ"], ["浮気", "不倫"], ["初恋", "元カレ元カノ"], ["プロポーズ", "告白"], ["結婚式", "披露宴"], ["合コン", "マッチングアプリ"], ["記念日", "誕生日"], ["恋人", "親友"], ["嫉妬", "独占欲"]],
+            life: [["シャンプー", "リンス"], ["日記", "家計簿"], ["掃除機", "ほうき"], ["朝食", "夕食"], ["お風呂", "シャワー"], ["布団", "ベッド"], ["メガネ", "コンタクト"], ["歯磨き粉", "洗顔料"], ["自炊", "外食"], ["洗濯物", "クリーニング"]],
+            play: [["カラオケ", "ボウリング"], ["映画鑑賞", "読書"], ["YouTube", "Netflix"], ["キャンプ", "グランピング"], ["スキー", "スノボ"], ["散歩", "ジョギング"], ["テレビゲーム", "ボードゲーム"], ["パズル", "トランプ"], ["遊園地", "動物園"], ["SNS", "ブログ"]],
+            school: [["宿題", "課題"], ["教科書", "参考書"], ["部活動", "サークル"], ["給食", "お弁当"], ["先生", "上司"], ["残業", "居残り"], ["会議", "朝礼"], ["文系", "理系"], ["修学旅行", "社員旅行"], ["夏休み", "冬休み"]],
+            animal: [["ライオン", "トラ"], ["犬", "猫"], ["うさぎ", "ハムスター"], ["クジラ", "イルカ"], ["スズメ", "カラス"], ["ヘビ", "トカゲ"], ["ペンギン", "アザラシ"], ["キリン", "シマウマ"], ["パンダ", "コアラ"], ["金魚", "メダカ"]],
+            place: [["映画館", "プラネタリウム"], ["海", "プール"], ["神社", "お寺"], ["コンビニ", "スーパー"], ["公園", "庭"], ["駅", "空港"], ["図書館", "美術館"], ["デパート", "モール"], ["病院", "薬局"], ["ホテル", "旅館"]],
+            item: [["シャーペン", "鉛筆"], ["スマホ", "タブレット"], ["イヤホン", "ヘッドホン"], ["リュック", "ショルダー"], ["サンダル", "スニーカー"], ["マフラー", "手袋"], ["時計", "懐中時計"], ["財布", "ポーチ"], ["傘", "カッパ"], ["扇風機", "エアコン"]],
+            emotion: [["信頼", "安心"], ["緊張", "不安"], ["怒り", "悲しみ"], ["勇気", "希望"], ["孤独", "退屈"], ["努力", "根性"], ["理想", "幻想"], ["後悔", "反省"], ["尊敬", "憧れ"], ["幸福", "満足"]],
+            random: []
+        };
+        THEME_DATA.random = [].concat(...Object.values(THEME_DATA));
+
         window.onload = () => {
             const urlParams = new URLSearchParams(window.location.search);
             const rId = urlParams.get('room');
-            if (rId && rId.length === 5) {
+            if (rId) {
                 document.getElementById('direct-join-msg').style.display = 'block';
                 document.getElementById('home-main-actions').style.display = 'none';
                 document.getElementById('home-direct-actions').style.display = 'block';
                 document.getElementById('input-room-id').value = rId.toUpperCase();
             }
-        };
-
-        window.cancelDirectJoin = () => {
-            window.history.replaceState({}, '', window.location.pathname);
-            document.getElementById('direct-join-msg').style.display = 'none';
-            document.getElementById('home-main-actions').style.display = 'block';
-            document.getElementById('home-direct-actions').style.display = 'none';
         };
 
         window.showPage = (id) => {
@@ -142,35 +160,30 @@
                 document.getElementById('btn-mic-lobby').style.display = "flex";
                 document.getElementById('voice-status').innerText = "マイク有効中 🎤";
                 monitorVolume(localStream, state.myId);
-                const playersRef = ref(db, `rooms/${state.roomId}/players`);
-                onValue(playersRef, (snap) => {
+                onValue(ref(db, `rooms/${state.roomId}/players`), (snap) => {
                     const players = snap.val();
                     for(let id in players) if(id !== state.myId && !peers[id]) callUser(id);
                 }, { onlyOnce: true });
                 listenForSignals();
-            } catch (e) { alert("マイク許可が必要です"); }
+            } catch (e) { alert("マイクを許可してね！"); }
         };
 
         function monitorVolume(stream, userId) {
             const source = audioContext.createMediaStreamSource(stream);
             const processor = audioContext.createScriptProcessor(2048, 1, 1);
-            source.connect(processor);
-            processor.connect(audioContext.destination);
+            source.connect(processor); processor.connect(audioContext.destination);
             processor.onaudioprocess = (e) => {
                 const input = e.inputBuffer.getChannelData(0);
-                let sum = 0;
-                for (let i = 0; i < input.length; i++) sum += input[i] * input[i];
+                let sum = 0; for (let i = 0; i < input.length; i++) sum += input[i] * input[i];
                 const rms = Math.sqrt(sum / input.length);
-                const isSpeaking = rms > 0.05;
                 const el = document.getElementById(`voice-user-${userId}`);
-                if (el) isSpeaking ? el.classList.add('speaking') : el.classList.remove('speaking');
+                if (el) rms > 0.05 ? el.classList.add('speaking') : el.classList.remove('speaking');
             };
         }
 
         async function callUser(userId) {
             const pc = createPeerConnection(userId);
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
+            const offer = await pc.createOffer(); await pc.setLocalDescription(offer);
             push(ref(db, `rooms/${state.roomId}/signals/${userId}`), { from: state.myId, type: 'offer', sdp: offer.sdp });
         }
 
@@ -180,8 +193,7 @@
                 let pc = peers[data.from] || createPeerConnection(data.from);
                 if (data.type === 'offer') {
                     await pc.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: data.sdp }));
-                    const answer = await pc.createAnswer();
-                    await pc.setLocalDescription(answer);
+                    const answer = await pc.createAnswer(); await pc.setLocalDescription(answer);
                     push(ref(db, `rooms/${state.roomId}/signals/${data.from}`), { from: state.myId, type: 'answer', sdp: answer.sdp });
                 } else if (data.type === 'answer') await pc.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: data.sdp }));
                 else if (data.type === 'ice-candidate') await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
@@ -201,18 +213,18 @@
         }
 
         window.toggleMic = () => {
-            const track = localStream.getAudioTracks()[0];
-            track.enabled = !track.enabled;
-            const enabled = track.enabled;
+            localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled;
+            const enabled = localStream.getAudioTracks()[0].enabled;
             [document.getElementById('btn-mic-lobby'), document.getElementById('btn-mic-game')].forEach(b => {
-                b.innerText = enabled ? "🎙️" : "🔇";
-                b.style.background = enabled ? "var(--secondary)" : "var(--accent)";
+                b.innerText = enabled ? "🎙️" : "🔇"; b.style.background = enabled ? "var(--secondary)" : "var(--accent)";
             });
         };
 
         window.copyInviteURL = () => {
             const url = `${window.location.origin}${window.location.pathname}?room=${state.roomId}`;
-            navigator.clipboard.writeText(url).then(() => alert("招待URLをコピーしたよ！友達に送ってね！🔗✨"));
+            navigator.clipboard.writeText(url).then(() => {
+                const t = document.getElementById('toast'); t.style.opacity = "1"; setTimeout(() => t.style.opacity = "0", 2000);
+            });
         };
 
         window.handleCreateRoom = async () => {
@@ -221,11 +233,11 @@
             state = { ...state, roomId: rid, myId: "p_"+Date.now(), nickname: nick, isHost: true };
             await set(ref(db, 'rooms/' + rid), { status: 'waiting', timer: 300, hostId: state.myId, players: { [state.myId]: { name: nick, role: '', word: '', vote: '' } } });
             onDisconnect(ref(db, `rooms/${rid}/players/${state.myId}`)).remove();
-            listenToRoom(rid);
-            showPage('page-lobby');
+            listenToRoom(rid); showPage('page-lobby');
         };
 
         window.handleJoinRoomDirect = () => handleJoinRoom();
+        window.cancelDirectJoin = () => { window.history.replaceState({}, '', window.location.pathname); location.reload(); };
 
         window.handleJoinRoom = async () => {
             const rid = document.getElementById('input-room-id').value.toUpperCase();
@@ -234,8 +246,7 @@
             state = { ...state, roomId: rid, myId: "p_"+Date.now(), nickname: nick, isHost: false };
             await update(ref(db, `rooms/${rid}/players/${state.myId}`), { name: nick, role: '', word: '', vote: '' });
             onDisconnect(ref(db, `rooms/${rid}/players/${state.myId}`)).remove();
-            listenToRoom(rid);
-            showPage('page-lobby');
+            listenToRoom(rid); showPage('page-lobby');
         };
 
         function listenToRoom(rid) {
@@ -244,14 +255,13 @@
                 document.getElementById('display-room-id').innerText = rid;
                 const overlay = document.getElementById('voice-overlay');
                 overlay.innerHTML = Object.entries(data.players || {}).map(([id, p]) => `<div id="voice-user-${id}" class="voice-user">${p.name}</div>`).join('');
-                document.getElementById('host-controls').style.display = (state.isHost && data.status === 'waiting') ? 'block' : 'none';
+                document.getElementById('host-settings').style.display = (state.isHost && data.status === 'waiting') ? 'block' : 'none';
                 document.getElementById('guest-msg').style.display = state.isHost ? 'none' : 'block';
                 const m = Math.floor(data.timer / 60); const s = data.timer % 60;
                 document.getElementById('display-timer').innerText = `${m}:${s < 10 ? '0'+s : s}`;
                 if(data.status === 'playing' && !document.getElementById('page-game').classList.contains('active')) {
                     document.getElementById('display-my-word').innerText = data.players[state.myId]?.word || "...";
-                    showPage('page-game');
-                    if(state.isHost) startTimer(rid);
+                    showPage('page-game'); if(state.isHost) startTimer(rid);
                 }
                 if(data.status === 'voting' && document.getElementById('page-game').classList.contains('active')) { setupVoteUI(data.players); showPage('page-vote'); }
                 if(data.status === 'result') showResult(data);
@@ -269,8 +279,9 @@
         }
 
         window.handleStartGame = () => {
-            const THEMES = [["カフェラテ", "カフェオレ"], ["パンケーキ", "ホットケーキ"], ["醤油", "めんつゆ"], ["プロレス", "相撲"], ["リンゴ", "ナシ"]];
-            const pair = THEMES[Math.floor(Math.random() * THEMES.length)];
+            const genre = document.getElementById('select-genre').value;
+            const themes = THEME_DATA[genre];
+            const pair = themes[Math.floor(Math.random() * themes.length)];
             const words = Math.random() > 0.5 ? [pair[0], pair[1]] : [pair[1], pair[0]];
             onValue(ref(db, `rooms/${state.roomId}/players`), (snap) => {
                 const ids = Object.keys(snap.val()).sort(() => 0.5 - Math.random());
@@ -284,7 +295,12 @@
         window.handleGoToVote = () => update(ref(db, `rooms/${state.roomId}`), { status: 'voting' });
         function setupVoteUI(players) { document.getElementById('vote-container').innerHTML = Object.entries(players).filter(([id]) => id !== state.myId).map(([id, p]) => `<div class="btn btn-sub" onclick="castVote('${id}')">${p.name}</div>`).join(''); }
         window.castVote = (tid) => { update(ref(db, `rooms/${state.roomId}/players/${state.myId}`), { vote: tid }); onValue(ref(db, `rooms/${state.roomId}/players`), (snap) => { if(Object.values(snap.val()).every(p => p.vote !== "")) update(ref(db, `rooms/${state.roomId}`), { status: 'result' }); }, { onlyOnce: true }); };
-        function showResult(data) { const wolf = Object.values(data.players).find(p => p.role === 'wolf')?.name; document.getElementById('result-info').innerHTML = `人狼は <b>${wolf}</b> でした！`; showPage('page-result'); }
+        function showResult(data) { 
+            const wolf = Object.values(data.players).find(p => p.role === 'wolf');
+            const citizen = Object.values(data.players).find(p => p.role === 'citizen');
+            document.getElementById('result-info').innerHTML = `人狼は <b>${wolf.name}</b> でした！<br><div style="font-size:0.9rem; margin-top:10px; color:#666;">市民：${citizen.word}<br>人狼：${wolf.word}</div>`;
+            showPage('page-result'); 
+        }
         window.handleRestart = () => { if(state.isHost) update(ref(db, `rooms/${state.roomId}`), { status: 'waiting', timer: 300 }); showPage('page-lobby'); };
     </script>
 </body>
