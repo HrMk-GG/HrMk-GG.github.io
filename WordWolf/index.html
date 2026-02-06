@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ワードウルフ 🐺</title>
     <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700;800&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@skyway-sdk/room@latest/dist/skyway_room.js"></script>
     <style>
         :root {
             --primary: #FFD93D; --secondary: #6BCB77; --accent: #FF6B6B;
@@ -46,9 +45,9 @@
         <div class="room-id-display" id="display-room-id">-----</div>
         
         <div class="mic-controls">
-            <button id="btn-start-voice" class="btn btn-sub" onclick="manualInitVoice()">🎤 ボイスを開始する</button>
+            <button id="btn-start-voice" class="btn btn-sub" onclick="initSimpleVoice()">🎤 マイクを有効にする</button>
             <button id="btn-mic-lobby" class="btn btn-sub btn-mic" onclick="toggleMic()" style="display:none;">🎙️</button>
-            <div id="voice-status">ボイス未接続</div>
+            <div id="voice-status">マイク未接続</div>
         </div>
 
         <ul id="lobby-player-list" class="user-list"></ul>
@@ -83,7 +82,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, set, onValue, update, runTransaction, onDisconnect } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { getDatabase, ref, set, onValue, update, runTransaction, onDisconnect, push, onChildAdded } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAbZPrLSIygyIABnUGAHOigM9QmXdGRa8g",
@@ -93,91 +92,110 @@
             messagingSenderId: "804527745152",
             appId: "1:804527745152:web:0ab51db1cc348000801e65"
         };
-        const SKYWAY_APP_ID = "86266f8a-a0de-449d-b00e-6639c2659542"; 
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app, "https://othello-hrmk-default-rtdb.asia-southeast1.firebasedatabase.app");
 
         const THEMES = { "ALL": [["カフェラテ", "カフェオレ"], ["パンケーキ", "ホットケーキ"], ["醤油", "めんつゆ"], ["ラーメン", "つけ麺"], ["一目惚れ", "片思い"]] };
         let state = { roomId: "", myId: "", nickname: "", isHost: false, timerInterval: null };
-        let audioPublication = null;
+        let localStream = null;
+        let peers = {};
 
         window.showPage = (id) => {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             setTimeout(() => document.getElementById(id).classList.add('active'), 50);
         };
 
-        window.manualInitVoice = async () => {
-            const status = document.getElementById('voice-status');
-            const btnStart = document.getElementById('btn-start-voice');
-            
-            // window.skyway_room を直接確認する
-            if (!window.skyway_room) {
-                status.innerText = "SkyWayを読み込み中...もう一度押してね！";
-                return;
-            }
-
-            status.innerText = "マイクを接続中...";
-            btnStart.disabled = true;
-
+        // --- シンプルWebRTCボイスチャット ---
+        window.initSimpleVoice = async () => {
             try {
-                const { SkyWayContext, SkyWayRoom, SkyWayStreamFactory } = window.skyway_room;
-                // トークンを使わずAppIDのみで繋ぐ設定（ダッシュボードで認証OFFにする必要あり）
-                const context = await SkyWayContext.Create(SKYWAY_APP_ID);
-                const room = await SkyWayRoom.FindOrCreate(context, { type: 'p2p', name: state.roomId });
-                const member = await room.join();
-                
-                const { audio } = await SkyWayStreamFactory.createMicrophoneAudioAndCameraStream();
-                audioPublication = await member.publish(audio);
-                
-                room.onPublicationsByAnyMemberAdded.add(({ publication }) => {
-                    if (publication.contentType === 'audio' && publication.publisherId !== member.id) {
-                        member.subscribe(publication).then(({ stream }) => {
-                            const audioEl = document.createElement('audio');
-                            audioEl.srcObject = new MediaStream([stream.track]);
-                            audioEl.autoplay = true;
-                            document.body.appendChild(audioEl);
-                        });
-                    }
-                });
-
-                btnStart.style.display = "none";
+                localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                document.getElementById('btn-start-voice').style.display = "none";
                 document.getElementById('btn-mic-lobby').style.display = "flex";
-                status.innerText = "ボイス接続完了！ 🎙️";
-                status.style.color = "#6BCB77";
-            } catch (e) { 
-                console.error("SkyWay Error:", e);
-                status.innerText = "エラー: " + e.message;
-                btnStart.disabled = false;
+                document.getElementById('voice-status').innerText = "マイク有効 🎤";
+                document.getElementById('voice-status').style.color = "#6BCB77";
+                
+                // 既存のプレイヤー全員に接続リクエスト
+                const playersRef = ref(db, `rooms/${state.roomId}/players`);
+                onValue(playersRef, (snap) => {
+                    const players = snap.val();
+                    for(let id in players) {
+                        if(id !== state.myId && !peers[id]) {
+                            callUser(id);
+                        }
+                    }
+                }, { onlyOnce: true });
+
+                // シグナリング待機
+                listenForSignals();
+            } catch (e) {
+                alert("マイクを許可してね！");
             }
         };
 
-        window.toggleMic = async () => {
-            if (!audioPublication) return;
-            const lobbyBtn = document.getElementById('btn-mic-lobby');
-            const gameBtn = document.getElementById('btn-mic-game');
-            if (audioPublication.state === 'enabled') {
-                await audioPublication.disable();
-                [lobbyBtn, gameBtn].forEach(b => { b.innerText = "🔇"; b.style.background = "#FF6B6B"; });
-            } else {
-                await audioPublication.enable();
-                [lobbyBtn, gameBtn].forEach(b => { b.innerText = "🎙️"; b.style.background = "#6BCB77"; });
-            }
+        async function callUser(userId) {
+            const pc = createPeerConnection(userId);
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            push(ref(db, `rooms/${state.roomId}/signals/${userId}`), { from: state.myId, type: 'offer', sdp: offer.sdp });
+        }
+
+        function listenForSignals() {
+            onChildAdded(ref(db, `rooms/${state.roomId}/signals/${state.myId}`), async (snap) => {
+                const data = snap.val();
+                let pc = peers[data.from] || createPeerConnection(data.from);
+                
+                if (data.type === 'offer') {
+                    await pc.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: data.sdp }));
+                    const answer = await pc.createAnswer();
+                    await pc.setLocalDescription(answer);
+                    push(ref(db, `rooms/${state.roomId}/signals/${data.from}`), { from: state.myId, type: 'answer', sdp: answer.sdp });
+                } else if (data.type === 'answer') {
+                    await pc.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: data.sdp }));
+                } else if (data.type === 'ice-candidate') {
+                    await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+                }
+            });
+        }
+
+        function createPeerConnection(userId) {
+            const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+            peers[userId] = pc;
+            localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+            pc.onicecandidate = (e) => {
+                if (e.candidate) push(ref(db, `rooms/${state.roomId}/signals/${userId}`), { from: state.myId, type: 'ice-candidate', candidate: e.candidate.toJSON() });
+            };
+            pc.ontrack = (e) => {
+                const audio = document.createElement('audio');
+                audio.srcObject = e.streams[0];
+                audio.autoplay = true;
+                document.body.appendChild(audio);
+            };
+            return pc;
+        }
+
+        window.toggleMic = () => {
+            localStream.getAudioTracks().forEach(t => t.enabled = !t.enabled);
+            const enabled = localStream.getAudioTracks()[0].enabled;
+            const btns = [document.getElementById('btn-mic-lobby'), document.getElementById('btn-mic-game')];
+            btns.forEach(b => {
+                b.innerText = enabled ? "🎙️" : "🔇";
+                b.style.background = enabled ? "#6BCB77" : "#FF6B6B";
+            });
         };
 
+        // --- ゲーム基本ロジック ---
         window.handleCreateRoom = async () => {
             const nick = document.getElementById('input-nickname').value || "ゲスト";
             const rid = Math.random().toString(36).substring(2, 7).toUpperCase();
             state = { ...state, roomId: rid, myId: "p_"+Date.now(), nickname: nick, isHost: true };
-            try {
-                await set(ref(db, 'rooms/' + rid), {
-                    status: 'waiting', timer: 300, hostId: state.myId,
-                    players: { [state.myId]: { name: nick, role: '', word: '', vote: '' } }
-                });
-                onDisconnect(ref(db, `rooms/${rid}/players/${state.myId}`)).remove();
-                listenToRoom(rid);
-                showPage('page-lobby');
-            } catch (e) { alert("Firebaseエラー"); }
+            await set(ref(db, 'rooms/' + rid), {
+                status: 'waiting', timer: 300, hostId: state.myId,
+                players: { [state.myId]: { name: nick, role: '', word: '', vote: '' } }
+            });
+            onDisconnect(ref(db, `rooms/${rid}/players/${state.myId}`)).remove();
+            listenToRoom(rid);
+            showPage('page-lobby');
         };
 
         window.handleJoinRoom = async () => {
@@ -185,12 +203,10 @@
             const nick = document.getElementById('input-nickname').value || "ゲスト";
             if(rid.length !== 5) return;
             state = { ...state, roomId: rid, myId: "p_"+Date.now(), nickname: nick, isHost: false };
-            try {
-                await update(ref(db, `rooms/${rid}/players/${state.myId}`), { name: nick, role: '', word: '', vote: '' });
-                onDisconnect(ref(db, `rooms/${rid}/players/${state.myId}`)).remove();
-                listenToRoom(rid);
-                showPage('page-lobby');
-            } catch (e) { alert("部屋が見つかりません"); }
+            await update(ref(db, `rooms/${rid}/players/${state.myId}`), { name: nick, role: '', word: '', vote: '' });
+            onDisconnect(ref(db, `rooms/${rid}/players/${state.myId}`)).remove();
+            listenToRoom(rid);
+            showPage('page-lobby');
         };
 
         function listenToRoom(rid) {
@@ -209,9 +225,6 @@
                     document.getElementById('display-my-word').innerText = data.players[state.myId]?.word || "...";
                     showPage('page-game');
                     if(state.isHost) startTimer(rid);
-                }
-                if(data.status === 'playing' && document.getElementById('page-vote').classList.contains('active')) {
-                    showPage('page-game');
                 }
                 if(data.status === 'voting' && document.getElementById('page-game').classList.contains('active')) {
                     setupVoteUI(data.players);
