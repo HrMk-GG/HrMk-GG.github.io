@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ふわふわワードウルフ 🐺🍭</title>
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #FFD93D;
+            --secondary: #6BCB77;
+            --accent: #FF6B6B;
+            --bg: #FFF9CA;
+            --text: #4D4D4D;
+            --white: #ffffff;
+        }
+
+        body {
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* なめらかな画面遷移 🪄 */
+        .page {
+            position: absolute;
+            width: 90%;
+            max-width: 450px;
+            padding: 30px;
+            background: var(--white);
+            border-radius: 30px;
+            box-shadow: 0 10px 0 #E6D5A9;
+            opacity: 0;
+            transform: translateY(30px) scale(0.9);
+            pointer-events: none;
+            transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+            box-sizing: border-box;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .page.active {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            pointer-events: all;
+        }
+
+        h1 { text-align: center; color: var(--accent); font-size: 1.8rem; margin: 0 0 20px 0; }
+        h3 { font-size: 1.1rem; text-align: center; margin: 10px 0; }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        .btn-main { background: var(--primary); color: #856600; box-shadow: 0 6px 0 #D4B42E; }
+        .btn-sub { background: var(--secondary); color: var(--white); box-shadow: 0 6px 0 #4FA659; }
+        .btn-accent { background: var(--accent); color: var(--white); box-shadow: 0 6px 0 #D14D4D; }
+        .btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.1); }
+
+        input {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border: 3px solid var(--primary);
+            border-radius: 15px;
+            font-family: inherit;
+            font-size: 1rem;
+            box-sizing: border-box;
+            outline: none;
+            background: #FFFBEB;
+        }
+
+        .room-id-display {
+            background: #eee;
+            padding: 10px;
+            border-radius: 15px;
+            font-size: 1.5rem;
+            text-align: center;
+            letter-spacing: 3px;
+            margin-bottom: 20px;
+            font-weight: 800;
+        }
+
+        .user-list { list-style: none; padding: 0; margin: 15px 0; }
+        .user-list li {
+            background: #F3F4F6;
+            margin: 8px 0;
+            padding: 12px 20px;
+            border-radius: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            animation: popIn 0.4s ease-out forwards;
+        }
+
+        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        .genre-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .genre-item {
+            padding: 12px;
+            border: 2px solid #eee;
+            border-radius: 15px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: 0.3s;
+        }
+
+        .genre-item.selected {
+            border-color: var(--secondary);
+            background: #EFFFF0;
+            font-weight: bold;
+            transform: scale(1.05);
+        }
+
+        .timer-display { font-size: 4rem; text-align: center; color: var(--accent); text-shadow: 3px 3px 0 #FFD93D; margin: 10px 0; }
+        .timer-controls { display: flex; gap: 10px; }
+
+        .word-card {
+            background: var(--primary);
+            padding: 25px;
+            border-radius: 25px;
+            text-align: center;
+            font-size: 2rem;
+            margin: 20px 0;
+            border: 4px dashed #856600;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+        .vote-item {
+            background: #FFF;
+            border: 3px solid var(--primary);
+            margin: 8px 0;
+            padding: 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            text-align: center;
+            font-weight: 800;
+            transition: 0.2s;
+        }
+        .vote-item.voted { background: var(--accent); color: white; border-color: var(--accent); }
+    </style>
+</head>
+<body>
+
+    <div id="page-home" class="page active">
+        <h1>🐺 Word Wolf</h1>
+        <input type="text" id="input-nickname" placeholder="ニックネームを入力！" maxlength="8">
+        <button class="btn btn-main" onclick="handleCreateRoom()">部屋を作る ✨</button>
+        <div style="text-align:center; margin:15px; color:#aaa;">ーー または ーー</div>
+        <input type="text" id="input-room-id" placeholder="5桁のコードを入力" maxlength="5">
+        <button class="btn btn-sub" onclick="handleJoinRoom()">参加する 🚪</button>
+    </div>
+
+    <div id="page-lobby" class="page">
+        <h1>待機ロビー 🕒</h1>
+        <div class="room-id-display" id="display-room-id">-----</div>
+        <ul id="lobby-player-list" class="user-list"></ul>
+        <div id="host-controls" style="display:none;">
+            <h3>ジャンルを選んでね 👇</h3>
+            <div class="genre-grid" id="genre-grid"></div>
+            <button class="btn btn-accent" onclick="handleStartGame()">ゲーム開始！🚀</button>
+        </div>
+        <div id="guest-msg" style="text-align:center; color:#888;">ホストが開始するのを待っています...</div>
+    </div>
+
+    <div id="page-game" class="page">
+        <h1>あなたのお題 🤫</h1>
+        <div class="word-card" id="display-my-word">読み込み中...</div>
+        <div class="timer-display" id="display-timer">05:00</div>
+        <div class="timer-controls" id="timer-ui-host" style="display:none;">
+            <button class="btn btn-sub" onclick="changeTimer(60)">＋1分</button>
+            <button class="btn btn-accent" onclick="changeTimer(-60)">－1分</button>
+        </div>
+        <button class="btn btn-main" style="margin-top:20px;" onclick="handleGoToVote()">投票へ進む 👉</button>
+    </div>
+
+    <div id="page-vote" class="page">
+        <h1>誰が人狼？🗳️</h1>
+        <p style="text-align:center;">怪しい人をタップしてね！</p>
+        <div id="vote-container"></div>
+    </div>
+
+    <div id="page-result" class="page">
+        <h1>結果発表！🎊</h1>
+        <div id="result-info" style="text-align:center; font-size:1.2rem; margin-bottom:20px;"></div>
+        <ul id="result-details" class="user-list"></ul>
+        <button class="btn btn-main" onclick="handleRestart()">もう一度遊ぶ 🔄</button>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, set, onValue, update, runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAbZPrLSIygyIABnUGAHOigM9QmXdGRa8g",
+            authDomain: "othello-hrmk.firebaseapp.com",
+            projectId: "othello-hrmk",
+            storageBucket: "othello-hrmk.firebasestorage.app",
+            messagingSenderId: "804527745152",
+            appId: "1:804527745152:web:0ab51db1cc348000801e65",
+            measurementId: "G-ZJX6L6ZEFL"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        const THEMES = {
+            "🍔 飲食（激似）": [["カフェラテ", "カフェオレ"], ["パンケーキ", "ホットケーキ"], ["おひたし", "胡麻和え"], ["醤油", "めんつゆ"], ["ポテトチップス", "フライドポテト"], ["ビスケット", "クッキー"], ["おにぎり", "焼きおにぎり"], ["ステーキ", "ローストビーフ"], ["唐揚げ", "竜田揚げ"], ["中華そば", "ラーメン"], ["パスタ", "スパゲッティ"], ["シャーベット", "ジェラート"]],
+            "❤️ 恋愛（絶妙）": [["浮気", "不倫"], ["デート", "お出かけ"], ["一目惚れ", "一聞き惚れ"], ["元カレ", "今カレ"], ["合コン", "街コン"], ["告白", "プロポーズ"], ["ヤキモチ", "嫉妬"], ["ペアリング", "ペアネックレス"], ["愛", "恋"]],
+            "🏫 学校・日常": [["算数", "数学"], ["理科", "科学"], ["国語", "現代文"], ["宿題", "課題"], ["遠足", "修学旅行"], ["文化祭", "学園祭"], ["体育祭", "運動会"], ["シャーペン", "鉛筆"], ["教科書", "参考書"]],
+            "🏠 生活・家電": [["洗濯機", "乾燥機"], ["冷蔵庫", "冷凍庫"], ["電子レンジ", "オーブン"], ["布団", "毛布"], ["枕", "クッション"], ["シャンプー", "リンス"], ["扇風機", "エアコン"]],
+            "🐶 動物・自然": [["アシカ", "アザラシ"], ["イルカ", "シャチ"], ["リス", "ハムスター"], ["山", "丘"], ["海", "湖"], ["川", "滝"], ["雨", "霧雨"]],
+            "🎥 エンタメ": [["YouTube", "TikTok"], ["映画", "ドラマ"], ["漫画", "アニメ"], ["トランプ", "UNO"], ["Instagram", "X(Twitter)"]],
+            "💼 仕事・社会": [["会議", "打ち合わせ"], ["残業", "休日出勤"], ["名刺", "身分証"], ["上司", "社長"], ["給料", "ボーナス"], ["メール", "チャット"]],
+            "🧤 持ち物・服": [["スニーカー", "運動靴"], ["サンダル", "スリッパ"], ["リュック", "ランドセル"], ["帽子", "ヘルメット"], ["眼鏡", "サングラス"], ["傘", "カッパ"]]
+        };
+
+        let state = { roomId: "", myId: "", nickname: "", isHost: false, selectedGenre: "🍔 飲食（激似）", hasVoted: false, timerInterval: null };
+
+        window.showPage = (id) => {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            setTimeout(() => document.getElementById(id).classList.add('active'), 50);
+        };
+
+        window.handleCreateRoom = () => {
+            const nick = document.getElementById('input-nickname').value || "ななし";
+            const rid = Math.random().toString(36).substring(2, 7).toUpperCase();
+            state.myId = "p_" + Date.now();
+            state.roomId = rid;
+            state.nickname = nick;
+            state.isHost = true;
+
+            set(ref(db, 'rooms/' + rid), {
+                status: 'waiting',
+                timer: 300,
+                genre: "🍔 飲食（激似）",
+                hostId: state.myId,
+                players: { [state.myId]: { name: nick, role: '', word: '', vote: '', isOnline: true } }
+            });
+            initGenreGrid();
+            listenToRoom(rid);
+            showPage('page-lobby');
+        };
+
+        window.handleJoinRoom = () => {
+            const rid = document.getElementById('input-room-id').value.toUpperCase();
+            const nick = document.getElementById('input-nickname').value || "ななし";
+            if(rid.length !== 5) return alert("5桁のコードを入れてね！");
+            state.myId = "p_" + Date.now();
+            state.roomId = rid;
+            state.nickname = nick;
+            state.isHost = false;
+
+            update(ref(db, `rooms/${rid}/players/${state.myId}`), { name: nick, role: '', word: '', vote: '', isOnline: true });
+            listenToRoom(rid);
+            showPage('page-lobby');
+        };
+
+        function initGenreGrid() {
+            const grid = document.getElementById('genre-grid');
+            grid.innerHTML = "";
+            Object.keys(THEMES).forEach(g => {
+                const div = document.createElement('div');
+                div.className = `genre-item ${g === state.selectedGenre ? 'selected' : ''}`;
+                div.innerText = g;
+                div.onclick = () => {
+                    state.selectedGenre = g;
+                    update(ref(db, `rooms/${state.roomId}`), { genre: g });
+                };
+                grid.appendChild(div);
+            });
+        }
+
+        function listenToRoom(rid) {
+            document.getElementById('display-room-id').innerText = rid;
+            onValue(ref(db, 'rooms/' + rid), (snapshot) => {
+                const data = snapshot.val();
+                if(!data) return;
+
+                const list = document.getElementById('lobby-player-list');
+                list.innerHTML = "";
+                Object.entries(data.players).forEach(([id, p]) => {
+                    list.innerHTML += `<li>${p.name} ${id === data.hostId ? '👑' : ''} <span>✅</span></li>`;
+                });
+
+                document.getElementById('host-controls').style.display = state.isHost ? 'block' : 'none';
+                document.getElementById('guest-msg').style.display = state.isHost ? 'none' : 'block';
+                document.getElementById('timer-ui-host').style.display = state.isHost ? 'flex' : 'none';
+
+                const m = Math.floor(data.timer / 60);
+                const s = data.timer % 60;
+                document.getElementById('display-timer').innerText = `${m}:${s < 10 ? '0'+s : s}`;
+
+                if(!state.isHost) {
+                    state.selectedGenre = data.genre;
+                } else {
+                    document.querySelectorAll('.genre-item').forEach(el => el.classList.toggle('selected', el.innerText === data.genre));
+                }
+
+                if(data.status === 'playing' && document.getElementById('page-lobby').classList.contains('active')) {
+                    document.getElementById('display-my-word').innerText = data.players[state.myId].word;
+                    showPage('page-game');
+                    if(state.isHost) startTimerCountdown();
+                }
+                if(data.status === 'voting' && document.getElementById('page-game').classList.contains('active')) {
+                    clearInterval(state.timerInterval);
+                    setupVoteUI(data.players);
+                    showPage('page-vote');
+                }
+                if(data.status === 'result') {
+                    showResult(data);
+                    showPage('page-result');
+                }
+            });
+        }
+
+        function startTimerCountdown() {
+            if(state.timerInterval) clearInterval(state.timerInterval);
+            state.timerInterval = setInterval(() => {
+                runTransaction(ref(db, `rooms/${state.roomId}/timer`), (t) => {
+                    if(t <= 0) { clearInterval(state.timerInterval); return 0; }
+                    return t - 1;
+                });
+            }, 1000);
+        }
+
+        window.handleStartGame = () => {
+            const pairs = THEMES[state.selectedGenre];
+            const pair = pairs[Math.floor(Math.random() * pairs.length)];
+            const words = Math.random() > 0.5 ? [pair[0], pair[1]] : [pair[1], pair[0]];
+
+            onValue(ref(db, `rooms/${state.roomId}/players`), (snap) => {
+                const players = snap.val();
+                const ids = Object.keys(players);
+                const wolfId = ids[Math.floor(Math.random() * ids.length)];
+                const updates = {};
+                ids.forEach(id => {
+                    updates[`/players/${id}/role`] = (id === wolfId ? 'wolf' : 'citizen');
+                    updates[`/players/${id}/word`] = (id === wolfId ? words[1] : words[0]);
+                    updates[`/players/${id}/vote`] = '';
+                });
+                updates['/status'] = 'playing';
+                update(ref(db, `rooms/${state.roomId}`), updates);
+            }, { onlyOnce: true });
+        };
+
+        window.changeTimer = (val) => {
+            runTransaction(ref(db, `rooms/${state.roomId}/timer`), (t) => Math.max(0, (t || 0) + val));
+        };
+
+        window.handleGoToVote = () => update(ref(db, `rooms/${state.roomId}`), { status: 'voting' });
+
+        function setupVoteUI(players) {
+            const container = document.getElementById('vote-container');
+            container.innerHTML = "";
+            Object.entries(players).forEach(([id, p]) => {
+                if(id === state.myId) return;
+                const div = document.createElement('div');
+                div.className = 'vote-item';
+                div.innerText = p.name;
+                div.onclick = () => {
+                    if(state.hasVoted) return;
+                    state.hasVoted = true;
+                    div.classList.add('voted');
+                    update(ref(db, `rooms/${state.roomId}/players/${state.myId}`), { vote: id });
+                    checkAllVoted();
+                };
+                container.appendChild(div);
+            });
+        }
+
+        function checkAllVoted() {
+            onValue(ref(db, `rooms/${state.roomId}`), (snap) => {
+                const data = snap.val();
+                const players = Object.values(data.players);
+                if(players.filter(p => p.vote !== "").length >= players.length) {
+                    update(ref(db, `rooms/${state.roomId}`), { status: 'result' });
+                }
+            }, { onlyOnce: true });
+        }
+
+        function showResult(data) {
+            const info = document.getElementById('result-info');
+            const details = document.getElementById('result-details');
+            const wolf = Object.values(data.players).find(p => p.role === 'wolf');
+            info.innerHTML = `正体は <b>${wolf.name}</b> さん！<br>お題：${wolf.word}`;
+            details.innerHTML = "";
+            Object.values(data.players).forEach(p => {
+                details.innerHTML += `<li>${p.name} <span>${p.role === 'wolf' ? '人狼🐺' : '市民👤'}</span></li>`;
+            });
+        }
+
+        window.handleRestart = () => {
+            state.hasVoted = false;
+            if(state.isHost) update(ref(db, `rooms/${state.roomId}`), { status: 'waiting', timer: 300 });
+            showPage('page-lobby');
+        };
+    </script>
+</body>
+</html>
