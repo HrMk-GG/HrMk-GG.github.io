@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ワードウルフ 🐺 CREATE BY HrMk</title>
+    <title>ワードウルフ 🐺 属性MIX完全版</title>
     <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700;800&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -22,7 +22,7 @@
         .room-id-display { background: #eee; padding: 15px; border-radius: 15px; font-size: 1.8rem; text-align: center; letter-spacing: 5px; margin-bottom: 5px; font-weight: 800; color: #555; cursor: pointer; transition: 0.3s; }
         .timer-display { font-size: 3.5rem; text-align: center; color: var(--accent); text-shadow: 3px 3px 0 #FFD93D; margin: 5px 0; }
         .word-card { background: var(--primary); padding: 20px; border-radius: 25px; text-align: center; font-size: 1.6rem; margin: 10px 0; border: 4px dashed #856600; line-height: 1.4; }
-        .topic-area { background: #fdfdfd; padding: 15px; border-radius: 20px; margin: 15px 0; border: 3px solid var(--primary); position: relative; }
+        .topic-area { background: #fdfdfd; padding: 15px; border-radius: 20px; margin: 15px 0; border: 3px solid var(--primary); }
         .topic-btns { display: flex; gap: 10px; justify-content: center; margin-bottom: 10px; }
         .btn-topic { width: 50px; height: 50px; border-radius: 15px; border: none; font-size: 1.2rem; font-weight: 800; cursor: pointer; box-shadow: 0 4px 0 #bbb; transition: 0.1s; }
         .btn-topic:active { transform: translateY(2px); box-shadow: 0 2px 0 #bbb; }
@@ -58,17 +58,14 @@
         <h1>待機ロビー 🕒</h1>
         <div class="room-id-display" id="display-room-id" onclick="copyInviteURL()">-----</div>
         <div id="host-settings" style="display:none;">
-            <label style="font-size: 0.8rem; font-weight: 800; color: #888;">テーマ：</label>
+            <label style="font-size: 0.8rem; font-weight: 800; color: #888;">テーマを選択：</label>
             <select id="select-genre">
-                <option value="attribute">👤 自分たち（属性）</option>
                 <option value="food">🍔 飲食・グルメ</option>
                 <option value="love">💖 恋愛・結婚</option>
-                <option value="life">🏠 生活・習慣</option>
                 <option value="play">🎮 遊び・趣味</option>
                 <option value="school">🏫 学校・仕事</option>
-                <option value="animal">🐾 動物・生き物</option>
+                <option value="life">🏠 生活・習慣</option>
                 <option value="place">🗺️ 場所・施設</option>
-                <option value="item">📦 持ち物・道具</option>
                 <option value="emotion">🤔 感情・抽象的</option>
                 <option value="random">🎲 全混ぜランダム</option>
             </select>
@@ -90,7 +87,7 @@
                 <button class="btn-topic btn-t2" onclick="sendTopicRequest(2)">②</button>
                 <button class="btn-topic btn-t3" onclick="sendTopicRequest(3)">③</button>
             </div>
-            <div id="display-topic">誰かがボタンを押すとここに話題が出るよ！</div>
+            <div id="display-topic">ボタンを押すと話題が同期されるよ！</div>
         </div>
         <div class="timer-display" id="display-timer">05:00</div>
         <div class="mic-controls"><button id="btn-mic-game" class="btn btn-sub btn-mic" onclick="toggleMic()">🎙️</button></div>
@@ -130,39 +127,26 @@
         let audioContext = null;
 
         const THEME_DATA = {
-            attribute: [["計算が得意な人", "暗記が得意な人"], ["モテそうな人", "友達が多そうな人"], ["貯金してそうな人", "浪費してそうな人"], ["几帳面な人", "せっかちな人"], ["寂しがり屋な人", "一人が好きな人"], ["怒ると怖そうな人", "泣くと長そうな人"], ["運動神経がいい人", "頭の回転が速い人"], ["メンタルが強い人", "運が強い人"], ["真面目な人", "自由奔放な人"], ["聞き上手な人", "話し上手な人"]],
-            food: [["カフェラテ", "カフェオレ"], ["パンケーキ", "ホットケーキ"], ["醤油", "めんつゆ"], ["ラーメン", "つけ麺"], ["マヨネーズ", "ケチャップ"], ["うどん", "そば"], ["焼肉", "しゃぶしゃぶ"], ["ポテト", "唐揚げ"], ["おにぎり", "サンドイッチ"], ["寿司", "ピザ"]],
-            love: [["一目惚れ", "片思い"], ["デート", "お出かけ"], ["浮気", "不倫"], ["初恋", "元恋人"], ["プロポーズ", "告白"], ["結婚式", "披露宴"], ["合コン", "アプリ"], ["記念日", "誕生日"], ["恋人", "親友"], ["嫉妬", "独占欲"]],
-            life: [["シャンプー", "リンス"], ["日記", "家計簿"], ["掃除機", "ほうき"], ["朝食", "夕食"], ["お風呂", "シャワー"], ["布団", "ベッド"], ["メガネ", "コンタクト"], ["歯磨き粉", "洗顔料"], ["自炊", "外食"], ["洗濯物", "クリーニング"]],
-            play: [["カラオケ", "ボウリング"], ["映画鑑賞", "読書"], ["YouTube", "Netflix"], ["キャンプ", "グランピング"], ["スキー", "スノボ"], ["散歩", "ジョギング"], ["ゲーム", "ボドゲ"], ["パズル", "トランプ"], ["遊園地", "動物園"], ["SNS", "ブログ"]],
-            school: [["宿題", "課題"], ["教科書", "参考書"], ["部活動", "サークル"], ["給食", "お弁当"], ["先生", "上司"], ["残業", "居残り"], ["会議", "朝礼"], ["文系", "理系"], ["修学旅行", "研修"], ["夏休み", "冬休み"]],
-            animal: [["ライオン", "トラ"], ["犬", "猫"], ["うさぎ", "ハムスター"], ["クジラ", "イルカ"], ["スズメ", "カラス"], ["ヘビ", "トカゲ"], ["ペンギン", "アザラシ"], ["キリン", "シマウマ"], ["パンダ", "コアラ"], ["金魚", "メダカ"]],
-            place: [["映画館", "プラネタリウム"], ["海", "プール"], ["神社", "お寺"], ["コンビニ", "スーパー"], ["公園", "庭"], ["駅", "空港"], ["図書館", "美術館"], ["デパート", "モール"], ["病院", "薬局"], ["ホテル", "旅館"]],
-            item: [["シャーペン", "鉛筆"], ["スマホ", "タブレット"], ["イヤホン", "ヘッドホン"], ["リュック", "ショルダー"], ["サンダル", "スニーカー"], ["マフラー", "手袋"], ["時計", "指輪"], ["財布", "ポーチ"], ["傘", "カッパ"], ["扇風機", "エアコン"]],
-            emotion: [["信頼", "安心"], ["緊張", "不安"], ["怒り", "悲しみ"], ["勇気", "希望"], ["孤独", "退屈"], ["努力", "根性"], ["理想", "幻想"], ["後悔", "反省"], ["尊敬", "憧れ"], ["幸福", "満足"]],
+            food: [["カフェラテ", "カフェオレ"], ["うどん", "そば"], ["偏食が激しそうな人", "食にこだわりが強そうな人"], ["高級料理が似合う人", "ジャンクフードが似合う人"], ["自炊が完璧そうな人", "毎日外食してそうな人"], ["マヨラーそうな人", "甘党そうな人"]],
+            love: [["浮気", "不倫"], ["初恋", "元恋人"], ["束縛が激しそうな人", "嫉妬深そうな人"], ["一途そうな人", "すぐ目移りしそうな人"], ["恋人に甘えそうな人", "恋人を振り回しそうな人"], ["モテすぎて困ってそうな人", "押しに弱そうな人"]],
+            play: [["YouTube", "Netflix"], ["ゲーム", "ボドゲ"], ["インドア派な人", "アウトドア派な人"], ["多趣味そうな人", "一つのことを極めそうな人"], ["ギャンブルが強そうな人", "くじ運が絶望的な人"], ["常に流行を追ってそうな人", "マイナーな趣味を持ってそうな人"]],
+            school: [["宿題", "課題"], ["先生", "上司"], ["成績が学年トップそうな人", "運動神経が化け物そうな人"], ["会議で寝てそうな人", "影のリーダーっぽい人"], ["残業が多そうな人", "定時で光の速さで帰りそうな人"], ["文系っぽい人", "理系っぽい人"]],
+            life: [["シャンプー", "リンス"], ["布団", "ベッド"], ["朝に弱そうな人", "夜更かしが限界突破してそうな人"], ["部屋がゴミ屋敷そうな人", "潔癖症そうな人"], ["貯金が1億円ありそうな人", "給料日前はもやし生活そうな人"], ["常に冷静沈着な人", "実は小心者そうな人"]],
+            place: [["映画館", "プラネタリウム"], ["海", "プール"], ["世界一周してそうな人", "近所のコンビニしか行かなそうな人"], ["無人島で生き残りそうな人", "都会じゃないと生きていけなそうな人"], ["迷子になりやすい人", "方向感覚が野生並みな人"]],
+            emotion: [["信頼", "安心"], ["理想", "幻想"], ["秘密が多そうな人", "嘘を隠し通せそうな人"], ["怒ると静かになる人", "怒ると語彙力がなくなる人"], ["褒められると伸びる人", "プレッシャーに強い人"]],
             random: []
         };
         THEME_DATA.random = [].concat(...Object.values(THEME_DATA));
 
         const TOPIC_MASTER = {
-            1: ["この中で一番お題に当てはまりそうな人は誰？", "最近それを体験した（見た、食べた）のはいつ？", "それのどこが一番魅力的（または嫌）だと思う？", "正直、今一番怪しいと思っている人を指差して！"],
-            2: ["自分にとって、それは日常でどれくらい必要？", "自分がそれを選ぶときの一番のこだわりは？", "さっきの誰かの発言に、少し違和感を感じた？", "自分がそのお題に対して持っている「強いイメージ」は？"],
-            3: ["それのイメージカラーを「せーの」で言おう！", "それのイメージを漢字一文字で表すと何？", "それがもし魔法で消えたら、世界はどうなる？", "それの値段、このメンバーで競り落とすならいくら？"]
+            1: ["この中で一番お題に当てはまりそうな人は誰？", "最近それを意識（体験）したのはいつ？", "正直、今一番怪しい人を指差して！"],
+            2: ["自分にとってそれは日常でどれくらい大事？", "自分がそれを選ぶときの最大の基準は？", "今の自分のワード、かなり自信ある？"],
+            3: ["それのイメージカラーをせーので言おう！", "それが擬人化したら、どんな性格だと思う？", "それの値段、このメンバーで競り落とすならいくら？"]
         };
 
-        window.sendTopicRequest = (num) => {
-            update(ref(db, `rooms/${state.roomId}`), { currentTopicNum: num });
-        };
-
-        window.onload = () => {
-            const rId = new URLSearchParams(window.location.search).get('room');
-            if (rId) document.getElementById('input-room-id').value = rId.toUpperCase();
-        };
-
-        window.showPage = (id) => {
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            setTimeout(() => document.getElementById(id).classList.add('active'), 50);
-        };
+        window.sendTopicRequest = (num) => { update(ref(db, `rooms/${state.roomId}`), { currentTopicNum: num }); };
+        window.onload = () => { const rId = new URLSearchParams(window.location.search).get('room'); if (rId) document.getElementById('input-room-id').value = rId.toUpperCase(); };
+        window.showPage = (id) => { document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); setTimeout(() => document.getElementById(id).classList.add('active'), 50); };
 
         window.initSimpleVoice = async () => {
             try {
@@ -264,15 +248,10 @@
                 document.getElementById('guest-msg').style.display = state.isHost ? 'none' : 'block';
                 const m = Math.floor(data.timer / 60); const s = data.timer % 60;
                 document.getElementById('display-timer').innerText = `${m}:${s < 10 ? '0'+s : s}`;
-                
-                // 話題の同期表示
-                if (data.currentTopicNum && data.topics) {
-                    document.getElementById('display-topic').innerText = data.topics[data.currentTopicNum];
-                }
-
+                if (data.currentTopicNum && data.topics) document.getElementById('display-topic').innerText = data.topics[data.currentTopicNum];
                 if(data.status === 'playing' && !document.getElementById('page-game').classList.contains('active')) {
                     document.getElementById('display-my-word').innerText = data.players[state.myId]?.word || "...";
-                    document.getElementById('display-topic').innerText = "誰かがボタンを押すとここに話題が出るよ！";
+                    document.getElementById('display-topic').innerText = "誰かがボタンを押すと話題が出るよ！";
                     showPage('page-game'); if(state.isHost) startTimer(rid);
                 }
                 if(data.status === 'voting' && document.getElementById('page-game').classList.contains('active')) { setupVoteUI(data.players); showPage('page-vote'); }
@@ -295,14 +274,7 @@
             const themes = THEME_DATA[genre];
             const pair = themes[Math.floor(Math.random() * themes.length)];
             const words = Math.random() > 0.5 ? [pair[0], pair[1]] : [pair[1], pair[0]];
-            
-            // この試合用の話題を3つ固定
-            const sessionTopics = {
-                1: TOPIC_MASTER[1][Math.floor(Math.random() * TOPIC_MASTER[1].length)],
-                2: TOPIC_MASTER[2][Math.floor(Math.random() * TOPIC_MASTER[2].length)],
-                3: TOPIC_MASTER[3][Math.floor(Math.random() * TOPIC_MASTER[3].length)]
-            };
-
+            const sessionTopics = { 1: TOPIC_MASTER[1][Math.floor(Math.random() * TOPIC_MASTER[1].length)], 2: TOPIC_MASTER[2][Math.floor(Math.random() * TOPIC_MASTER[2].length)], 3: TOPIC_MASTER[3][Math.floor(Math.random() * TOPIC_MASTER[3].length)] };
             onValue(ref(db, `rooms/${state.roomId}/players`), (snap) => {
                 const ids = Object.keys(snap.val()).sort(() => 0.5 - Math.random());
                 const updates = { status: 'playing', timer: 300, topics: sessionTopics, currentTopicNum: 0 };
@@ -315,12 +287,7 @@
         window.handleGoToVote = () => update(ref(db, `rooms/${state.roomId}`), { status: 'voting' });
         function setupVoteUI(players) { document.getElementById('vote-container').innerHTML = Object.entries(players).filter(([id]) => id !== state.myId).map(([id, p]) => `<div class="btn btn-sub" onclick="castVote('${id}')">${p.name}</div>`).join(''); }
         window.castVote = (tid) => { update(ref(db, `rooms/${state.roomId}/players/${state.myId}`), { vote: tid }); onValue(ref(db, `rooms/${state.roomId}/players`), (snap) => { if(Object.values(snap.val()).every(p => p.vote !== "")) update(ref(db, `rooms/${state.roomId}`), { status: 'result' }); }, { onlyOnce: true }); };
-        function showResult(data) { 
-            const wolf = Object.values(data.players).find(p => p.role === 'wolf');
-            const citizen = Object.values(data.players).find(p => p.role === 'citizen');
-            document.getElementById('result-info').innerHTML = `人狼は <b>${wolf.name}</b> でした！<br><div style="font-size:0.9rem; margin-top:10px; color:#666;">市民：${citizen.word}<br>人狼：${wolf.word}</div>`;
-            showPage('page-result'); 
-        }
+        function showResult(data) { const wolf = Object.values(data.players).find(p => p.role === 'wolf'); const citizen = Object.values(data.players).find(p => p.role === 'citizen'); document.getElementById('result-info').innerHTML = `人狼は <b>${wolf.name}</b> でした！<br><div style="font-size:0.9rem; margin-top:10px; color:#666;">市民：${citizen.word}<br>人狼：${wolf.word}</div>`; showPage('page-result'); }
         window.handleRestart = () => { if(state.isHost) update(ref(db, `rooms/${state.roomId}`), { status: 'waiting', timer: 300 }); showPage('page-lobby'); };
     </script>
 </body>
