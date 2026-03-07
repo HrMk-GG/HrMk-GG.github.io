@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clicker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700;900&display=swap');
+        
+        :root {
+            --ps-blue: #00a2ff;
+            --ps-yellow: #ffcf00;
+            --ps-green: #2ecc71;
+            --ps-pink: #ff4791;
+            --ps-purple: #9b59b6;
+        }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            transition: background 0.5s ease;
+            color: white;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .stage-0 { background: #1e90ff; } /* Grassland */
+        .stage-1 { background: #f39c12; } /* Desert */
+        .stage-2 { background: #2c3e50; } /* Frozen */
+        .stage-3 { background: #8e44ad; } /* Volcano */
+
+        .font-luckiest { font-family: 'Fredoka One', cursive; }
+
+        .btn-3d {
+            position: relative;
+            transition: all 0.1s;
+            border-bottom: 6px solid rgba(0,0,0,0.2);
+            text-shadow: 2px 2px 0px rgba(0,0,0,0.2);
+        }
+        .btn-3d:active {
+            transform: translateY(4px);
+            border-bottom-width: 2px;
+        }
+
+        .float-animation {
+            animation: floating 3s ease-in-out infinite;
+        }
+        @keyframes floating {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-15px); }
+        }
+
+        .pet-card {
+            background: linear-gradient(180deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.05) 100%);
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 15px;
+            box-shadow: 0 8px 0 rgba(0,0,0,0.1);
+        }
+
+        .glass-panel {
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(12px);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .coin-particle {
+            position: absolute;
+            pointer-events: none;
+            animation: floatUp 0.6s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+            font-family: 'Fredoka One', cursive;
+            z-index: 100;
+        }
+
+        @keyframes floatUp {
+            0% { transform: translateY(0) scale(0.5); opacity: 0; }
+            20% { opacity: 1; transform: translateY(-20px) scale(1.2); }
+            100% { transform: translateY(-120px) scale(1); opacity: 0; }
+        }
+
+        .scroll-hide::-webkit-scrollbar { display: none; }
+
+        .rarity-legendary-bg {
+            background: linear-gradient(45deg, #f1c40f, #e67e22, #e74c3c, #9b59b6, #3498db, #2ecc71);
+            background-size: 400% 400%;
+            animation: rainbow 5s ease infinite;
+        }
+        @keyframes rainbow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .menu-transition {
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+    </style>
+</head>
+<body class="h-screen flex stage-0" id="game-body">
+
+    <!-- Sidebar Menu -->
+    <div class="w-20 glass-panel m-4 rounded-3xl flex flex-col items-center py-6 gap-6 z-40">
+        <button onclick="toggleMenu('shop')" class="w-12 h-12 rounded-xl bg-green-500 btn-3d flex items-center justify-center text-xl shadow-lg">
+            <i class="fas fa-shopping-cart"></i>
+        </button>
+        <button onclick="toggleMenu('inventory')" class="w-12 h-12 rounded-xl bg-blue-500 btn-3d flex items-center justify-center text-xl shadow-lg">
+            <i class="fas fa-paw"></i>
+        </button>
+        <button onclick="toggleMenu('stages')" class="w-12 h-12 rounded-xl bg-purple-500 btn-3d flex items-center justify-center text-xl shadow-lg">
+            <i class="fas fa-map-marked-alt"></i>
+        </button>
+        <div class="flex-1"></div>
+        <button onclick="clearData()" class="w-12 h-12 rounded-xl bg-red-500 btn-3d flex items-center justify-center text-xl shadow-lg">
+            <i class="fas fa-trash"></i>
+        </button>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 flex flex-col relative overflow-hidden">
+        
+        <!-- Top HUD -->
+        <div class="flex justify-between items-start p-6">
+            <div class="flex flex-col gap-2">
+                <div class="glass-panel px-4 py-2 rounded-full flex items-center gap-3 min-w-[160px]">
+                    <div class="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center shadow-inner">💰</div>
+                    <span id="coin-display" class="font-luckiest text-xl text-yellow-300">0</span>
+                </div>
+                <div class="glass-panel px-4 py-2 rounded-full flex items-center gap-3 min-w-[160px]">
+                    <div class="w-8 h-8 bg-blue-400 rounded-full flex items-center justify-center shadow-inner">💎</div>
+                    <span id="gem-display" class="font-luckiest text-xl text-blue-300">0</span>
+                </div>
+            </div>
+
+            <div class="flex flex-col items-center">
+                <div class="glass-panel px-6 py-2 rounded-2xl flex flex-col items-center min-w-[200px]">
+                    <span id="stage-name" class="text-xs font-black uppercase tracking-widest text-blue-200 text-center">Grassland</span>
+                    <div class="w-full h-3 bg-black/40 rounded-full mt-2 overflow-hidden border border-white/10">
+                        <div id="rank-bar" class="h-full bg-gradient-to-r from-blue-400 to-cyan-300 transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel px-4 py-2 rounded-2xl flex flex-col items-end">
+                <span class="text-[10px] font-bold text-gray-300 uppercase">Multiplier</span>
+                <div class="flex items-center gap-2">
+                    <span id="power-display" class="font-luckiest text-2xl text-green-400">1</span>
+                    <i class="fas fa-bolt text-yellow-400"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Center Click Target -->
+        <div class="flex-1 flex flex-col items-center justify-center">
+            <div id="click-target" class="relative cursor-pointer hover:scale-105 active:scale-95 transition-transform duration-75">
+                <div class="absolute inset-0 bg-white/20 blur-3xl rounded-full animate-pulse"></div>
+                <div class="relative w-48 h-48 md:w-64 md:h-64 flex items-center justify-center float-animation">
+                    <div id="main-target-emoji" class="text-[120px] md:text-[160px] drop-shadow-2xl">🥚</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Inventory Bar -->
+        <div class="p-6">
+            <div class="glass-panel p-4 rounded-[30px] flex items-center gap-4">
+                <div class="bg-blue-600/50 p-3 rounded-2xl text-center min-w-[80px]">
+                    <div class="text-xs font-bold text-blue-200">PETS</div>
+                    <div class="font-luckiest text-xl"><span id="pet-count">0</span>/20</div>
+                </div>
+                <div id="pet-list" class="flex-1 flex gap-3 overflow-x-auto scroll-hide py-1">
+                    <!-- Pets show up here -->
+                </div>
+                <button onclick="buyEgg()" class="bg-gradient-to-b from-green-400 to-green-600 px-8 py-4 rounded-2xl btn-3d font-luckiest text-xl flex flex-col items-center">
+                    <span id="egg-label" class="text-xs font-bold text-green-100 mb-1">GRASS EGG</span>
+                    <div class="flex items-center gap-2">
+                        <span id="egg-cost">100</span><span class="text-sm">💰</span>
+                    </div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Menus -->
+    <div id="menu-overlay" class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center hidden p-4 menu-transition opacity-0 scale-95">
+        <div class="glass-panel w-full max-w-lg p-8 rounded-[40px] relative">
+            <button onclick="toggleMenu()" class="absolute -top-4 -right-4 w-12 h-12 bg-red-500 rounded-full btn-3d flex items-center justify-center text-xl z-50">
+                <i class="fas fa-times"></i>
+            </button>
+            
+            <div id="menu-content-shop" class="menu-tab hidden">
+                <h2 class="font-luckiest text-3xl text-yellow-400 mb-6 uppercase">Shop</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-white/10 p-4 rounded-2xl text-center">
+                        <div class="text-4xl mb-2">💎</div>
+                        <div class="font-bold">Gem Pack</div>
+                        <button class="mt-2 w-full bg-blue-500 py-2 rounded-xl btn-3d text-sm font-bold">SOON</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="menu-content-inventory" class="menu-tab hidden">
+                <h2 class="font-luckiest text-3xl text-blue-400 mb-2 uppercase">Inventory</h2>
+                <div id="full-pet-grid" class="grid grid-cols-3 gap-4 max-h-[400px] overflow-y-auto pr-2 scroll-hide"></div>
+            </div>
+
+            <div id="menu-content-stages" class="menu-tab hidden">
+                <h2 class="font-luckiest text-3xl text-purple-400 mb-6 uppercase">Stages</h2>
+                <div id="stage-grid" class="flex flex-col gap-4 max-h-[400px] overflow-y-auto pr-2 scroll-hide"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gacha Modal -->
+    <div id="gacha-modal" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 hidden px-4">
+        <div id="modal-content" class="bg-white/10 backdrop-blur-xl p-10 rounded-[40px] border-4 border-white/20 text-center max-w-sm w-full">
+            <h3 class="font-luckiest text-xl text-yellow-400 mb-8 uppercase tracking-widest">A New Pet!</h3>
+            <div class="relative inline-block mb-8">
+                <div id="gacha-icon" class="text-9xl relative drop-shadow-2xl">🐶</div>
+            </div>
+            <div id="gacha-name" class="font-luckiest text-3xl mb-1 text-white uppercase">DOGGY</div>
+            <div id="gacha-rarity" class="text-sm font-black uppercase tracking-[0.2em] mb-8">RARE</div>
+            <button onclick="closeGacha()" class="w-full bg-green-500 hover:bg-green-400 text-white font-luckiest py-4 rounded-2xl btn-3d text-xl uppercase">OK!</button>
+        </div>
+    </div>
+
+    <script>
+        // --- GAME DATA ---
+        let coins = 0;
+        let gems = 0;
+        let pets = [];
+        let currentStageIdx = 0;
+        let unlockedStages = [0];
+
+        // --- STAGE & EGG CONFIG ---
+        const stages = [
+            { 
+                name: "Grassland", cost: 0, multiplier: 1, emoji: "🥚", bgColor: "stage-0", eggName: "GRASS EGG", eggCost: 100,
+                pool: [
+                    { emoji: '🐶', name: 'Doggy', rarity: 'Common', power: 1, chance: 0.4 },
+                    { emoji: '🐱', name: 'Kitty', rarity: 'Common', power: 2, chance: 0.35 },
+                    { emoji: '🐰', name: 'Bunny', rarity: 'Rare', power: 10, chance: 0.2 },
+                    { emoji: '🦄', name: 'Unicorn', rarity: 'Legendary', power: 100, chance: 0.05 }
+                ]
+            },
+            { 
+                name: "Desert", cost: 2500, multiplier: 8, emoji: "🌵", bgColor: "stage-1", eggName: "DESERT EGG", eggCost: 1000,
+                pool: [
+                    { emoji: '🐫', name: 'Camel', rarity: 'Common', power: 20, chance: 0.4 },
+                    { emoji: '🐍', name: 'Snake', rarity: 'Common', power: 25, chance: 0.35 },
+                    { emoji: '🦂', name: 'Scorpion', rarity: 'Rare', power: 80, chance: 0.2 },
+                    { emoji: '🧞', name: 'Genie', rarity: 'Legendary', power: 500, chance: 0.05 }
+                ]
+            },
+            { 
+                name: "Frozen", cost: 25000, multiplier: 40, emoji: "❄️", bgColor: "stage-2", eggName: "SNOW EGG", eggCost: 10000,
+                pool: [
+                    { emoji: '🐧', name: 'Penguin', rarity: 'Common', power: 150, chance: 0.4 },
+                    { emoji: '🐻‍❄️', name: 'Polar Bear', rarity: 'Common', power: 180, chance: 0.35 },
+                    { emoji: '🦌', name: 'Reindeer', rarity: 'Rare', power: 450, chance: 0.2 },
+                    { emoji: '🧊', name: 'Yeti', rarity: 'Legendary', power: 3000, chance: 0.05 }
+                ]
+            },
+            { 
+                name: "Volcano", cost: 250000, multiplier: 200, emoji: "🔥", bgColor: "stage-3", eggName: "MAGMA EGG", eggCost: 100000,
+                pool: [
+                    { emoji: '🦎', name: 'Lava Liz', rarity: 'Common', power: 1200, chance: 0.4 },
+                    { emoji: '🦅', name: 'Phoenix', rarity: 'Common', power: 1500, chance: 0.35 },
+                    { emoji: '🦖', name: 'Dino', rarity: 'Rare', power: 4000, chance: 0.2 },
+                    { emoji: '🐲', name: 'Dragon', rarity: 'Legendary', power: 25000, chance: 0.05 }
+                ]
+            }
+        ];
+
+        const coinDisplay = document.getElementById('coin-display');
+        const gemDisplay = document.getElementById('gem-display');
+        const powerDisplay = document.getElementById('power-display');
+        const petList = document.getElementById('pet-list');
+        const petCount = document.getElementById('pet-count');
+        const clickTarget = document.getElementById('click-target');
+        const menuOverlay = document.getElementById('menu-overlay');
+
+        // --- CORE LOGIC ---
+        function getClickPower() {
+            let petPower = pets.reduce((sum, pet) => sum + pet.power, 0);
+            return (1 + petPower) * stages[currentStageIdx].multiplier;
+        }
+
+        function updateUI() {
+            const stage = stages[currentStageIdx];
+            coinDisplay.innerText = formatNumber(coins);
+            gemDisplay.innerText = formatNumber(gems);
+            powerDisplay.innerText = formatNumber(getClickPower());
+            petCount.innerText = pets.length;
+            document.getElementById('stage-name').innerText = stage.name;
+            document.getElementById('main-target-emoji').innerText = stage.emoji;
+            document.getElementById('egg-label').innerText = stage.eggName;
+            document.getElementById('egg-cost').innerText = formatNumber(stage.eggCost);
+            
+            const body = document.getElementById('game-body');
+            stages.forEach(s => body.classList.remove(s.bgColor));
+            body.classList.add(stage.bgColor);
+
+            const progress = (coins % (stages[currentStageIdx + 1]?.cost || 1000000)) / (stages[currentStageIdx + 1]?.cost || 1000000) * 100;
+            document.getElementById('rank-bar').style.width = `${Math.min(100, progress)}%`;
+        }
+
+        function formatNumber(num) {
+            if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+            return Math.floor(num).toLocaleString();
+        }
+
+        clickTarget.addEventListener('click', (e) => {
+            const power = getClickPower();
+            coins += power;
+            if (Math.random() < 0.05) {
+                const g = Math.max(1, Math.ceil(power / 100));
+                gems += g;
+                spawnParticle(e.clientX + 30, e.clientY, `+${g} 💎`, '#60a5fa');
+            }
+            spawnParticle(e.clientX, e.clientY, `+${formatNumber(power)} 💰`, '#fcd34d');
+            updateUI();
+        });
+
+        function spawnParticle(x, y, text, color) {
+            const el = document.createElement('div');
+            el.className = 'coin-particle';
+            el.innerHTML = text;
+            el.style.left = `${x}px`; el.style.top = `${y}px`;
+            el.style.color = color;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 600);
+        }
+
+        // --- MENUS ---
+        function toggleMenu(tabName) {
+            if (!tabName) {
+                menuOverlay.style.opacity = '0';
+                menuOverlay.style.transform = 'scale(0.95)';
+                setTimeout(() => menuOverlay.classList.add('hidden'), 300);
+                return;
+            }
+            document.querySelectorAll('.menu-tab').forEach(t => t.classList.add('hidden'));
+            const activeTab = document.getElementById(`menu-content-${tabName}`);
+            if(activeTab) activeTab.classList.remove('hidden');
+            
+            if (tabName === 'stages') renderStages();
+            if (tabName === 'inventory') renderInventory();
+
+            menuOverlay.classList.remove('hidden');
+            setTimeout(() => {
+                menuOverlay.style.opacity = '1';
+                menuOverlay.style.transform = 'scale(1)';
+            }, 10);
+        }
+
+        function renderStages() {
+            const grid = document.getElementById('stage-grid');
+            grid.innerHTML = '';
+            stages.forEach((stage, idx) => {
+                const isUnlocked = unlockedStages.includes(idx);
+                const btn = document.createElement('div');
+                btn.className = `p-4 rounded-2xl flex justify-between items-center ${isUnlocked ? 'bg-white/10' : 'bg-black/40 opacity-70'}`;
+                
+                let actionBtn = '';
+                if (isUnlocked) {
+                    actionBtn = `<button onclick="switchStage(${idx})" class="bg-blue-500 px-4 py-2 rounded-xl btn-3d text-sm font-bold uppercase">${currentStageIdx === idx ? 'Equipped' : 'Travel'}</button>`;
+                } else {
+                    actionBtn = `<button onclick="unlockStage(${idx})" class="bg-yellow-500 px-4 py-2 rounded-xl btn-3d text-sm font-bold text-black">${formatNumber(stage.cost)} 💰</button>`;
+                }
+
+                btn.innerHTML = `
+                    <div class="flex items-center gap-4">
+                        <span class="text-3xl">${stage.emoji}</span>
+                        <div>
+                            <div class="font-luckiest text-lg uppercase">${stage.name}</div>
+                            <div class="text-[10px] text-gray-300">Boost: x${stage.multiplier}</div>
+                        </div>
+                    </div>
+                    ${actionBtn}
+                `;
+                grid.appendChild(btn);
+            });
+        }
+
+        function unlockStage(idx) {
+            if (coins >= stages[idx].cost) {
+                coins -= stages[idx].cost;
+                unlockedStages.push(idx);
+                switchStage(idx);
+                renderStages();
+            }
+        }
+
+        function switchStage(idx) {
+            currentStageIdx = idx;
+            toggleMenu();
+            updateUI();
+        }
+
+        // --- GACHA ---
+        function buyEgg() {
+            const stage = stages[currentStageIdx];
+            if (coins < stage.eggCost) return;
+            if (pets.length >= 20) return;
+
+            coins -= stage.eggCost;
+            
+            const rand = Math.random();
+            let cumulative = 0;
+            let selectedPet = stage.pool[0];
+            for (let p of stage.pool) {
+                cumulative += p.chance;
+                if (rand < cumulative) {
+                    selectedPet = p;
+                    break;
+                }
+            }
+
+            addPet(selectedPet);
+            showGacha(selectedPet);
+            updateUI();
+        }
+
+        function addPet(petInfo) {
+            const petObj = { ...petInfo, id: Date.now() + Math.random() };
+            pets.push(petObj);
+            renderQuickPetList();
+        }
+
+        function renderQuickPetList() {
+            petList.innerHTML = '';
+            const recent = pets.slice(-5).reverse();
+            recent.forEach(p => {
+                const card = document.createElement('div');
+                const isLeg = p.rarity === 'Legendary';
+                card.className = `pet-card flex-shrink-0 w-20 h-24 flex flex-col items-center justify-center p-2 text-center animate-pop ${isLeg ? 'rarity-legendary-bg' : ''}`;
+                card.innerHTML = `
+                    <div class="text-3xl mb-1">${p.emoji}</div>
+                    <div class="text-[8px] font-black uppercase truncate w-full">${p.name}</div>
+                    <div class="text-[8px] font-bold mt-1 px-2 bg-black/20 rounded-full">+${formatNumber(p.power)}</div>
+                `;
+                petList.appendChild(card);
+            });
+        }
+
+        function renderInventory() {
+            const grid = document.getElementById('full-pet-grid');
+            grid.innerHTML = '';
+            pets.slice().reverse().forEach(pet => {
+                const card = document.createElement('div');
+                const isLeg = pet.rarity === 'Legendary';
+                card.className = `pet-card p-4 text-center ${isLeg ? 'rarity-legendary-bg' : ''}`;
+                card.innerHTML = `
+                    <div class="text-5xl mb-2">${pet.emoji}</div>
+                    <div class="font-luckiest text-[10px] uppercase">${pet.name}</div>
+                    <div class="text-[10px] font-bold text-yellow-300">${pet.rarity}</div>
+                    <div class="text-[10px] font-bold text-blue-200">+${formatNumber(pet.power)}</div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function showGacha(pet) {
+            const modal = document.getElementById('gacha-modal');
+            const content = document.getElementById('modal-content');
+            document.getElementById('gacha-icon').innerText = pet.emoji;
+            document.getElementById('gacha-name').innerText = pet.name;
+            const rarityEl = document.getElementById('gacha-rarity');
+            rarityEl.innerText = pet.rarity;
+            rarityEl.style.color = (pet.rarity === 'Legendary') ? '#f1c40f' : (pet.rarity === 'Rare' ? '#3b82f6' : '#fff');
+            
+            if (pet.rarity === 'Legendary') content.classList.add('rarity-legendary-bg');
+            else content.classList.remove('rarity-legendary-bg');
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeGacha() {
+            document.getElementById('gacha-modal').classList.add('hidden');
+        }
+
+        // --- SAVE SYSTEM ---
+        function saveGame() {
+            const data = { coins, gems, pets, currentStageIdx, unlockedStages };
+            localStorage.setItem('petSimSave_V5', JSON.stringify(data));
+        }
+
+        function loadGame() {
+            const saved = localStorage.getItem('petSimSave_V5');
+            if (saved) {
+                const data = JSON.parse(saved);
+                coins = data.coins || 0;
+                gems = data.gems || 0;
+                currentStageIdx = data.currentStageIdx || 0;
+                unlockedStages = data.unlockedStages || [0];
+                pets = data.pets || [];
+                renderQuickPetList();
+                updateUI();
+            }
+        }
+
+        function clearData() {
+            if (confirm("データを消去しますか？")) {
+                localStorage.removeItem('petSimSave_V5');
+                location.reload();
+            }
+        }
+
+        window.onload = loadGame;
+        setInterval(saveGame, 5000);
+    </script>
+</body>
+</html>
