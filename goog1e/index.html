@@ -175,7 +175,7 @@
     </div>
 
     <script>
-        const apiKey = ""; // 実行環境によって自動的に提供されるため空のままでOK
+        const apiKey = "";
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'google-clone';
 
         const searchInput = document.getElementById('search-input');
@@ -201,16 +201,13 @@
             if (!query || !query.trim()) return;
             lastQuery = query.trim();
 
-            // UI Switch
             searchInterface.classList.add('hidden');
             resultsInterface.classList.remove('hidden');
             mainFooter.classList.add('hidden');
             errorView.classList.add('hidden');
             
-            // Sync input values
             searchInputResults.value = lastQuery;
             
-            // Show loader
             loader.classList.remove('hidden');
             resultsContainer.innerHTML = '';
             sourcesList.innerHTML = '';
@@ -231,20 +228,10 @@
                     }
                 );
 
-                const textResponse = await response.text();
-                if (!textResponse) {
-                    throw new Error("サーバーからのレスポンスが空です。");
-                }
-
-                let data;
-                try {
-                    data = JSON.parse(textResponse);
-                } catch (e) {
-                    throw new Error("レスポンスの解析に失敗しました。");
-                }
+                const data = await response.json();
                 
                 if (data.error) {
-                    throw new Error(data.error.message || "API Error");
+                    throw new Error(`${data.error.code}: ${data.error.message}`);
                 }
 
                 const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "結果が見つかりませんでした。";
@@ -322,19 +309,26 @@
                 try {
                     const response = await fetch(url, options);
                     if (response.ok) return response;
+                    
+                    // 403 (Forbidden/Permission Denied) は APIキーの問題なのでリトライしない
+                    if (response.status === 403) {
+                        const errData = await response.json();
+                        throw new Error(`HTTP 403: ${errData.error?.message || 'Permission Denied'}`);
+                    }
+
                     if (response.status === 429 || response.status >= 500) {
+                        // Retryable errors
                     } else {
-                        // 403エラーなどの場合、リトライせずにエラー内容を取得して投げる
                         const errText = await response.text();
-                        throw new Error(`HTTP ${response.status}: ${errText || '未知のエラー'}`);
+                        throw new Error(`HTTP ${response.status}: ${errText}`);
                     }
                 } catch (e) {
-                    if (i === retries - 1) throw e;
+                    if (i === retries - 1 || e.message.includes('HTTP 403')) throw e;
                 }
                 await new Promise(res => setTimeout(res, delay));
                 delay *= 2;
             }
-            throw new Error('複数の試行の後、リクエストが失敗しました。');
+            throw new Error('Timeout or unknown error.');
         }
 
         searchInput.addEventListener('keypress', (e) => {
