@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google</title>
+    <title>Goog1e</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
@@ -89,7 +89,7 @@
         <main id="search-interface" class="flex-grow flex flex-col items-center mt-20 fade-in">
             <!-- Logo -->
             <div id="main-logo" class="google-logo-text mb-8 select-none">
-                <span class="blue">G</span><span class="red">o</span><span class="yellow">o</span><span class="blue">g</span><span class="green">l</span><span class="red">e</span>
+                <span class="blue">G</span><span class="red">o</span><span class="yellow">o</span><span class="blue">g</span><span class="green">1</span><span class="red">e</span>
             </div>
 
             <!-- Search Box -->
@@ -104,13 +104,13 @@
                 </div>
 
                 <div class="flex justify-center mt-8 space-x-3">
-                    <button id="search-btn" class="bg-[#f8f9fa] border border-transparent hover:border-gray-300 hover:shadow-sm px-4 py-2 text-sm text-gray-800 rounded transition-all">Google 検索</button>
+                    <button id="search-btn" class="bg-[#f8f9fa] border border-transparent hover:border-gray-300 hover:shadow-sm px-4 py-2 text-sm text-gray-800 rounded transition-all">Goog1e 検索</button>
                     <button class="bg-[#f8f9fa] border border-transparent hover:border-gray-300 hover:shadow-sm px-4 py-2 text-sm text-gray-800 rounded transition-all">I'm Feeling Lucky</button>
                 </div>
             </div>
 
             <div class="mt-8 text-sm">
-                Google は <a href="#" class="text-blue-800 hover:underline">English</a> でも利用できます
+                Goog1e は <a href="#" class="text-blue-800 hover:underline">English</a> でも利用できます
             </div>
         </main>
 
@@ -118,7 +118,7 @@
         <div id="results-interface" class="hidden w-full fade-in">
             <header class="border-b flex items-center p-4 sticky top-0 bg-white z-10">
                 <div id="logo-small" class="google-logo-text text-3xl mr-8 cursor-pointer select-none">
-                    <span class="blue">G</span><span class="red">o</span><span class="yellow">o</span><span class="blue">g</span><span class="green">l</span><span class="red">e</span>
+                    <span class="blue">G</span><span class="red">o</span><span class="yellow">o</span><span class="blue">g</span><span class="green">1</span><span class="red">e</span>
                 </div>
                 <div class="flex-grow max-w-[692px]">
                     <div class="search-box flex items-center border border-gray-200 rounded-full px-5 py-2 shadow-sm hover:shadow-md bg-white">
@@ -160,7 +160,7 @@
             <div class="px-8 py-3 border-b border-gray-300">日本</div>
             <div class="px-8 py-3 flex flex-wrap justify-between">
                 <div class="space-x-6 flex py-2">
-                    <a href="#" class="hover:underline">Google について</a>
+                    <a href="#" class="hover:underline">Goog1e について</a>
                     <a href="#" class="hover:underline">広告</a>
                     <a href="#" class="hover:underline">ビジネス</a>
                     <a href="#" class="hover:underline">検索の仕組み</a>
@@ -224,14 +224,13 @@
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            contents: [{ parts: [{ text: `以下の検索クエリに対する詳細な回答と、Google検索結果のようなリストを作成してください。ユーザーは本物のGoogleを使っている感覚を求めています。回答は日本語で行ってください。検索結果にはタイトル、スニペット（説明文）、およびそれらしいURLを含めてください。: ${lastQuery}` }] }],
-                            systemInstruction: { parts: [{ text: "You are a Google Search simulator. Provide a concise answer first, then a list of relevant web results with titles, snippets, and simulated URLs. Always prioritize Google Search grounding to find real info." }] },
+                            contents: [{ parts: [{ text: `以下の検索クエリに対する詳細な回答と、Goog1e検索結果のようなリストを作成してください。ユーザーは本物のGoog1eを使っている感覚を求めています。回答は日本語で行ってください。検索結果にはタイトル、スニペット（説明文）、およびそれらしいURLを含めてください。: ${lastQuery}` }] }],
+                            systemInstruction: { parts: [{ text: "You are a Goog1e Search simulator. Provide a concise answer first, then a list of relevant web results with titles, snippets, and simulated URLs. Always prioritize Google Search grounding to find real info." }] },
                             tools: [{ "google_search": {} }]
                         })
                     }
                 );
 
-                // Check if response is empty or invalid before parsing
                 const textResponse = await response.text();
                 if (!textResponse) {
                     throw new Error("サーバーからのレスポンスが空です。");
@@ -265,11 +264,9 @@
         }
 
         function renderResults(text, attributions) {
-            // Split by lines and filter
             const lines = text.split('\n').map(l => l.trim()).filter(l => l !== '');
             let html = '';
 
-            // Extract the main summary if available
             const summaryLines = lines.filter(l => !l.startsWith('#') && !l.startsWith('*') && l.length > 50);
             if (summaryLines.length > 0) {
                 html += `
@@ -279,18 +276,17 @@
                     </div>`;
             }
 
-            // Create result cards for titles/markdown headers
             lines.forEach((line, index) => {
                 const delay = index * 0.05;
                 if (line.startsWith('###') || line.startsWith('**') || (line.length < 100 && line.endsWith('：'))) {
                     const cleanTitle = line.replace(/[#*：]/g, '').trim();
-                    if (cleanTitle.length < 5) return; // Skip very short titles
+                    if (cleanTitle.length < 5) return;
                     
                     html += `
                         <div class="result-card" style="animation-delay: ${delay}s">
                             <div class="text-sm text-gray-700 mb-1 truncate flex items-center">
                                 <div class="bg-gray-100 rounded-full w-6 h-6 flex items-center justify-center mr-2 text-[10px]">G</div>
-                                https://www.google.com › search › ${encodeURIComponent(cleanTitle.substring(0, 10))}
+                                https://www.goog1e.com › search › ${encodeURIComponent(cleanTitle.substring(0, 10))}
                             </div>
                             <a href="#" class="block group">
                                 <h3 class="text-[#1a0dab] text-xl font-medium mb-1 group-hover:underline">${cleanTitle}</h3>
@@ -304,7 +300,6 @@
 
             resultsContainer.innerHTML = html || `<p class="fade-in text-gray-600">${text}</p>`;
 
-            // Render grounding sources
             if (attributions.length > 0) {
                 groundingSection.classList.remove('hidden');
                 attributions.forEach(attr => {
@@ -326,14 +321,9 @@
             for (let i = 0; i < retries; i++) {
                 try {
                     const response = await fetch(url, options);
-                    // Check for 200 OK
                     if (response.ok) return response;
-                    
-                    // Handle specific error codes
                     if (response.status === 429 || response.status >= 500) {
-                        // Wait and retry
                     } else {
-                        // Other errors (400, 401, 403, 404) should fail immediately
                         const errText = await response.text();
                         throw new Error(`HTTP ${response.status}: ${errText || '未知のエラー'}`);
                     }
@@ -346,7 +336,6 @@
             throw new Error('複数の試行の後、リクエストが失敗しました。');
         }
 
-        // Event Listeners
         searchInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') performSearch(searchInput.value);
         });
@@ -371,7 +360,6 @@
             resultsContainer.innerHTML = '';
             sourcesList.innerHTML = '';
         });
-
     </script>
 </body>
 </html>
