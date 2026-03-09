@@ -175,7 +175,7 @@
     </div>
 
     <script>
-        const apiKey = ""; 
+        const apiKey = ""; // 実行環境によって自動的に提供されるため空のままでOK
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'google-clone';
 
         const searchInput = document.getElementById('search-input');
@@ -324,6 +324,7 @@
                     if (response.ok) return response;
                     if (response.status === 429 || response.status >= 500) {
                     } else {
+                        // 403エラーなどの場合、リトライせずにエラー内容を取得して投げる
                         const errText = await response.text();
                         throw new Error(`HTTP ${response.status}: ${errText || '未知のエラー'}`);
                     }
