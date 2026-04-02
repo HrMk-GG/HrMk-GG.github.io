@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>極・オセロ PREMIER</title>
+    <script src="https://www.gstatic.com/firebasejs/9.1.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.1/firebase-database-compat.js"></script>
+    <style>
+        :root {
+            --primary: #6366f1; --accent: #a855f7; --bg: #0f172a;
+            --glass: rgba(255, 255, 255, 0.05); --board-color: #1e293b;
+        }
+        /* テーマ設定 */
+        body.theme-dark { --board-color: #1e293b; }
+        body.theme-classic { --board-color: #2e7d32; }
+        body.theme-midnight { --board-color: #020617; }
+        body.theme-ocean { --board-color: #075985; }
+        body.theme-forest { --board-color: #064e3b; }
+        body.theme-crimson { --board-color: #7f1d1d; }
+        body.theme-amber { --board-color: #78350f; }
+        body.theme-grape { --board-color: #581c87; }
+        body.theme-slate { --board-color: #334155; }
+        body.theme-gold { --board-color: #713f12; }
+
+        body {
+            background: radial-gradient(circle at top left, #1e1b4b, var(--bg));
+            color: #f8fafc; font-family: 'Hiragino Sans', sans-serif;
+            margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden;
+        }
+        .glass-card {
+            background: var(--glass); backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px;
+            padding: 30px; width: 90%; max-width: 400px; text-align: center; position: relative;
+        }
+        #version-display { position: fixed; top: 10px; right: 10px; background: var(--glass); padding: 4px 10px; border-radius: 8px; font-size: 0.7rem; color: rgba(255,255,255,0.7); border: 1px solid rgba(255,255,255,0.1); z-index: 2000; }
+        button {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white; border: none; padding: 12px; font-size: 0.9rem; font-weight: bold;
+            border-radius: 12px; cursor: pointer; width: 100%; margin: 5px 0; transition: 0.3s;
+        }
+        button:hover { transform: translateY(-1px); filter: brightness(1.1); }
+        input, select {
+            background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white; padding: 10px; border-radius: 10px; width: 100%; box-sizing: border-box; margin-bottom: 10px; text-align: center;
+        }
+        .board {
+            display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;
+            background: rgba(255, 255, 255, 0.05); padding: 8px; border-radius: 12px; margin: 15px 0; aspect-ratio: 1/1;
+        }
+        .cell { background: var(--board-color); border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .stone { width: 85%; height: 85%; border-radius: 50%; transform: scale(0); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .stone.black { display: block; background: #000; transform: scale(1); box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .stone.white { display: block; background: #fff; transform: scale(1); box-shadow: 0 4px 10px rgba(255,255,255,0.3); }
+        .hidden { display: none !important; }
+        .status-badge { background: var(--glass); padding: 5px 15px; border-radius: 20px; font-size: 0.8rem; margin-bottom: 10px; }
+        .share-box { background: rgba(0,0,0,0.2); padding: 10px; border-radius: 10px; margin-top: 10px; font-size: 0.8rem; word-break: break-all; border: 1px dashed var(--accent); }
+    </style>
+</head>
+<body class="theme-dark">
+
+    <div id="version-display">Build: Loading...</div>
+
+    <div class="glass-card">
+        <div id="sc-login">
+            <h1>極・オセロ</h1>
+            <input type="text" id="in-name" placeholder="名前を入力">
+            <button onclick="toMenu()">ログイン</button>
+        </div>
+
+        <div id="sc-menu" class="hidden">
+            <div class="status-badge">Player: <span id="disp-name"></span></div>
+            <button onclick="startCPU()">CPU戦（練習）</button>
+            <button onclick="changeScreen('sc-online')">オンライン対戦</button>
+            <button onclick="changeScreen('sc-set')">設定</button>
+        </div>
+
+        <div id="sc-set" class="hidden">
+            <h2>設定</h2>
+            <input type="text" id="edit-name" onchange="updateNick()" placeholder="名前変更">
+            <select id="theme-sel" onchange="updateTheme()">
+                <option value="theme-dark">ダーク</option>
+                <option value="theme-classic">クラシック</option>
+                <option value="theme-midnight">ミッドナイト</option>
+                <option value="theme-ocean">オーシャン</option>
+                <option value="theme-forest">フォレスト</option>
+                <option value="theme-crimson">クリムゾン</option>
+                <option value="theme-amber">アンバー</option>
+                <option value="theme-grape">グレープ</option>
+                <option value="theme-slate">スレート</option>
+                <option value="theme-gold">ゴールド</option>
+            </select>
+            <button id="btn-se" onclick="toggleSE()">SE: ON</button>
+            <button onclick="changeScreen('sc-menu')">戻る</button>
+        </div>
+
+        <div id="sc-online" class="hidden">
+            <h2>オンライン</h2>
+            <button onclick="createRoom()">部屋を作る</button>
+            <div style="margin: 10px 0; opacity: 0.5;">── または ──</div>
+            <input type="text" id="in-room" placeholder="5桁コードを入力">
+            <button onclick="joinRoom()">参加する</button>
+            <div id="wait-area" class="hidden">
+                <p id="wait-msg"></p>
+                <div class="share-box" id="share-url"></div>
+                <button onclick="copyURL()" style="font-size: 0.7rem; padding: 5px;">URLをコピー</button>
+            </div>
+            <button onclick="changeScreen('sc-menu')" style="background:var(--glass); margin-top: 20px;">戻る</button>
+        </div>
+
+        <div id="sc-jan" class="hidden">
+            <h2>先攻決め</h2>
+            <p id="jan-info">手を選んでね！</p>
+            <div style="display:flex; gap:10px;">
+                <button class="j-btn" onclick="setJan(0)">✊</button>
+                <button class="j-btn" onclick="setJan(1)">✌️</button>
+                <button class="j-btn" onclick="setJan(2)">🖐️</button>
+            </div>
+        </div>
+
+        <div id="sc-game" class="hidden">
+            <div class="status-badge" id="turn-txt">準備中...</div>
+            <div id="board" class="board"></div>
+            <div style="display:flex; justify-content:space-around; font-size:0.9rem;">
+                <span>黒: <b id="cnt-b">2</b></span>
+                <span>白: <b id="cnt-w">2</b></span>
+            </div>
+            <button onclick="location.reload()" style="margin-top:10px; background:var(--glass)">終了</button>
+        </div>
+    </div>
+
+    <audio id="se-put" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3"></audio>
+
+    <script>
+        // --- ビルド日時 & 自動参加チェック ---
+        window.addEventListener('load', () => {
+            const lastMod = new Date(document.lastModified);
+            document.getElementById('version-display').innerText = `Build: ${lastMod.getMonth()+1}/${lastMod.getDate()} ${lastMod.getHours()}:${String(lastMod.getMinutes()).padStart(2,'0')}`;
+            
+            // URLパラメータに room があれば自動入力
+            const params = new URLSearchParams(window.location.search);
+            if (params.has('room')) {
+                document.getElementById('in-room').value = params.get('room');
+            }
+        });
+
+        // --- Firebase設定 ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyBYb9uXyjA7XJdRiYjcA3VBlSVgLh0C1fw",
+            authDomain: "hrmk-othello.firebaseapp.com",
+            projectId: "hrmk-othello",
+            databaseURL: "https://hrmk-othello-default-rtdb.asia-southeast1.firebasedatabase.app/",
+            storageBucket: "hrmk-othello.firebasestorage.app",
+            messagingSenderId: "91127278693",
+            appId: "1:91127278693:web:89d6cdbbcabac60a172a8c"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let myName = "", mySide = 'black', turn = 'black', mode = 'cpu', roomID = "", myRole = "", seEnabled = true;
+        let boardState = Array(64).fill(null);
+
+        function changeScreen(id) {
+            document.querySelectorAll('.glass-card > div').forEach(d => d.classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        function toMenu() {
+            myName = document.getElementById('in-name').value || "ななし";
+            document.getElementById('disp-name').innerText = myName;
+            document.getElementById('edit-name').value = myName;
+            changeScreen('sc-menu');
+        }
+
+        // --- シェア機能 ---
+        function createRoom() {
+            roomID = Math.random().toString(36).substring(2, 7).toUpperCase();
+            myRole = 'host';
+            db.ref('rooms/' + roomID).set({ status: 'wait', hostName: myName });
+            
+            const shareURL = window.location.origin + window.location.pathname + "?room=" + roomID;
+            document.getElementById('wait-area').classList.remove('hidden');
+            document.getElementById('wait-msg').innerHTML = `コード: <b>${roomID}</b>`;
+            document.getElementById('share-url').innerText = shareURL;
+
+            db.ref('rooms/' + roomID).on('value', s => {
+                if (s.val()?.status === 'ready') changeScreen('sc-jan');
+                if (s.val()?.status === 'play') syncGame(s.val());
+            });
+        }
+
+        function copyURL() {
+            const url = document.getElementById('share-url').innerText;
+            navigator.clipboard.writeText(url);
+            alert("対戦URLをコピーしたよ！友達に送ってね！🔗");
+        }
+
+        function joinRoom() {
+            roomID = document.getElementById('in-room').value.toUpperCase();
+            if (!roomID) return;
+            myRole = 'guest';
+            db.ref('rooms/' + roomID).update({ status: 'ready', guestName: myName });
+            changeScreen('sc-jan');
+            db.ref('rooms/' + roomID).on('value', s => { if (s.val()?.status === 'play') syncGame(s.val()); });
+        }
+
+        // --- じゃんけん・ゲームエンジン（省略せず全入り） ---
+        function setJan(hand) {
+            db.ref(`rooms/${roomID}/jan/${myRole}`).set(hand);
+            document.getElementById('jan-info').innerText = "相手を待っています...";
+            document.querySelectorAll('.j-btn').forEach(b => b.disabled = true);
+            db.ref(`rooms/${roomID}/jan`).on('value', s => {
+                const h = s.val();
+                if (h && h.host !== undefined && h.guest !== undefined) {
+                    if (h.host === h.guest) {
+                        if (myRole === 'host') db.ref(`rooms/${roomID}/jan`).remove();
+                        document.querySelectorAll('.j-btn').forEach(b => b.disabled = false);
+                        document.getElementById('jan-info').innerText = "あいこ！";
+                    } else {
+                        const hostWins = (h.host===0 && h.guest===1) || (h.host===1 && h.guest===2) || (h.host===2 && h.guest===0);
+                        mySide = (myRole === 'host') ? (hostWins ? 'black' : 'white') : (hostWins ? 'white' : 'black');
+                        if (myRole === 'host') db.ref('rooms/' + roomID).update({ status: 'play', turn: 'black', board: JSON.stringify(initBoard()) });
+                    }
+                }
+            });
+        }
+
+        function initBoard() { let b = Array(64).fill(null); b[27]='white'; b[28]='black'; b[35]='black'; b[36]='white'; return b; }
+        function startCPU() { mode = 'cpu'; mySide = 'black'; boardState = initBoard(); turn = 'black'; changeScreen('sc-game'); render(); }
+        function syncGame(data) { mode = 'online'; boardState = JSON.parse(data.board); if (turn !== data.turn) playSE(); turn = data.turn; changeScreen('sc-game'); render(); checkPass(); }
+        function updateNick() { myName = document.getElementById('edit-name').value; document.getElementById('disp-name').innerText = myName; }
+        function updateTheme() { document.body.className = document.getElementById('theme-sel').value; }
+        function toggleSE() { seEnabled = !seEnabled; document.getElementById('btn-se').innerText = `SE: ${seEnabled ? 'ON' : 'OFF'}`; }
+        function playSE() { if (seEnabled) { const a = document.getElementById('se-put'); a.currentTime = 0; a.play().catch(()=>{}); } }
+
+        function render() {
+            const b = document.getElementById('board'); b.innerHTML = "";
+            let bc=0, wc=0;
+            boardState.forEach((s, i) => {
+                const c = document.createElement('div'); c.className = 'cell';
+                const st = document.createElement('div'); st.className = 'stone ' + (s || '');
+                if(s==='black') bc++; if(s==='white') wc++;
+                c.onclick = () => clickCell(i);
+                c.appendChild(st); b.appendChild(c);
+            });
+            document.getElementById('cnt-b').innerText = bc; document.getElementById('cnt-w').innerText = wc;
+            document.getElementById('turn-txt').innerText = (turn === 'black' ? "黒" : "白") + "の番" + (turn === mySide ? " (あなた)" : "");
+        }
+
+        function clickCell(i) {
+            if (mode === 'online' && turn !== mySide) return;
+            if (boardState[i]) return;
+            const flips = getFlips(i, turn);
+            if (flips.length > 0) {
+                boardState[i] = turn;
+                flips.forEach(idx => boardState[idx] = turn);
+                playSE();
+                const nextTurn = (turn === 'black' ? 'white' : 'black');
+                if (mode === 'online') db.ref('rooms/' + roomID).update({ board: JSON.stringify(boardState), turn: nextTurn });
+                else { turn = nextTurn; render(); if (turn === 'white') setTimeout(cpuPlay, 600); else checkPass(); }
+            }
+        }
+
+        function checkPass() {
+            const moves = [];
+            boardState.forEach((s, i) => { if(!s && getFlips(i, turn).length > 0) moves.push(i); });
+            if (moves.length === 0) {
+                const opp = (turn === 'black' ? 'white' : 'black');
+                const oppMoves = [];
+                boardState.forEach((s, i) => { if(!s && getFlips(i, opp).length > 0) oppMoves.push(i); });
+                if (oppMoves.length > 0) {
+                    alert(turn + "パス！");
+                    if (mode === 'online') db.ref('rooms/' + roomID).update({ turn: opp });
+                    else { turn = opp; render(); if(turn==='white') setTimeout(cpuPlay,600); }
+                } else {
+                    const bc = boardState.filter(s=>s==='black').length;
+                    const wc = boardState.filter(s=>s==='white').length;
+                    alert(`終了！ 黒:${bc} 白:${wc}\n${bc>wc?"黒":"白"}の勝ち！`);
+                }
+            }
+        }
+
+        function getFlips(idx, color) {
+            const opp = (color === 'black' ? 'white' : 'black');
+            const flips = [];
+            const dirs = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+            const r = Math.floor(idx/8), c = idx%8;
+            dirs.forEach(([dr, dc]) => {
+                let tr=r+dr, tc=c+dc, temp=[];
+                while(tr>=0 && tr<8 && tc>=0 && tc<8 && boardState[tr*8+tc] === opp) { temp.push(tr*8+tc); tr+=dr; tc+=dc; }
+                if(tr>=0 && tr<8 && tc>=0 && tc<8 && boardState[tr*8+tc] === color) flips.push(...temp);
+            });
+            return flips;
+        }
+
+        function cpuPlay() {
+            let moves = [];
+            boardState.forEach((s, i) => { if(!s && getFlips(i, 'white').length > 0) moves.push(i); });
+            if (moves.length > 0) {
+                const move = moves[Math.floor(Math.random() * moves.length)];
+                boardState[move] = 'white';
+                getFlips(move, 'white').forEach(idx => boardState[idx] = 'white');
+                playSE(); turn = 'black'; render(); checkPass();
+            } else { turn = 'black'; render(); checkPass(); }
+        }
+    </script>
+</body>
+</html>

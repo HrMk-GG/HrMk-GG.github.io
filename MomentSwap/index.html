@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moment Swap - Instant Edition</title>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+    <style>
+        body { background: #090A0F; color: #fff; font-family: sans-serif; text-align: center; margin: 0; }
+        .hidden { display: none !important; }
+        video { width: 90%; max-width: 400px; border-radius: 20px; border: 2px solid #4fc3f7; margin-top: 20px; }
+        .btn { background: #4fc3f7; color: #000; padding: 15px 30px; border-radius: 50px; font-weight: bold; border: none; cursor: pointer; margin: 10px; }
+        .card { background: rgba(255,255,255,0.1); padding: 10px; border-radius: 15px; margin: 10px; border: 1px solid #333; }
+        .card img { width: 100%; border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+<div id="setup-ui">
+    <h1>Moment Swap</h1>
+    <p>ニックネームを入れて開始！</p>
+    <input type="text" id="nickname" placeholder="名無しさん" style="padding:10px; border-radius:5px;">
+    <br>
+    <button class="btn" onclick="startApp()">開始する</button>
+</div>
+
+<div id="main-ui" class="hidden">
+    <video id="camera" autoplay playsinline></video>
+    <canvas id="output" class="hidden"></canvas>
+    <br>
+    <button id="swap-btn" class="btn">🌟 今を撮って交換！</button>
+    <p id="status">準備完了</p>
+    <div id="history"></div>
+</div>
+
+<script>
+// --- 君の設定 (Firestoreのルールを if true にしてね！) ---
+const firebaseConfig = {
+  apiKey: "AIzaSyAWVuyKmGKY04Xnpia_2ehtG8fVW5rLX3s",
+  projectId: "photo-share-9405d",
+  appId: "1:218976247260:web:52f9c93559065317f7c319"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+let myName = "";
+let myId = "user_" + Math.random().toString(36).substring(7); // ログインの代わりにランダムID
+
+async function startApp() {
+    myName = document.getElementById('nickname').value || "名無し";
+    document.getElementById('setup-ui').classList.add('hidden');
+    document.getElementById('main-ui').classList.remove('hidden');
+
+    const s = await navigator.mediaDevices.getUserMedia({video: {facingMode: "environment"}});
+    document.getElementById('camera').srcObject = s;
+}
+
+document.getElementById('swap-btn').onclick = async () => {
+    const stat = document.getElementById('status');
+    stat.innerText = "撮影＆送信中...";
+    
+    const canvas = document.getElementById('output');
+    canvas.width = 300; canvas.height = 400;
+    canvas.getContext('2d').drawImage(document.getElementById('camera'), 0, 0, 300, 400);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
+
+    // 交換待ちを探す
+    const rooms = await db.collection("waiting").limit(1).get();
+
+    if (rooms.empty) {
+        await db.collection("waiting").doc(myId).set({
+            name: myName, photo: dataUrl, time: Date.now()
+        });
+        // 誰かが自分を拾ってくれるのを待つ
+        db.collection("swaps").doc(myId).onSnapshot((doc) => {
+            if (doc.exists()) {
+                const d = doc.data();
+                addHistory(d.name, d.photo);
+                stat.innerText = "交換成功！";
+                db.collection("swaps").doc(myId).delete();
+            }
+        });
+        stat.innerText = "待機中...";
+    } else {
+        const partner = rooms.docs[0];
+        const pData = partner.data();
+        await db.collection("waiting").doc(partner.id).delete();
+        await db.collection("swaps").doc(partner.id).set({ name: myName, photo: dataUrl });
+        addHistory(pData.name, pData.photo);
+        stat.innerText = "交換成功！";
+    }
+};
+
+function addHistory(n, u) {
+    const h = `<div class="card"><b>👤 ${n}</b><br><img src="${u}"></div>`;
+    document.getElementById('history').insertAdjacentHTML('afterbegin', h);
+}
+</script>
+</body>
+</html>
