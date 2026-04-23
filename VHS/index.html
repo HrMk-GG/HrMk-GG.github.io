@@ -410,14 +410,10 @@
                     const bi = (y * W + bX) * 4;
                     d[i]     = d[ri];     // R
                     d[i + 2] = d[bi + 2]; // B
-                    // コントラスト＋彩度強調
-                    d[i]     = clamp((d[i]     - 128) * 1.3 + 128 + 10);
-                    d[i + 1] = clamp((d[i + 1] - 128) * 1.2 + 128);
-                    d[i + 2] = clamp((d[i + 2] - 128) * 1.3 + 128);
-                    // セピア気味に
-                    const avg = d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114;
-                    d[i]     = clamp(avg * 1.08 + d[i]     * 0.92);
-                    d[i + 1] = clamp(avg * 0.95 + d[i + 1] * 1.05);
+                    // コントラスト強調（セピアなし、緑をわずかに上げてVHSっぽく）
+                    d[i]     = clamp((d[i]     - 128) * 1.25 + 128);
+                    d[i + 1] = clamp((d[i + 1] - 128) * 1.2  + 128 + 4);
+                    d[i + 2] = clamp((d[i + 2] - 128) * 1.15 + 128);
                 }
             }
 
@@ -492,7 +488,7 @@
 
             // ── videoを低解像度で描画 ──────────────────────────
             captureCtx.imageSmoothingEnabled = false;
-            captureCtx.filter = "contrast(1.3) brightness(1.05) saturate(1.8) sepia(0.25)";
+            captureCtx.filter = "contrast(1.25) brightness(1.05) saturate(1.4)";
             captureCtx.drawImage(video, 0, 0, W, H);
             captureCtx.filter = "none";
 
