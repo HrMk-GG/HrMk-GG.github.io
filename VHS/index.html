@@ -17,24 +17,65 @@
         .mode { color: #888; transition: 0.3s; }
         .mode.active { color: var(--accent-yellow); transform: scale(1.1); }
 
-        #camera-container { margin-top: 20px; width: 100vw; display: flex; justify-content: center; align-items: center; background: #000; position: relative; overflow: hidden; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
-        video { width: 100%; height: 100%; object-fit: cover; filter: contrast(1.1) brightness(1.1) saturate(1.3) sepia(0.1); }
+        /* カメラコンテナ：ここがVHS化の核！ */
+        #camera-container {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #000;
+            position: relative;
+            overflow: hidden;
+            /* 映像をわざとぼかして、色を滲ませる */
+            filter: contrast(1.2) brightness(1.1) saturate(1.5) blur(0.5px) sepia(0.2);
+        }
 
-        .vhs-overlay { position: absolute; top: 10px; left: 10px; color: var(--accent-yellow); font-size: 0.9rem; pointer-events: none; }
+        /* 走査線とノイズのオーバーレイ */
+        #camera-container::before {
+            content: " ";
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 4px, 3px 100%;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        /* 砂嵐アニメーション */
+        #camera-container::after {
+            content: " ";
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: url('https://upload.wikimedia.org/wikipedia/commons/5/5a/Static_noise.gif');
+            opacity: 0.08;
+            z-index: 3;
+            pointer-events: none;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .vhs-overlay {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            color: var(--accent-yellow);
+            font-size: 1rem;
+            z-index: 10;
+            text-shadow: 2px 2px #000;
+            pointer-events: none;
+        }
 
         .bottom-ui { position: absolute; bottom: 40px; width: 100%; display: flex; flex-direction: column; align-items: center; }
-
         .controls-row { display: flex; align-items: center; justify-content: center; width: 100vw; gap: 30px; }
 
-        /* 解像度ボタン（白でシンプルに） */
-        .ratio-btn { font-size: 1.8rem; font-weight: 900; background: none; border: none; color: white; cursor: pointer; width: 80px; text-align: center; }
-
-        /* 撮影ボタン */
+        .ratio-btn { font-size: 1.8rem; font-weight: 900; background: none; border: none; color: white; cursor: pointer; width: 80px; }
         .shutter-btn { width: 80px; height: 80px; background: white; border-radius: 50%; border: 6px solid rgba(255,255,255,0.3); position: relative; cursor: pointer; }
-        .shutter-btn:active { transform: scale(0.9); }
         .shutter-btn::after { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 60px; height: 60px; border: 2px solid #000; border-radius: 50%; }
-
-        /* ギャラリー窓 */
         .gallery-thumb { width: 60px; height: 60px; border: 2px solid white; border-radius: 8px; overflow: hidden; background: #222; background-size: cover; background-position: center; cursor: pointer; }
 
         #gallery-view { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); display: none; flex-direction: column; z-index: 100; }
@@ -42,6 +83,7 @@
         .gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; padding: 5px; overflow-y: auto; }
         .gallery-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; }
 
+        /* 比率設定 */
         .ratio-auto { aspect-ratio: 9 / 16; width: auto; height: 60vh; }
         @media (orientation: landscape) { .ratio-auto { aspect-ratio: 16 / 9; width: 80vw; height: auto; } }
         .ratio-3-4 { aspect-ratio: 3 / 4; width: 85vw; }
@@ -60,16 +102,14 @@
         <video id="webcam" autoplay playsinline muted></video>
         <div class="vhs-overlay">
             <div id="vhs-status">PLAY ▶</div>
-            <div id="vhs-date"></div>
+            <div id="vhs-date" style="margin-top: 5px;"></div>
         </div>
     </div>
 
     <div class="bottom-ui">
         <div class="controls-row">
             <button class="ratio-btn" id="ratio-display" onclick="toggleRatio()">AUTO</button>
-            
             <div class="shutter-btn" onclick="capture()"></div>
-            
             <div class="gallery-thumb" id="last-photo" onclick="openGallery()"></div>
         </div>
     </div>
@@ -101,10 +141,18 @@
 
         async function initCamera() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+                // 解像度をわざと低く設定してリクエストする
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: "environment",
+                        width: { ideal: 640 },
+                        height: { ideal: 480 }
+                    }, 
+                    audio: false 
+                });
                 video.srcObject = stream;
                 loadLastPhoto();
-            } catch (err) { alert("カメラを許可してね！"); }
+            } catch (err) { alert("カメラ設定エラー"); }
         }
 
         function toggleRatio() {
@@ -115,19 +163,25 @@
 
         async function capture() {
             const ctx = canvas.getContext('2d');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            ctx.filter = "contrast(1.1) brightness(1.1) saturate(1.3) sepia(0.1)";
+            // 保存する画像もわざと小さくして荒くする
+            canvas.width = 640;
+            canvas.height = 480;
+            
+            // 保存画像にエフェクトを反映
+            ctx.filter = "contrast(1.2) brightness(1.1) saturate(1.5) blur(0.5px) sepia(0.2)";
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             
-            ctx.font = "bold 40px 'Courier New'";
+            // 日付を合成
+            ctx.font = "bold 30px 'Courier New'";
             ctx.fillStyle = "#ffcc00";
-            ctx.fillText(vhsDate.innerText, 50, canvas.height - 50);
+            ctx.shadowColor = "black";
+            ctx.shadowBlur = 4;
+            ctx.fillText(vhsDate.innerText, 30, canvas.height - 40);
 
             canvas.toBlob(async (blob) => {
                 await db.photos.add({ blob: blob, timestamp: Date.now() });
                 loadLastPhoto();
-            }, 'image/jpeg');
+            }, 'image/jpeg', 0.6); // 画質(0.6)を落として保存
         }
 
         async function loadLastPhoto() {
