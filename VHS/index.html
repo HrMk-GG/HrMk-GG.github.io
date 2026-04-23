@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VHS Camera -ガチレトロ-</title>
+    <title>VHS Camera</title>
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -11,13 +11,32 @@
     <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
     <style>
         :root { --bg-color: #050510; --accent-yellow: #ffcc00; }
-        body { background-color: var(--bg-color); color: white; font-family: 'Courier New', Courier, monospace; margin: 0; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; user-select: none; }
+        * { box-sizing: border-box; }
+        body {
+            background-color: var(--bg-color);
+            color: white;
+            font-family: 'Courier New', Courier, monospace;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
 
-        .mode-selector { margin-top: 30px; display: flex; gap: 20px; font-size: 1.2rem; font-weight: bold; z-index: 10; }
+        .mode-selector {
+            margin-top: 30px;
+            display: flex;
+            gap: 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            z-index: 10;
+        }
         .mode { color: #888; transition: 0.3s; }
         .mode.active { color: var(--accent-yellow); transform: scale(1.1); }
 
-        /* カメラコンテナ：ここがVHS化の核！ */
+        /* カメラコンテナ */
         #camera-container {
             margin-top: 15px;
             display: flex;
@@ -27,31 +46,30 @@
             position: relative;
             overflow: hidden;
             border: 2px solid white;
-            /* 映像をわざとぼかして、ドットを荒く見せる */
-            filter: contrast(1.3) brightness(1.1) saturate(1.8) blur(0.7px) sepia(0.3);
         }
 
-        /* 走査線（横線）と色の滲みのオーバーレイ */
+        /* ライブVHSエフェクト用キャンバス（video上に重ねる） */
+        #effect-canvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        /* 走査線オーバーレイ */
         #camera-container::before {
             content: " ";
             position: absolute;
             top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%), 
-                        linear-gradient(90deg, rgba(255, 0, 0, 0.1), rgba(0, 255, 0, 0.05), rgba(0, 0, 255, 0.1));
-            background-size: 100% 3px, 3px 100%;
-            z-index: 2;
-            pointer-events: none;
-        }
-
-        /* ザラザラしたノイズ（砂嵐）のアニメーション */
-        #camera-container::after {
-            content: " ";
-            position: absolute;
-            top: -50%; left: -50%; width: 200%; height: 200%;
-            background: url('https://upload.wikimedia.org/wikipedia/commons/5/5a/Static_noise.gif');
-            opacity: 0.12; /* ノイズを強めに */
-            animation: noise 0.5s steps(10) infinite;
-            z-index: 3;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(0, 0, 0, 0.18) 2px,
+                rgba(0, 0, 0, 0.18) 4px
+            );
+            z-index: 6;
             pointer-events: none;
         }
 
@@ -59,33 +77,132 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-            opacity: 0.9;
+            opacity: 0.92;
+            /* 低解像度っぽく */
+            image-rendering: pixelated;
         }
 
-        /* 日付とロゴ（フォントをレトロに） */
+        /* VHSオーバーレイテキスト */
         .vhs-overlay {
             position: absolute;
             color: var(--accent-yellow);
             font-family: 'Courier New', Courier, monospace;
             z-index: 10;
-            text-shadow: 3px 3px #000;
+            text-shadow: 2px 2px #000, -1px 0 rgba(255,0,0,0.5), 1px 0 rgba(0,255,255,0.5);
             pointer-events: none;
             text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
-        .bottom-ui { position: absolute; bottom: 30px; width: 100%; display: flex; flex-direction: column; align-items: center; }
-        .controls-row { display: flex; align-items: center; justify-content: center; width: 100vw; gap: 30px; }
+        /* RECインジケーター */
+        .rec-indicator {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            pointer-events: none;
+        }
+        .rec-dot {
+            width: 10px;
+            height: 10px;
+            background: red;
+            border-radius: 50%;
+            animation: blink 1s step-start infinite;
+        }
+        .rec-text {
+            color: white;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            font-weight: bold;
+            text-shadow: 1px 1px #000;
+        }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
-        .ratio-btn { font-size: 1.8rem; font-weight: 900; background: none; border: none; color: white; cursor: pointer; width: 80px; font-family: sans-serif; }
-        .shutter-btn { width: 80px; height: 80px; background: white; border-radius: 50%; border: 6px solid rgba(255,255,255,0.3); position: relative; cursor: pointer; }
-        .shutter-btn::after { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 60px; height: 60px; border: 2px solid #000; border-radius: 50%; }
-        .gallery-thumb { width: 60px; height: 60px; border: 2px solid white; border-radius: 8px; overflow: hidden; background: #222; background-size: cover; background-position: center; cursor: pointer; }
+        .bottom-ui {
+            position: absolute;
+            bottom: 30px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .controls-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100vw;
+            gap: 30px;
+        }
 
-        /* ギャラリー一覧 */
-        #gallery-view { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); display: none; flex-direction: column; z-index: 100; }
-        .gallery-header { padding: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; }
-        .gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; padding: 5px; overflow-y: auto; }
-        .gallery-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; }
+        .ratio-btn {
+            font-size: 1.8rem;
+            font-weight: 900;
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            width: 80px;
+            font-family: sans-serif;
+        }
+        .shutter-btn {
+            width: 80px;
+            height: 80px;
+            background: white;
+            border-radius: 50%;
+            border: 6px solid rgba(255,255,255,0.3);
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .shutter-btn:active { transform: scale(0.92); }
+        .shutter-btn::after {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px; height: 60px;
+            border: 2px solid #000;
+            border-radius: 50%;
+        }
+        .gallery-thumb {
+            width: 60px; height: 60px;
+            border: 2px solid white;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #222;
+            background-size: cover;
+            background-position: center;
+            cursor: pointer;
+        }
+
+        /* ギャラリー */
+        #gallery-view {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: var(--bg-color);
+            display: none;
+            flex-direction: column;
+            z-index: 100;
+        }
+        .gallery-header {
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #333;
+        }
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 5px;
+            padding: 5px;
+            overflow-y: auto;
+        }
+        .gallery-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; cursor: pointer; }
 
         /* 比率設定 */
         .ratio-auto { aspect-ratio: 9 / 16; width: auto; height: 55vh; }
@@ -93,19 +210,51 @@
         .ratio-3-4 { aspect-ratio: 3 / 4; width: 85vw; }
         .ratio-1-1 { aspect-ratio: 1 / 1; width: 100vw; }
 
-        /* ノイズのアニメーション */
-        @keyframes noise {
-            0% { transform: translate(0, 0); }
-            10% { transform: translate(-5%, -5%); }
-            20% { transform: translate(-10%, 5%); }
-            30% { transform: translate(5%, -10%); }
-            40% { transform: translate(-5%, 15%); }
-            50% { transform: translate(-10%, -5%); }
-            60% { transform: translate(15%, 0); }
-            70% { transform: translate(0, 10%); }
-            80% { transform: translate(-15%, 0); }
-            90% { transform: translate(10%, 5%); }
-            100% { transform: translate(5%, 0); }
+        /* キャプチャフラッシュ */
+        #flash {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: white;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 200;
+            transition: opacity 0.05s;
+        }
+        #flash.active { opacity: 0.7; }
+
+        /* フルスクリーンビュー */
+        #fullscreen-view {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: #000;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+        #fullscreen-view img { max-width: 100%; max-height: 90vh; object-fit: contain; }
+        #fullscreen-close {
+            position: absolute;
+            top: 20px; right: 20px;
+            background: none;
+            border: 1px solid white;
+            color: white;
+            padding: 5px 15px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+        }
+        #fullscreen-delete {
+            position: absolute;
+            bottom: 20px;
+            background: none;
+            border: 1px solid red;
+            color: red;
+            padding: 5px 20px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
         }
     </style>
 </head>
@@ -119,11 +268,22 @@
 
     <div id="camera-container" class="ratio-auto">
         <video id="webcam" autoplay playsinline muted></video>
-        <div class="vhs-overlay" style="top: 15px; left: 15px; font-weight: bold; font-size: 1.2rem; line-height: 1;">
-            VHS CAMERA<br>PLAY ▶
+        <!-- ライブVHSエフェクト用キャンバス -->
+        <canvas id="effect-canvas"></canvas>
+
+        <!-- VHSロゴ -->
+        <div class="vhs-overlay" style="top: 15px; left: 15px; font-weight: bold; font-size: 1rem; line-height: 1.4;">
+            VHS CAMERA<br><span style="font-size:0.8rem;">▶ PLAY</span>
         </div>
-        <div class="vhs-overlay" id="vhs-date" style="bottom: 15px; right: 15px; text-align: right; font-size: 1rem; line-height: 1.2;">
+
+        <!-- RECインジケーター -->
+        <div class="rec-indicator">
+            <div class="rec-dot"></div>
+            <span class="rec-text">REC</span>
         </div>
+
+        <!-- 日付 -->
+        <div class="vhs-overlay" id="vhs-date" style="bottom: 15px; right: 15px; text-align: right; font-size: 0.9rem; line-height: 1.4;"></div>
     </div>
 
     <div class="bottom-ui">
@@ -134,120 +294,343 @@
         </div>
     </div>
 
+    <!-- ギャラリー -->
     <div id="gallery-view">
         <div class="gallery-header">
             <span style="font-size: 1.5rem; color: var(--accent-yellow);">ALBUM</span>
-            <button onclick="closeGallery()" style="background:none; border:1px solid white; color:white; padding:5px 15px;">閉じる</button>
+            <button onclick="closeGallery()" style="background:none; border:1px solid white; color:white; padding:5px 15px; cursor:pointer;">閉じる</button>
         </div>
         <div class="gallery-grid" id="gallery-grid"></div>
     </div>
 
+    <!-- フルスクリーンビュー -->
+    <div id="fullscreen-view">
+        <button id="fullscreen-close" onclick="closeFullscreen()">✕ 閉じる</button>
+        <img id="fullscreen-img" src="" alt="">
+        <button id="fullscreen-delete" onclick="deleteCurrentPhoto()">🗑 削除</button>
+    </div>
+
+    <!-- キャプチャ用非表示キャンバス -->
     <canvas id="capture-canvas" style="display:none;"></canvas>
 
+    <!-- フラッシュ演出 -->
+    <div id="flash"></div>
+
     <script>
+        // ── DB ──────────────────────────────────────────────────
         const db = new Dexie("VHSCamDB");
         db.version(1).stores({ photos: '++id, blob, timestamp' });
 
-        const video = document.getElementById('webcam');
-        const container = document.getElementById('camera-container');
+        // ── DOM ─────────────────────────────────────────────────
+        const video        = document.getElementById('webcam');
+        const container    = document.getElementById('camera-container');
+        const effectCanvas = document.getElementById('effect-canvas');
+        const effectCtx    = effectCanvas.getContext('2d');
+        const captureCanvas = document.getElementById('capture-canvas');
+        const captureCtx   = captureCanvas.getContext('2d');
         const ratioDisplay = document.getElementById('ratio-display');
-        const vhsDate = document.getElementById('vhs-date');
-        const canvas = document.getElementById('capture-canvas');
+        const vhsDate      = document.getElementById('vhs-date');
         const lastPhotoThumb = document.getElementById('last-photo');
+        const flash        = document.getElementById('flash');
 
         let ratioMode = 0;
-        const modeLabels = ['AUTO', '3:4', '1:1'];
+        const modeLabels  = ['AUTO', '3:4', '1:1'];
         const modeClasses = ['ratio-auto', 'ratio-3-4', 'ratio-1-1'];
 
+        let currentPhotoId = null; // フルスクリーン表示中の写真ID
+
+        // ── カメラ起動 ─────────────────────────────────────────
         async function initCamera() {
             try {
-                // 解像度をわざと極限(320x240)まで落としてリクエストする
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { 
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
                         facingMode: "environment",
-                        width: { ideal: 320 },
+                        width:  { ideal: 320 },
                         height: { ideal: 240 }
-                    }, 
-                    audio: false 
+                    },
+                    audio: false
                 });
                 video.srcObject = stream;
+                video.addEventListener('play', startEffectLoop);
                 loadLastPhoto();
-            } catch (err) { alert("カメラ許可してね！"); }
+            } catch (err) {
+                alert("カメラを許可してください！");
+            }
         }
 
+        // ── 比率切替 ───────────────────────────────────────────
         function toggleRatio() {
             ratioMode = (ratioMode + 1) % modeLabels.length;
             ratioDisplay.innerText = modeLabels[ratioMode];
             container.className = modeClasses[ratioMode];
         }
 
-        async function capture() {
-            const ctx = canvas.getContext('2d');
-            // 保存する画像もわざと超・小さくして荒くする
-            canvas.width = 320;
-            canvas.height = 240;
-            
-            // 保存画像にエフェクトをガッツリ反映
-            ctx.filter = "contrast(1.3) brightness(1.1) saturate(1.8) blur(0.7px) sepia(0.3)";
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            // 日付とロゴを合成
-            ctx.font = "bold 20px 'Courier New'";
-            ctx.fillStyle = "#ffcc00";
-            ctx.shadowColor = "black";
-            ctx.shadowBlur = 4;
-            ctx.fillText("VHS CAMERA", 15, 25);
-            
-            const now = new Date();
-            const dateText = `${getFormattedDate(now)}\n${getFormattedTime(now)}`;
-            const lines = dateText.split('\n');
-            ctx.fillText(lines[0], canvas.width - 150, canvas.height - 40);
-            ctx.fillText(lines[1], canvas.width - 100, canvas.height - 15);
+        // ════════════════════════════════════════════════════════
+        //  ライブVHSエフェクトループ
+        // ════════════════════════════════════════════════════════
+        let frameCount = 0;
+        let glitchTimer = 0;
 
-            canvas.toBlob(async (blob) => {
-                await db.photos.add({ blob: blob, timestamp: Date.now() });
-                loadLastPhoto();
-            }, 'image/jpeg', 0.5); // 保存画質も落としてザラザラ感を強調
+        function startEffectLoop() {
+            function loop() {
+                renderVHSFrame();
+                requestAnimationFrame(loop);
+            }
+            loop();
         }
 
+        function renderVHSFrame() {
+            const W = effectCanvas.width  = container.offsetWidth;
+            const H = effectCanvas.height = container.offsetHeight;
+
+            if (video.readyState < 2) return;
+
+            // ── 1. videoを低解像度で描画 ──────────────────────
+            effectCtx.save();
+            effectCtx.imageSmoothingEnabled = false;
+            // わざと1/2解像度で描いて拡大（ドット粗さ）
+            effectCtx.drawImage(video, 0, 0, W * 0.5, H * 0.5);
+            effectCtx.drawImage(effectCanvas, 0, 0, W * 0.5, H * 0.5, 0, 0, W, H);
+            effectCtx.restore();
+
+            // ── 2. ルマ（輝度）調整 ───────────────────────────
+            const imageData = effectCtx.getImageData(0, 0, W, H);
+            const d = imageData.data;
+
+            // ── 3. クロマノイズ（RGB色ずれ） ──────────────────
+            const chromaShift = 4;
+            for (let y = 0; y < H; y++) {
+                for (let x = 0; x < W; x++) {
+                    const i = (y * W + x) * 4;
+                    // R → 右にズレ
+                    const rX = Math.min(x + chromaShift, W - 1);
+                    const ri = (y * W + rX) * 4;
+                    // B → 左にズレ
+                    const bX = Math.max(x - chromaShift, 0);
+                    const bi = (y * W + bX) * 4;
+                    d[i]     = d[ri];     // R
+                    d[i + 2] = d[bi + 2]; // B
+                    // コントラスト＋彩度強調
+                    d[i]     = clamp((d[i]     - 128) * 1.3 + 128 + 10);
+                    d[i + 1] = clamp((d[i + 1] - 128) * 1.2 + 128);
+                    d[i + 2] = clamp((d[i + 2] - 128) * 1.3 + 128);
+                    // セピア気味に
+                    const avg = d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114;
+                    d[i]     = clamp(avg * 1.08 + d[i]     * 0.92);
+                    d[i + 1] = clamp(avg * 0.95 + d[i + 1] * 1.05);
+                }
+            }
+
+            // ── 4. フィルムグレイン ───────────────────────────
+            for (let i = 0; i < d.length; i += 4) {
+                const grain = (Math.random() - 0.5) * 35;
+                d[i]     = clamp(d[i]     + grain);
+                d[i + 1] = clamp(d[i + 1] + grain);
+                d[i + 2] = clamp(d[i + 2] + grain);
+            }
+
+            // ── 5. ランダム水平ノイズライン ───────────────────
+            const numNoise = Math.floor(Math.random() * 3) + 1;
+            for (let n = 0; n < numNoise; n++) {
+                const lineY = Math.floor(Math.random() * H);
+                const offset = Math.floor(Math.random() * 16 - 8);
+                for (let x = 0; x < W; x++) {
+                    const src = (lineY * W + x) * 4;
+                    const dst = (lineY * W + Math.max(0, Math.min(W - 1, x + offset))) * 4;
+                    d[dst]     = clamp(d[src]     + 30);
+                    d[dst + 1] = clamp(d[src + 1] + 30);
+                    d[dst + 2] = clamp(d[src + 2] + 30);
+                }
+            }
+
+            effectCtx.putImageData(imageData, 0, 0);
+
+            // ── 6. ビネット ───────────────────────────────────
+            const vignette = effectCtx.createRadialGradient(
+                W / 2, H / 2, H * 0.25,
+                W / 2, H / 2, H * 0.85
+            );
+            vignette.addColorStop(0, 'rgba(0,0,0,0)');
+            vignette.addColorStop(1, 'rgba(0,0,0,0.65)');
+            effectCtx.fillStyle = vignette;
+            effectCtx.fillRect(0, 0, W, H);
+
+            // ── 7. グリッチ（たまにトラッキングずれ） ─────────
+            frameCount++;
+            glitchTimer--;
+            if (glitchTimer <= 0 && Math.random() < 0.015) {
+                glitchTimer = 6;
+                drawGlitch(W, H);
+            }
+        }
+
+        function drawGlitch(W, H) {
+            const y = Math.floor(Math.random() * H * 0.7);
+            const h = Math.floor(Math.random() * 20 + 5);
+            const offset = Math.floor(Math.random() * 30 - 15);
+            const strip = effectCtx.getImageData(0, y, W, h);
+            effectCtx.putImageData(strip, offset, y);
+            // グリッチラインの明るさ
+            effectCtx.fillStyle = 'rgba(255,255,255,0.04)';
+            effectCtx.fillRect(0, y, W, h);
+        }
+
+        function clamp(v) { return Math.max(0, Math.min(255, v)); }
+
+        // ════════════════════════════════════════════════════════
+        //  撮影（キャプチャ）
+        // ════════════════════════════════════════════════════════
+        async function capture() {
+            // フラッシュ演出
+            flash.classList.add('active');
+            setTimeout(() => flash.classList.remove('active'), 150);
+
+            const W = 320;
+            const H = 240;
+            captureCanvas.width  = W;
+            captureCanvas.height = H;
+
+            // ── videoを低解像度で描画 ──────────────────────────
+            captureCtx.imageSmoothingEnabled = false;
+            captureCtx.filter = "contrast(1.3) brightness(1.05) saturate(1.8) sepia(0.25)";
+            captureCtx.drawImage(video, 0, 0, W, H);
+            captureCtx.filter = "none";
+
+            // ── クロマノイズ ──────────────────────────────────
+            const imgData = captureCtx.getImageData(0, 0, W, H);
+            const d = imgData.data;
+            const shift = 4;
+            for (let y = 0; y < H; y++) {
+                for (let x = 0; x < W; x++) {
+                    const i = (y * W + x) * 4;
+                    const ri = (y * W + Math.min(x + shift, W - 1)) * 4;
+                    const bi = (y * W + Math.max(x - shift, 0)) * 4;
+                    d[i]     = d[ri];
+                    d[i + 2] = d[bi + 2];
+                }
+            }
+
+            // ── グレイン ──────────────────────────────────────
+            for (let i = 0; i < d.length; i += 4) {
+                const grain = (Math.random() - 0.5) * 40;
+                d[i]     = clamp(d[i]     + grain);
+                d[i + 1] = clamp(d[i + 1] + grain);
+                d[i + 2] = clamp(d[i + 2] + grain);
+            }
+
+            // ── ランダムノイズライン ───────────────────────────
+            for (let n = 0; n < 4; n++) {
+                const lineY = Math.floor(Math.random() * H);
+                const offset = Math.floor(Math.random() * 12 - 6);
+                for (let x = 0; x < W; x++) {
+                    const src = (lineY * W + x) * 4;
+                    const dst = (lineY * W + Math.max(0, Math.min(W - 1, x + offset))) * 4;
+                    d[dst] = clamp(d[src] + 25); d[dst+1] = clamp(d[src+1] + 25); d[dst+2] = clamp(d[src+2] + 25);
+                }
+            }
+            captureCtx.putImageData(imgData, 0, 0);
+
+            // ── ビネット ──────────────────────────────────────
+            const vig = captureCtx.createRadialGradient(W/2, H/2, H*0.2, W/2, H/2, H*0.9);
+            vig.addColorStop(0, 'rgba(0,0,0,0)');
+            vig.addColorStop(1, 'rgba(0,0,0,0.7)');
+            captureCtx.fillStyle = vig;
+            captureCtx.fillRect(0, 0, W, H);
+
+            // ── 走査線 ────────────────────────────────────────
+            for (let y = 0; y < H; y += 3) {
+                captureCtx.fillStyle = 'rgba(0,0,0,0.18)';
+                captureCtx.fillRect(0, y, W, 1);
+            }
+
+            // ── VHSテキスト合成 ───────────────────────────────
+            const now = new Date();
+            captureCtx.font = "bold 14px 'Courier New'";
+            // クロマ風グロー
+            captureCtx.shadowColor = 'rgba(255,0,0,0.6)';
+            captureCtx.shadowBlur = 2;
+            captureCtx.fillStyle = "#ffcc00";
+            captureCtx.fillText("VHS CAMERA", 10, 18);
+            captureCtx.fillText("▶ PLAY", 10, 32);
+
+            const dateStr = getFormattedDate(now);
+            const timeStr = getFormattedTime(now);
+            captureCtx.textAlign = 'right';
+            captureCtx.fillText(timeStr, W - 8, H - 22);
+            captureCtx.fillText(dateStr, W - 8, H - 8);
+            captureCtx.textAlign = 'left';
+            captureCtx.shadowBlur = 0;
+
+            // ── 保存 ──────────────────────────────────────────
+            captureCanvas.toBlob(async (blob) => {
+                await db.photos.add({ blob, timestamp: Date.now() });
+                loadLastPhoto();
+            }, 'image/jpeg', 0.5);
+        }
+
+        // ── 日付・時刻フォーマット ──────────────────────────────
         function getFormattedDate(now) {
-            const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
-            return `${months[now.getMonth()]} ${String(now.getDate()).padStart(2, '0')} ${now.getFullYear()}`;
+            const months = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+            return `${months[now.getMonth()]} ${String(now.getDate()).padStart(2,'0')} ${now.getFullYear()}`;
         }
         function getFormattedTime(now) {
-            return `PM ${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
+            const h = now.getHours();
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            const h12 = h % 12 || 12;
+            return `${ampm} ${String(h12).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
         }
 
+        // ── サムネイル読み込み ──────────────────────────────────
         async function loadLastPhoto() {
-            const lastEntry = await db.photos.orderBy('id').last();
-            if (lastEntry) {
-                const url = URL.createObjectURL(lastEntry.blob);
+            const last = await db.photos.orderBy('id').last();
+            if (last) {
+                const url = URL.createObjectURL(last.blob);
                 lastPhotoThumb.style.backgroundImage = `url(${url})`;
             }
         }
 
+        // ── ギャラリー ─────────────────────────────────────────
         async function openGallery() {
             const grid = document.getElementById('gallery-grid');
             grid.innerHTML = '';
-            const allPhotos = await db.photos.orderBy('id').reverse().toArray();
-            allPhotos.forEach(p => {
+            const all = await db.photos.orderBy('id').reverse().toArray();
+            all.forEach(p => {
                 const img = document.createElement('img');
                 img.src = URL.createObjectURL(p.blob);
+                img.onclick = () => openFullscreen(img.src, p.id);
                 grid.appendChild(img);
             });
             document.getElementById('gallery-view').style.display = 'flex';
         }
-
         function closeGallery() { document.getElementById('gallery-view').style.display = 'none'; }
 
-        function updateDate() {
-            const now = new Date();
-            const timeText = getFormattedTime(now);
-            const dateText = getFormattedDate(now);
-            vhsDate.innerHTML = `${timeText}<br>${dateText}`;
+        // ── フルスクリーン ─────────────────────────────────────
+        function openFullscreen(src, id) {
+            currentPhotoId = id;
+            document.getElementById('fullscreen-img').src = src;
+            document.getElementById('fullscreen-view').style.display = 'flex';
+        }
+        function closeFullscreen() {
+            document.getElementById('fullscreen-view').style.display = 'none';
+        }
+        async function deleteCurrentPhoto() {
+            if (currentPhotoId == null) return;
+            if (!confirm('この写真を削除しますか？')) return;
+            await db.photos.delete(currentPhotoId);
+            closeFullscreen();
+            openGallery();
+            loadLastPhoto();
         }
 
+        // ── 日付ループ ─────────────────────────────────────────
+        function updateDate() {
+            const now = new Date();
+            vhsDate.innerHTML = `${getFormattedTime(now)}<br>${getFormattedDate(now)}`;
+        }
         setInterval(updateDate, 1000);
+        updateDate();
+
+        // ── 起動 ───────────────────────────────────────────────
         initCamera();
     </script>
 </body>
