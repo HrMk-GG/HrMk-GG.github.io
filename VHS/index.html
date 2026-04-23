@@ -22,26 +22,28 @@
 
         .vhs-overlay { position: absolute; top: 10px; left: 10px; color: var(--accent-yellow); font-size: 0.9rem; pointer-events: none; }
 
-        .bottom-ui { position: absolute; bottom: 40px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 20px; }
-        .ratio-btn { font-size: 2.5rem; font-weight: 900; background: none; border: none; color: white; text-shadow: 2px 2px #ff00ff, -2px -2px #00ffff; }
+        .bottom-ui { position: absolute; bottom: 40px; width: 100%; display: flex; flex-direction: column; align-items: center; }
 
-        .controls-row { display: flex; align-items: center; justify-content: center; width: 100%; gap: 40px; position: relative; }
+        .controls-row { display: flex; align-items: center; justify-content: center; width: 100vw; gap: 30px; }
+
+        /* 解像度ボタン（白でシンプルに） */
+        .ratio-btn { font-size: 1.8rem; font-weight: 900; background: none; border: none; color: white; cursor: pointer; width: 80px; text-align: center; }
 
         /* 撮影ボタン */
-        .shutter-btn { width: 85px; height: 85px; background: white; border-radius: 50%; border: 6px solid rgba(255,255,255,0.3); display: flex; justify-content: center; align-items: center; }
+        .shutter-btn { width: 80px; height: 80px; background: white; border-radius: 50%; border: 6px solid rgba(255,255,255,0.3); position: relative; cursor: pointer; }
         .shutter-btn:active { transform: scale(0.9); }
-        .shutter-inner { color: red; font-weight: bold; font-size: 0.8rem; text-align: center; }
+        .shutter-btn::after { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 60px; height: 60px; border: 2px solid #000; border-radius: 50%; }
 
-        /* 右下のギャラリー窓 */
+        /* ギャラリー窓 */
         .gallery-thumb { width: 60px; height: 60px; border: 2px solid white; border-radius: 8px; overflow: hidden; background: #222; background-size: cover; background-position: center; cursor: pointer; }
 
-        /* ギャラリー一覧画面 */
         #gallery-view { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); display: none; flex-direction: column; z-index: 100; }
         .gallery-header { padding: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; }
         .gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; padding: 5px; overflow-y: auto; }
         .gallery-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; }
 
-        .ratio-16-9 { aspect-ratio: 16 / 9; width: 100vw; }
+        .ratio-auto { aspect-ratio: 9 / 16; width: auto; height: 60vh; }
+        @media (orientation: landscape) { .ratio-auto { aspect-ratio: 16 / 9; width: 80vw; height: auto; } }
         .ratio-3-4 { aspect-ratio: 3 / 4; width: 85vw; }
         .ratio-1-1 { aspect-ratio: 1 / 1; width: 100vw; }
     </style>
@@ -54,7 +56,7 @@
         <span class="mode">ビデオ</span>
     </div>
 
-    <div id="camera-container" class="ratio-3-4">
+    <div id="camera-container" class="ratio-auto">
         <video id="webcam" autoplay playsinline muted></video>
         <div class="vhs-overlay">
             <div id="vhs-status">PLAY ▶</div>
@@ -63,11 +65,11 @@
     </div>
 
     <div class="bottom-ui">
-        <button class="ratio-btn" id="ratio-display" onclick="toggleRatio()">3:4</button>
         <div class="controls-row">
-            <div style="width: 60px;"></div> <div class="shutter-btn" onclick="capture()">
-                <div class="shutter-inner">撮る<br>ボタン</div>
-            </div>
+            <button class="ratio-btn" id="ratio-display" onclick="toggleRatio()">AUTO</button>
+            
+            <div class="shutter-btn" onclick="capture()"></div>
+            
             <div class="gallery-thumb" id="last-photo" onclick="openGallery()"></div>
         </div>
     </div>
@@ -93,22 +95,22 @@
         const canvas = document.getElementById('capture-canvas');
         const lastPhotoThumb = document.getElementById('last-photo');
 
-        let currentRatio = '3:4';
-        const ratios = ['16:9', '3:4', '1:1'];
+        let ratioMode = 0;
+        const modeLabels = ['AUTO', '3:4', '1:1'];
+        const modeClasses = ['ratio-auto', 'ratio-3-4', 'ratio-1-1'];
 
         async function initCamera() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
                 video.srcObject = stream;
                 loadLastPhoto();
-            } catch (err) { alert("カメラ許可してね！"); }
+            } catch (err) { alert("カメラを許可してね！"); }
         }
 
         function toggleRatio() {
-            let index = (ratios.indexOf(currentRatio) + 1) % ratios.length;
-            currentRatio = ratios[index];
-            ratioDisplay.innerText = currentRatio;
-            container.className = 'ratio-' + currentRatio.replace(':', '-');
+            ratioMode = (ratioMode + 1) % modeLabels.length;
+            ratioDisplay.innerText = modeLabels[ratioMode];
+            container.className = modeClasses[ratioMode];
         }
 
         async function capture() {
