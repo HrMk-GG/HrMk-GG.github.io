@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>VHS Camera</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="image.png">
+    <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
+    <style>
+        :root { --bg-color: #050510; --accent-yellow: #ffcc00; }
+        body { background-color: var(--bg-color); color: white; font-family: 'Courier New', Courier, monospace; margin: 0; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; user-select: none; }
+
+        .mode-selector { margin-top: 40px; display: flex; gap: 20px; font-size: 1.2rem; font-weight: bold; z-index: 10; }
+        .mode { color: #888; transition: 0.3s; }
+        .mode.active { color: var(--accent-yellow); transform: scale(1.1); }
+
+        #camera-container { margin-top: 20px; width: 100vw; display: flex; justify-content: center; align-items: center; background: #000; position: relative; overflow: hidden; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        video { width: 100%; height: 100%; object-fit: cover; filter: contrast(1.1) brightness(1.1) saturate(1.3) sepia(0.1); }
+
+        .vhs-overlay { position: absolute; top: 10px; left: 10px; color: var(--accent-yellow); font-size: 0.9rem; pointer-events: none; }
+
+        .bottom-ui { position: absolute; bottom: 40px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+        .ratio-btn { font-size: 2.5rem; font-weight: 900; background: none; border: none; color: white; text-shadow: 2px 2px #ff00ff, -2px -2px #00ffff; }
+
+        .controls-row { display: flex; align-items: center; justify-content: center; width: 100%; gap: 40px; position: relative; }
+
+        /* 撮影ボタン */
+        .shutter-btn { width: 85px; height: 85px; background: white; border-radius: 50%; border: 6px solid rgba(255,255,255,0.3); display: flex; justify-content: center; align-items: center; }
+        .shutter-btn:active { transform: scale(0.9); }
+        .shutter-inner { color: red; font-weight: bold; font-size: 0.8rem; text-align: center; }
+
+        /* 右下のギャラリー窓 */
+        .gallery-thumb { width: 60px; height: 60px; border: 2px solid white; border-radius: 8px; overflow: hidden; background: #222; background-size: cover; background-position: center; cursor: pointer; }
+
+        /* ギャラリー一覧画面 */
+        #gallery-view { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); display: none; flex-direction: column; z-index: 100; }
+        .gallery-header { padding: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; }
+        .gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; padding: 5px; overflow-y: auto; }
+        .gallery-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; }
+
+        .ratio-16-9 { aspect-ratio: 16 / 9; width: 100vw; }
+        .ratio-3-4 { aspect-ratio: 3 / 4; width: 85vw; }
+        .ratio-1-1 { aspect-ratio: 1 / 1; width: 100vw; }
+    </style>
+</head>
+<body>
+
+    <div class="mode-selector">
+        <span class="mode active">写真</span>
+        <span style="color:var(--accent-yellow)">●</span>
+        <span class="mode">ビデオ</span>
+    </div>
+
+    <div id="camera-container" class="ratio-3-4">
+        <video id="webcam" autoplay playsinline muted></video>
+        <div class="vhs-overlay">
+            <div id="vhs-status">PLAY ▶</div>
+            <div id="vhs-date"></div>
+        </div>
+    </div>
+
+    <div class="bottom-ui">
+        <button class="ratio-btn" id="ratio-display" onclick="toggleRatio()">3:4</button>
+        <div class="controls-row">
+            <div style="width: 60px;"></div> <div class="shutter-btn" onclick="capture()">
+                <div class="shutter-inner">撮る<br>ボタン</div>
+            </div>
+            <div class="gallery-thumb" id="last-photo" onclick="openGallery()"></div>
+        </div>
+    </div>
+
+    <div id="gallery-view">
+        <div class="gallery-header">
+            <span style="font-size: 1.5rem; color: var(--accent-yellow);">ALBUM</span>
+            <button onclick="closeGallery()" style="background:none; border:1px solid white; color:white; padding:5px 15px;">閉じる</button>
+        </div>
+        <div class="gallery-grid" id="gallery-grid"></div>
+    </div>
+
+    <canvas id="capture-canvas" style="display:none;"></canvas>
+
+    <script>
+        const db = new Dexie("VHSCamDB");
+        db.version(1).stores({ photos: '++id, blob, timestamp' });
+
+        const video = document.getElementById('webcam');
+        const container = document.getElementById('camera-container');
+        const ratioDisplay = document.getElementById('ratio-display');
+        const vhsDate = document.getElementById('vhs-date');
+        const canvas = document.getElementById('capture-canvas');
+        const lastPhotoThumb = document.getElementById('last-photo');
+
+        let currentRatio = '3:4';
+        const ratios = ['16:9', '3:4', '1:1'];
+
+        async function initCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+                video.srcObject = stream;
+                loadLastPhoto();
+            } catch (err) { alert("カメラ許可してね！"); }
+        }
+
+        function toggleRatio() {
+            let index = (ratios.indexOf(currentRatio) + 1) % ratios.length;
+            currentRatio = ratios[index];
+            ratioDisplay.innerText = currentRatio;
+            container.className = 'ratio-' + currentRatio.replace(':', '-');
+        }
+
+        async function capture() {
+            const ctx = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.filter = "contrast(1.1) brightness(1.1) saturate(1.3) sepia(0.1)";
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            ctx.font = "bold 40px 'Courier New'";
+            ctx.fillStyle = "#ffcc00";
+            ctx.fillText(vhsDate.innerText, 50, canvas.height - 50);
+
+            canvas.toBlob(async (blob) => {
+                await db.photos.add({ blob: blob, timestamp: Date.now() });
+                loadLastPhoto();
+            }, 'image/jpeg');
+        }
+
+        async function loadLastPhoto() {
+            const lastEntry = await db.photos.orderBy('id').last();
+            if (lastEntry) {
+                const url = URL.createObjectURL(lastEntry.blob);
+                lastPhotoThumb.style.backgroundImage = `url(${url})`;
+            }
+        }
+
+        async function openGallery() {
+            const grid = document.getElementById('gallery-grid');
+            grid.innerHTML = '';
+            const allPhotos = await db.photos.orderBy('id').reverse().toArray();
+            allPhotos.forEach(p => {
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(p.blob);
+                grid.appendChild(img);
+            });
+            document.getElementById('gallery-view').style.display = 'flex';
+        }
+
+        function closeGallery() { document.getElementById('gallery-view').style.display = 'none'; }
+
+        function updateDate() {
+            const now = new Date();
+            const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+            vhsDate.innerText = `${months[now.getMonth()]} ${String(now.getDate()).padStart(2, '0')} ${now.getFullYear()}`;
+        }
+
+        setInterval(updateDate, 1000);
+        initCamera();
+    </script>
+</body>
+</html>
