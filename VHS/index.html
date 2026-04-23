@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VHS Camera -ガチレトロ-</title>
+    <title>VHS Camera</title>
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -36,7 +36,6 @@
         .mode { color: #888; transition: 0.3s; }
         .mode.active { color: var(--accent-yellow); transform: scale(1.1); }
 
-        /* カメラコンテナ */
         #camera-container {
             margin-top: 15px;
             display: flex;
@@ -48,7 +47,6 @@
             border: 2px solid white;
         }
 
-        /* ライブVHSエフェクト用キャンバス（video上に重ねる） */
         #effect-canvas {
             position: absolute;
             top: 0; left: 0;
@@ -57,7 +55,6 @@
             pointer-events: none;
         }
 
-        /* 走査線オーバーレイ */
         #camera-container::before {
             content: " ";
             position: absolute;
@@ -78,11 +75,9 @@
             height: 100%;
             object-fit: cover;
             opacity: 0.92;
-            /* 低解像度っぽく */
             image-rendering: pixelated;
         }
 
-        /* VHSオーバーレイテキスト */
         .vhs-overlay {
             position: absolute;
             color: var(--accent-yellow);
@@ -94,7 +89,6 @@
             letter-spacing: 1px;
         }
 
-        /* RECインジケーター */
         .rec-indicator {
             position: absolute;
             top: 15px;
@@ -178,7 +172,6 @@
             cursor: pointer;
         }
 
-        /* ギャラリー */
         #gallery-view {
             position: fixed;
             top: 0; left: 0;
@@ -187,7 +180,10 @@
             display: none;
             flex-direction: column;
             z-index: 100;
+            animation: fadeIn 0.3s ease-out;
         }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
         .gallery-header {
             padding: 20px;
             display: flex;
@@ -198,19 +194,25 @@
         .gallery-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 5px;
-            padding: 5px;
+            gap: 8px;
+            padding: 10px;
             overflow-y: auto;
         }
-        .gallery-grid img { width: 100%; height: auto; display: block; cursor: pointer; }
+        .gallery-grid img { 
+            width: 100%; 
+            aspect-ratio: 1 / 1;
+            display: block; 
+            cursor: pointer; 
+            object-fit: contain; /* ここを修正！引き伸ばさずに枠に収める */
+            background: #000;
+            border: 1px solid #222;
+        }
 
-        /* 比率設定 */
         .ratio-auto { aspect-ratio: 9 / 16; width: auto; height: 55vh; }
         @media (orientation: landscape) { .ratio-auto { aspect-ratio: 16 / 9; width: 80vw; height: auto; } }
         .ratio-3-4 { aspect-ratio: 3 / 4; width: 85vw; }
         .ratio-1-1 { aspect-ratio: 1 / 1; width: 100vw; }
 
-        /* キャプチャフラッシュ */
         #flash {
             position: fixed;
             top: 0; left: 0;
@@ -223,7 +225,6 @@
         }
         #flash.active { opacity: 0.7; }
 
-        /* フルスクリーンビュー */
         #fullscreen-view {
             position: fixed;
             top: 0; left: 0;
@@ -268,21 +269,14 @@
 
     <div id="camera-container" class="ratio-auto">
         <video id="webcam" autoplay playsinline muted></video>
-        <!-- ライブVHSエフェクト用キャンバス -->
         <canvas id="effect-canvas"></canvas>
-
-        <!-- VHSロゴ -->
         <div class="vhs-overlay" style="top: 15px; left: 15px; font-weight: bold; font-size: 1rem; line-height: 1.4;">
             VHS CAMERA<br><span style="font-size:0.8rem;">▶ PLAY</span>
         </div>
-
-        <!-- RECインジケーター -->
         <div class="rec-indicator">
             <div class="rec-dot"></div>
             <span class="rec-text">REC</span>
         </div>
-
-        <!-- 日付 -->
         <div class="vhs-overlay" id="vhs-date" style="bottom: 15px; right: 15px; text-align: right; font-size: 0.9rem; line-height: 1.4;"></div>
     </div>
 
@@ -294,7 +288,6 @@
         </div>
     </div>
 
-    <!-- ギャラリー -->
     <div id="gallery-view">
         <div class="gallery-header">
             <span style="font-size: 1.5rem; color: var(--accent-yellow);">ALBUM</span>
@@ -303,31 +296,25 @@
         <div class="gallery-grid" id="gallery-grid"></div>
     </div>
 
-    <!-- フルスクリーンビュー -->
     <div id="fullscreen-view">
         <button id="fullscreen-close" onclick="closeFullscreen()">✕ 閉じる</button>
         <img id="fullscreen-img" src="" alt="">
         <button id="fullscreen-delete" onclick="deleteCurrentPhoto()">🗑 削除</button>
     </div>
 
-    <!-- キャプチャ用非表示キャンバス -->
     <canvas id="capture-canvas" style="display:none;"></canvas>
-
-    <!-- フラッシュ演出 -->
     <div id="flash"></div>
 
     <script>
-        // ── DB ──────────────────────────────────────────────────
         const db = new Dexie("VHSCamDB");
         db.version(1).stores({ photos: '++id, blob, timestamp' });
 
-        // ── DOM ─────────────────────────────────────────────────
         const video        = document.getElementById('webcam');
         const container    = document.getElementById('camera-container');
         const effectCanvas = document.getElementById('effect-canvas');
         const effectCtx    = effectCanvas.getContext('2d');
         const captureCanvas = document.getElementById('capture-canvas');
-        const captureCtx   = captureCanvas.getContext('2d');
+        const captureCtx    = captureCanvas.getContext('2d');
         const ratioDisplay = document.getElementById('ratio-display');
         const vhsDate      = document.getElementById('vhs-date');
         const lastPhotoThumb = document.getElementById('last-photo');
@@ -336,10 +323,8 @@
         let ratioMode = 0;
         const modeLabels  = ['AUTO', '3:4', '1:1'];
         const modeClasses = ['ratio-auto', 'ratio-3-4', 'ratio-1-1'];
+        let currentPhotoId = null;
 
-        let currentPhotoId = null; // フルスクリーン表示中の写真ID
-
-        // ── カメラ起動 ─────────────────────────────────────────
         async function initCamera() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
@@ -358,18 +343,11 @@
             }
         }
 
-        // ── 比率切替 ───────────────────────────────────────────
         function toggleRatio() {
             ratioMode = (ratioMode + 1) % modeLabels.length;
             ratioDisplay.innerText = modeLabels[ratioMode];
             container.className = modeClasses[ratioMode];
         }
-
-        // ════════════════════════════════════════════════════════
-        //  ライブVHSエフェクトループ
-        // ════════════════════════════════════════════════════════
-        let frameCount = 0;
-        let glitchTimer = 0;
 
         function startEffectLoop() {
             function loop() {
@@ -382,50 +360,34 @@
         function renderVHSFrame() {
             const W = effectCanvas.width  = container.offsetWidth;
             const H = effectCanvas.height = container.offsetHeight;
-
             if (video.readyState < 2) return;
 
-            // ── 1. videoを低解像度で描画 ──────────────────────
             effectCtx.save();
             effectCtx.imageSmoothingEnabled = false;
-            // わざと1/2解像度で描いて拡大（ドット粗さ）
             effectCtx.drawImage(video, 0, 0, W * 0.5, H * 0.5);
             effectCtx.drawImage(effectCanvas, 0, 0, W * 0.5, H * 0.5, 0, 0, W, H);
             effectCtx.restore();
 
-            // ── 2. ルマ（輝度）調整 ───────────────────────────
             const imageData = effectCtx.getImageData(0, 0, W, H);
             const d = imageData.data;
-
-            // ── 3. クロマノイズ（RGB色ずれ） ──────────────────
             const chromaShift = 4;
             for (let y = 0; y < H; y++) {
                 for (let x = 0; x < W; x++) {
                     const i = (y * W + x) * 4;
-                    // R → 右にズレ
-                    const rX = Math.min(x + chromaShift, W - 1);
-                    const ri = (y * W + rX) * 4;
-                    // B → 左にズレ
-                    const bX = Math.max(x - chromaShift, 0);
-                    const bi = (y * W + bX) * 4;
-                    d[i]     = d[ri];     // R
-                    d[i + 2] = d[bi + 2]; // B
-                    // コントラスト強調（セピアなし、緑をわずかに上げてVHSっぽく）
-                    d[i]     = clamp((d[i]     - 128) * 1.25 + 128);
-                    d[i + 1] = clamp((d[i + 1] - 128) * 1.2  + 128 + 4);
+                    const ri = (y * W + Math.min(x + chromaShift, W - 1)) * 4;
+                    const bi = (y * W + Math.max(x - chromaShift, 0)) * 4;
+                    d[i] = d[ri]; d[i + 2] = d[bi + 2];
+                    d[i] = clamp((d[i] - 128) * 1.25 + 128);
+                    d[i + 1] = clamp((d[i + 1] - 128) * 1.2 + 128 + 4);
                     d[i + 2] = clamp((d[i + 2] - 128) * 1.15 + 128);
                 }
             }
 
-            // ── 4. フィルムグレイン ───────────────────────────
             for (let i = 0; i < d.length; i += 4) {
                 const grain = (Math.random() - 0.5) * 35;
-                d[i]     = clamp(d[i]     + grain);
-                d[i + 1] = clamp(d[i + 1] + grain);
-                d[i + 2] = clamp(d[i + 2] + grain);
+                d[i] = clamp(d[i] + grain); d[i + 1] = clamp(d[i + 1] + grain); d[i + 2] = clamp(d[i + 2] + grain);
             }
 
-            // ── 5. ランダム水平ノイズライン ───────────────────
             const numNoise = Math.floor(Math.random() * 3) + 1;
             for (let n = 0; n < numNoise; n++) {
                 const lineY = Math.floor(Math.random() * H);
@@ -433,31 +395,18 @@
                 for (let x = 0; x < W; x++) {
                     const src = (lineY * W + x) * 4;
                     const dst = (lineY * W + Math.max(0, Math.min(W - 1, x + offset))) * 4;
-                    d[dst]     = clamp(d[src]     + 30);
-                    d[dst + 1] = clamp(d[src + 1] + 30);
-                    d[dst + 2] = clamp(d[src + 2] + 30);
+                    d[dst] = clamp(d[src] + 30); d[dst + 1] = clamp(d[src + 1] + 30); d[dst + 2] = clamp(d[src + 2] + 30);
                 }
             }
-
             effectCtx.putImageData(imageData, 0, 0);
 
-            // ── 6. ビネット ───────────────────────────────────
-            const vignette = effectCtx.createRadialGradient(
-                W / 2, H / 2, H * 0.25,
-                W / 2, H / 2, H * 0.85
-            );
+            const vignette = effectCtx.createRadialGradient(W / 2, H / 2, H * 0.25, W / 2, H / 2, H * 0.85);
             vignette.addColorStop(0, 'rgba(0,0,0,0)');
             vignette.addColorStop(1, 'rgba(0,0,0,0.65)');
             effectCtx.fillStyle = vignette;
             effectCtx.fillRect(0, 0, W, H);
 
-            // ── 7. グリッチ（たまにトラッキングずれ） ─────────
-            frameCount++;
-            glitchTimer--;
-            if (glitchTimer <= 0 && Math.random() < 0.015) {
-                glitchTimer = 6;
-                drawGlitch(W, H);
-            }
+            if (Math.random() < 0.015) drawGlitch(W, H);
         }
 
         function drawGlitch(W, H) {
@@ -466,39 +415,28 @@
             const offset = Math.floor(Math.random() * 30 - 15);
             const strip = effectCtx.getImageData(0, y, W, h);
             effectCtx.putImageData(strip, offset, y);
-            // グリッチラインの明るさ
             effectCtx.fillStyle = 'rgba(255,255,255,0.04)';
             effectCtx.fillRect(0, y, W, h);
         }
 
         function clamp(v) { return Math.max(0, Math.min(255, v)); }
 
-        // ════════════════════════════════════════════════════════
-        //  撮影（キャプチャ）
-        // ════════════════════════════════════════════════════════
         async function capture() {
-            // フラッシュ演出
             flash.classList.add('active');
             setTimeout(() => flash.classList.remove('active'), 150);
 
-            // 比率モードに合わせたキャンバスサイズ
             const ratioSizes = [
-                { w: 240, h: 320 }, // AUTO (9:16縦)
-                { w: 240, h: 320 }, // 3:4
-                { w: 320, h: 320 }, // 1:1
+                { w: 240, h: 320 }, { w: 240, h: 320 }, { w: 320, h: 320 },
             ];
             const W = ratioSizes[ratioMode].w;
             const H = ratioSizes[ratioMode].h;
-            captureCanvas.width  = W;
-            captureCanvas.height = H;
+            captureCanvas.width = W; captureCanvas.height = H;
 
-            // ── videoを低解像度で描画 ──────────────────────────
             captureCtx.imageSmoothingEnabled = false;
             captureCtx.filter = "contrast(1.25) brightness(1.05) saturate(1.4)";
             captureCtx.drawImage(video, 0, 0, W, H);
             captureCtx.filter = "none";
 
-            // ── クロマノイズ ──────────────────────────────────
             const imgData = captureCtx.getImageData(0, 0, W, H);
             const d = imgData.data;
             const shift = 4;
@@ -507,50 +445,26 @@
                     const i = (y * W + x) * 4;
                     const ri = (y * W + Math.min(x + shift, W - 1)) * 4;
                     const bi = (y * W + Math.max(x - shift, 0)) * 4;
-                    d[i]     = d[ri];
-                    d[i + 2] = d[bi + 2];
+                    d[i] = d[ri]; d[i + 2] = d[bi + 2];
                 }
             }
-
-            // ── グレイン ──────────────────────────────────────
             for (let i = 0; i < d.length; i += 4) {
                 const grain = (Math.random() - 0.5) * 40;
-                d[i]     = clamp(d[i]     + grain);
-                d[i + 1] = clamp(d[i + 1] + grain);
-                d[i + 2] = clamp(d[i + 2] + grain);
-            }
-
-            // ── ランダムノイズライン ───────────────────────────
-            for (let n = 0; n < 4; n++) {
-                const lineY = Math.floor(Math.random() * H);
-                const offset = Math.floor(Math.random() * 12 - 6);
-                for (let x = 0; x < W; x++) {
-                    const src = (lineY * W + x) * 4;
-                    const dst = (lineY * W + Math.max(0, Math.min(W - 1, x + offset))) * 4;
-                    d[dst] = clamp(d[src] + 25); d[dst+1] = clamp(d[src+1] + 25); d[dst+2] = clamp(d[src+2] + 25);
-                }
+                d[i] = clamp(d[i] + grain); d[i+1] = clamp(d[i+1] + grain); d[i+2] = clamp(d[i+2] + grain);
             }
             captureCtx.putImageData(imgData, 0, 0);
 
-            // ── ビネット ──────────────────────────────────────
             const vig = captureCtx.createRadialGradient(W/2, H/2, H*0.2, W/2, H/2, H*0.9);
-            vig.addColorStop(0, 'rgba(0,0,0,0)');
-            vig.addColorStop(1, 'rgba(0,0,0,0.7)');
-            captureCtx.fillStyle = vig;
-            captureCtx.fillRect(0, 0, W, H);
+            vig.addColorStop(0, 'rgba(0,0,0,0)'); vig.addColorStop(1, 'rgba(0,0,0,0.7)');
+            captureCtx.fillStyle = vig; captureCtx.fillRect(0, 0, W, H);
 
-            // ── 走査線 ────────────────────────────────────────
             for (let y = 0; y < H; y += 3) {
-                captureCtx.fillStyle = 'rgba(0,0,0,0.18)';
-                captureCtx.fillRect(0, y, W, 1);
+                captureCtx.fillStyle = 'rgba(0,0,0,0.18)'; captureCtx.fillRect(0, y, W, 1);
             }
 
-            // ── VHSテキスト合成 ───────────────────────────────
             const now = new Date();
             captureCtx.font = "bold 14px 'Courier New'";
-            // クロマ風グロー
-            captureCtx.shadowColor = 'rgba(255,0,0,0.6)';
-            captureCtx.shadowBlur = 2;
+            captureCtx.shadowColor = 'rgba(255,0,0,0.6)'; captureCtx.shadowBlur = 2;
             captureCtx.fillStyle = "#ffcc00";
             captureCtx.fillText("VHS CAMERA", 10, 18);
             captureCtx.fillText("▶ PLAY", 10, 32);
@@ -560,17 +474,14 @@
             captureCtx.textAlign = 'right';
             captureCtx.fillText(timeStr, W - 8, H - 22);
             captureCtx.fillText(dateStr, W - 8, H - 8);
-            captureCtx.textAlign = 'left';
-            captureCtx.shadowBlur = 0;
+            captureCtx.textAlign = 'left'; captureCtx.shadowBlur = 0;
 
-            // ── 保存 ──────────────────────────────────────────
             captureCanvas.toBlob(async (blob) => {
                 await db.photos.add({ blob, timestamp: Date.now() });
                 loadLastPhoto();
             }, 'image/jpeg', 0.5);
         }
 
-        // ── 日付・時刻フォーマット ──────────────────────────────
         function getFormattedDate(now) {
             const months = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
             return `${months[now.getMonth()]} ${String(now.getDate()).padStart(2,'0')} ${now.getFullYear()}`;
@@ -582,7 +493,6 @@
             return `${ampm} ${String(h12).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
         }
 
-        // ── サムネイル読み込み ──────────────────────────────────
         async function loadLastPhoto() {
             const last = await db.photos.orderBy('id').last();
             if (last) {
@@ -591,7 +501,6 @@
             }
         }
 
-        // ── ギャラリー ─────────────────────────────────────────
         async function openGallery() {
             const grid = document.getElementById('gallery-grid');
             grid.innerHTML = '';
@@ -606,33 +515,25 @@
         }
         function closeGallery() { document.getElementById('gallery-view').style.display = 'none'; }
 
-        // ── フルスクリーン ─────────────────────────────────────
         function openFullscreen(src, id) {
             currentPhotoId = id;
             document.getElementById('fullscreen-img').src = src;
             document.getElementById('fullscreen-view').style.display = 'flex';
         }
-        function closeFullscreen() {
-            document.getElementById('fullscreen-view').style.display = 'none';
-        }
+        function closeFullscreen() { document.getElementById('fullscreen-view').style.display = 'none'; }
+
         async function deleteCurrentPhoto() {
-            if (currentPhotoId == null) return;
-            if (!confirm('この写真を削除しますか？')) return;
+            if (currentPhotoId == null || !confirm('この写真を削除しますか？')) return;
             await db.photos.delete(currentPhotoId);
-            closeFullscreen();
-            openGallery();
-            loadLastPhoto();
+            closeFullscreen(); openGallery(); loadLastPhoto();
         }
 
-        // ── 日付ループ ─────────────────────────────────────────
         function updateDate() {
             const now = new Date();
             vhsDate.innerHTML = `${getFormattedTime(now)}<br>${getFormattedDate(now)}`;
         }
         setInterval(updateDate, 1000);
         updateDate();
-
-        // ── 起動 ───────────────────────────────────────────────
         initCamera();
     </script>
 </body>
