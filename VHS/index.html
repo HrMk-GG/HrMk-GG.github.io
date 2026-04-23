@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VHS Camera</title>
+    <title>VHS Camera v1</title>
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -194,18 +194,18 @@
         .gallery-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
+            gap: 10px;
             padding: 10px;
             overflow-y: auto;
         }
         .gallery-grid img { 
             width: 100%; 
-            aspect-ratio: 1 / 1;
+            height: auto; /* ここを修正！高さを固定せず写真の比率を守る */
             display: block; 
             cursor: pointer; 
-            object-fit: contain; /* ここを修正！引き伸ばさずに枠に収める */
+            object-fit: contain; 
             background: #000;
-            border: 1px solid #222;
+            border: 1px solid #333;
         }
 
         .ratio-auto { aspect-ratio: 9 / 16; width: auto; height: 55vh; }
@@ -426,7 +426,7 @@
             setTimeout(() => flash.classList.remove('active'), 150);
 
             const ratioSizes = [
-                { w: 240, h: 320 }, { w: 240, h: 320 }, { w: 320, h: 320 },
+                { w: 240, h: 426 }, { w: 240, h: 320 }, { w: 320, h: 320 },
             ];
             const W = ratioSizes[ratioMode].w;
             const H = ratioSizes[ratioMode].h;
