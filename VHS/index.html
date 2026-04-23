@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VHS Camera v1</title>
+    <title>VHS Camera v2</title>
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -194,18 +194,18 @@
         .gallery-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            padding: 10px;
+            gap: 5px;
+            padding: 5px;
             overflow-y: auto;
         }
         .gallery-grid img { 
             width: 100%; 
-            height: auto; /* ここを修正！高さを固定せず写真の比率を守る */
+            aspect-ratio: 1 / 1; /* アルバムでは正方形タイルにする */
             display: block; 
             cursor: pointer; 
-            object-fit: contain; 
+            object-fit: cover; /* 正方形に収まるように中央を切り抜く */
             background: #000;
-            border: 1px solid #333;
+            border: 1px solid #222;
         }
 
         .ratio-auto { aspect-ratio: 9 / 16; width: auto; height: 55vh; }
@@ -236,7 +236,11 @@
             justify-content: center;
             z-index: 200;
         }
-        #fullscreen-view img { max-width: 100%; max-height: 90vh; object-fit: contain; }
+        #fullscreen-view img { 
+            max-width: 100%; 
+            max-height: 90vh; 
+            object-fit: contain; /* 拡大時は元の比率を維持する */
+        }
         #fullscreen-close {
             position: absolute;
             top: 20px; right: 20px;
