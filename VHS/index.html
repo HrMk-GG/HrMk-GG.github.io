@@ -313,6 +313,8 @@
         const db = new Dexie("VHSCamDB");
         db.version(1).stores({ photos: '++id, blob, timestamp' });
 
+        const shutterSound = new Audio('shutter.mp3');
+
         const video        = document.getElementById('webcam');
         const container    = document.getElementById('camera-container');
         const effectCanvas = document.getElementById('effect-canvas');
@@ -426,6 +428,10 @@
         function clamp(v) { return Math.max(0, Math.min(255, v)); }
 
         async function capture() {
+            
+            shutterSound.currentTime = 0; // 連続で押しても音が重なるようにリセット
+            shutterSound.play().catch(e => console.log("Audio play error:", e));
+
             flash.classList.add('active');
             setTimeout(() => flash.classList.remove('active'), 150);
 
