@@ -202,7 +202,7 @@
             padding: 5px;
             overflow-y: auto;
         }
-        .gallery-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; cursor: pointer; }
+        .gallery-grid img { width: 100%; height: auto; display: block; cursor: pointer; }
 
         /* 比率設定 */
         .ratio-auto { aspect-ratio: 9 / 16; width: auto; height: 55vh; }
@@ -481,8 +481,14 @@
             flash.classList.add('active');
             setTimeout(() => flash.classList.remove('active'), 150);
 
-            const W = 320;
-            const H = 240;
+            // 比率モードに合わせたキャンバスサイズ
+            const ratioSizes = [
+                { w: 240, h: 320 }, // AUTO (9:16縦)
+                { w: 240, h: 320 }, // 3:4
+                { w: 320, h: 320 }, // 1:1
+            ];
+            const W = ratioSizes[ratioMode].w;
+            const H = ratioSizes[ratioMode].h;
             captureCanvas.width  = W;
             captureCanvas.height = H;
 
