@@ -5,1125 +5,767 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>VHS CAM</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  
-  body {
-    background: #000;
-    color: #fff;
-    font-family: 'Courier New', monospace;
-    height: 100dvh;
-    overflow: hidden;
-    user-select: none;
-  }
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:#000;overflow:hidden;height:100dvh;width:100vw;font-family:'Courier New',monospace}
+#app{position:relative;width:100vw;height:100dvh;background:#000;overflow:hidden;display:flex;flex-direction:column}
+#src-video{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;top:0;left:0}
+#vf{position:relative;flex:1;overflow:hidden;background:#000;display:flex;align-items:center;justify-content:center}
+#main-canvas{display:block;width:100%;height:100%;object-fit:contain}
 
-  #app {
-    position: relative;
-    width: 100%;
-    height: 100dvh;
-    display: flex;
-    flex-direction: column;
-    background: #000;
-  }
+/* Heavy CRT scanlines */
+#scanlines{
+  position:absolute;inset:0;pointer-events:none;z-index:5;
+  background:repeating-linear-gradient(
+    0deg,
+    rgba(0,0,0,0) 0px, rgba(0,0,0,0) 1px,
+    rgba(0,0,0,0.42) 1px, rgba(0,0,0,0.42) 2px
+  );
+}
+/* Phosphor glow pulse */
+#scanlines::before{
+  content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(
+    0deg,
+    rgba(0,255,80,0.015) 0px, rgba(0,255,80,0.015) 1px,
+    transparent 1px, transparent 4px
+  );
+  animation:phosphor 0.15s linear infinite;
+}
+@keyframes phosphor{0%{opacity:1}50%{opacity:0.7}100%{opacity:1}}
 
-  /* ── VIEWFINDER ── */
-  #viewfinder {
-    position: relative;
-    flex: 1;
-    overflow: hidden;
-    background: #000;
-  }
+/* Screen warp / vignette */
+#vignette{
+  position:absolute;inset:0;pointer-events:none;z-index:6;
+  background:radial-gradient(ellipse 115% 115% at 50% 50%,
+    transparent 25%,
+    rgba(0,0,0,0.35) 60%,
+    rgba(0,0,0,0.88) 100%
+  );
+}
+/* CRT edge darkening */
+#vignette::after{
+  content:'';position:absolute;inset:0;
+  box-shadow:inset 0 0 120px 40px rgba(0,0,0,0.75);
+  border-radius:4%/3%;
+}
 
-  #cam-video, #cam-canvas {
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    width: 100%; height: 100%;
-    object-fit: cover;
-  }
+/* ── HUD ── */
+#hud{position:absolute;inset:0;pointer-events:none;z-index:20;padding:10px 12px}
+#hud-tl{position:absolute;top:10px;left:12px;display:flex;flex-direction:column;gap:4px}
+#hud-tr{position:absolute;top:10px;right:12px;text-align:right;display:flex;flex-direction:column;gap:3px;align-items:flex-end}
+#hud-bl{position:absolute;bottom:10px;left:12px;display:flex;flex-direction:column;gap:2px}
+#hud-br{position:absolute;bottom:10px;right:12px;text-align:right}
 
-  #cam-canvas { pointer-events: none; }
+.vt{font-family:'Courier New',monospace;font-weight:700;letter-spacing:0.06em}
+.sm{font-size:10px}.md{font-size:13px}.lg{font-size:15px}
+.cw{color:#dde8dd}.cy{color:#f5c842}.cr{color:#ff3030}.cc{color:#30ddf0}.cg{color:#30d060}
+.glow-y{text-shadow:0 0 8px #f5c842aa,1px 1px 0 #000}
+.glow-r{text-shadow:0 0 8px #ff3030aa,1px 1px 0 #000}
+.glow-w{text-shadow:0 0 5px #ffffff55,1px 1px 0 #000}
 
-  /* VHS overlay effects */
-  #vhs-overlay {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 10;
-  }
+#rec-row{display:flex;align-items:center;gap:5px;opacity:0;transition:opacity 0.1s}
+#rec-row.on{opacity:1;animation:rb 0.9s step-end infinite}
+@keyframes rb{0%,100%{opacity:1}50%{opacity:0.05}}
+#rec-dot{width:9px;height:9px;border-radius:50%;background:#ff3030;box-shadow:0 0 8px #ff0000,0 0 16px #ff000066}
 
-  /* Scanlines */
-  #vhs-overlay::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(0,0,0,0.08) 2px,
-      rgba(0,0,0,0.08) 4px
-    );
-    pointer-events: none;
-    animation: scanroll 8s linear infinite;
-  }
+#timecode{
+  font-family:'Courier New',monospace;font-size:14px;font-weight:700;
+  color:#f5c842;letter-spacing:0.12em;
+  text-shadow:0 0 12px #f5c84288,0 0 24px #f5c84244,1px 1px 0 #000;
+}
+#datestamp{font-size:11px;color:#f0922a;font-family:'Courier New',monospace;font-weight:700;letter-spacing:0.08em;text-shadow:0 0 6px #f0922a88,1px 1px 0 #000}
+#rec-elapsed{font-size:12px;color:#ff3030;font-weight:700;letter-spacing:0.1em;text-shadow:0 0 8px #ff000088;display:none}
 
-  @keyframes scanroll {
-    0% { background-position: 0 0; }
-    100% { background-position: 0 100px; }
-  }
+/* ── BOTTOM UI ── */
+#bottom-ui{
+  background:linear-gradient(to bottom,#0c0c0c,#070707);
+  border-top:1px solid #181818;
+  padding:10px 18px 30px;
+  flex-shrink:0;
+}
+#mode-tabs{display:flex;justify-content:center;gap:0;margin-bottom:12px}
+.mtab{
+  background:none;border:none;border-bottom:2px solid transparent;
+  font-family:'Courier New',monospace;font-size:11px;font-weight:700;
+  letter-spacing:0.15em;color:rgba(255,255,255,0.28);
+  padding:3px 18px;cursor:pointer;transition:all 0.18s;text-transform:uppercase;
+}
+.mtab.active{color:#f5c842;border-bottom-color:#f5c842}
 
-  /* VHS noise / static */
-  #noise-canvas {
-    position: absolute;
-    inset: 0;
-    width: 100%; height: 100%;
-    opacity: 0.04;
-    pointer-events: none;
-    z-index: 11;
-  }
+#ctrl-row{display:flex;align-items:center;justify-content:space-between}
 
-  /* Vignette */
-  #vhs-overlay::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.7) 100%);
-    pointer-events: none;
-  }
+#ratio-stack{display:flex;flex-direction:column;gap:5px;min-width:40px}
+.rbtn{
+  background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.14);
+  border-radius:3px;color:rgba(255,255,255,0.3);font-family:'Courier New',monospace;
+  font-size:9px;font-weight:700;letter-spacing:0.04em;
+  padding:3px 0;text-align:center;cursor:pointer;transition:all 0.12s;width:40px;
+}
+.rbtn.active{background:#f5c842;border-color:#f5c842;color:#000}
 
-  /* HUD elements */
-  #hud {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 20;
-    padding: 12px 14px;
-  }
+#shutter-wrap{display:flex;flex-direction:column;align-items:center;gap:5px}
+#shutter{
+  width:76px;height:76px;border-radius:50%;
+  border:3px solid rgba(255,255,255,0.88);background:transparent;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:transform 0.08s;
+  box-shadow:0 0 0 1px rgba(255,255,255,0.12),0 0 20px rgba(255,255,255,0.04);
+}
+#shutter:active{transform:scale(0.88)}
+#si{
+  width:62px;height:62px;border-radius:50%;background:#fff;
+  transition:background 0.14s,border-radius 0.14s,width 0.14s,height 0.14s;
+}
+#si.rmode{background:#ff3030;border-radius:10px;width:30px;height:30px;box-shadow:0 0 14px #ff000099}
+#sl{font-family:'Courier New',monospace;font-size:9px;color:rgba(255,255,255,0.28);letter-spacing:0.12em}
 
-  #hud-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-  }
+#gal-btn{
+  width:58px;height:58px;border-radius:6px;border:1px solid rgba(255,255,255,0.22);
+  overflow:hidden;cursor:pointer;background:rgba(255,255,255,0.04);
+  display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0;
+}
+#gal-thumb{width:100%;height:100%;object-fit:cover;display:none}
+#gal-icon{color:rgba(255,255,255,0.28);font-size:24px;line-height:1}
+#gal-count{
+  position:absolute;top:2px;right:3px;
+  background:#f5c842;color:#000;font-family:'Courier New',monospace;
+  font-size:8px;font-weight:700;border-radius:2px;padding:1px 3px;display:none;
+}
 
-  #hud-bottom {
-    position: absolute;
-    bottom: 12px;
-    left: 14px;
-    right: 14px;
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-  }
+/* ── GALLERY ── */
+#gal-panel{position:fixed;inset:0;background:#040404;z-index:100;display:none;flex-direction:column}
+#gal-panel.open{display:flex}
+#gal-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #161616}
+#gal-title{font-family:'Courier New',monospace;font-size:13px;font-weight:700;color:#f5c842;letter-spacing:0.18em}
+#gal-close{background:none;border:1px solid #252525;border-radius:4px;color:#aaa;font-family:'Courier New',monospace;font-size:11px;padding:4px 10px;cursor:pointer;letter-spacing:0.08em}
+#gal-grid{flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(3,1fr);gap:2px;padding:2px}
+.gi{aspect-ratio:1;overflow:hidden;cursor:pointer;background:#101010;position:relative}
+.gi img,.gi video{width:100%;height:100%;object-fit:cover;display:block}
+.gbadge{position:absolute;bottom:3px;left:3px;font-family:'Courier New',monospace;font-size:8px;font-weight:700;background:rgba(0,0,0,0.8);color:#f5c842;padding:1px 4px;border-radius:2px;letter-spacing:0.05em}
+#gal-empty{color:rgba(255,255,255,0.18);font-family:'Courier New',monospace;font-size:11px;text-align:center;padding:60px 20px;line-height:2.2;letter-spacing:0.1em}
 
-  .hud-label {
-    font-family: 'Courier New', monospace;
-    font-size: 11px;
-    font-weight: bold;
-    letter-spacing: 0.05em;
-    text-shadow: 1px 1px 0 #000;
-  }
+/* ── LIGHTBOX ── */
+#lb{position:fixed;inset:0;background:rgba(0,0,0,0.97);z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center}
+#lb.open{display:flex}
+#lb-img{max-width:100%;max-height:72dvh;object-fit:contain;display:none}
+#lb-vid{max-width:100%;max-height:72dvh;object-fit:contain;display:none}
+#lb-btns{display:flex;gap:12px;margin-top:18px}
+.lbb{background:rgba(255,255,255,0.07);border:1px solid #222;border-radius:4px;color:#ccc;font-family:'Courier New',monospace;font-size:10px;padding:7px 16px;cursor:pointer;letter-spacing:0.1em}
 
-  .hud-white { color: #fff; }
-  .hud-yellow { color: #f0c040; }
-  .hud-red { color: #f03030; }
-  .hud-cyan { color: #40d0e0; }
+#flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:300;transition:opacity 0.04s}
+#flash.on{opacity:1}
 
-  #rec-indicator {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    opacity: 0;
-    transition: opacity 0.3s;
-  }
+#no-cam{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:40px;background:#030303;z-index:10}
+#no-cam p{font-family:'Courier New',monospace;font-size:12px;color:rgba(255,255,255,0.4);line-height:1.9;letter-spacing:0.06em}
+.nc-t{font-size:16px!important;color:#f5c842!important;font-weight:700;letter-spacing:0.2em!important}
 
-  #rec-indicator.active { opacity: 1; animation: recblink 1s step-end infinite; }
-
-  @keyframes recblink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.2; }
-  }
-
-  #rec-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: #f03030;
-  }
-
-  #timecode {
-    font-family: 'Courier New', monospace;
-    font-size: 12px;
-    font-weight: bold;
-    color: #f0c040;
-    letter-spacing: 0.1em;
-    text-shadow: 1px 1px 0 #000, 0 0 6px rgba(240,192,64,0.5);
-  }
-
-  #date-stamp {
-    font-family: 'Courier New', monospace;
-    font-size: 11px;
-    color: #f0a040;
-    text-shadow: 1px 1px 0 #000;
-    text-align: right;
-  }
-
-  #tape-counter {
-    font-size: 11px;
-    color: #fff;
-    text-shadow: 1px 1px 0 #000;
-  }
-
-  /* Camera label */
-  #cam-label {
-    position: absolute;
-    top: 50%;
-    right: 10px;
-    transform: translateY(-50%);
-    writing-mode: vertical-rl;
-    font-family: 'Courier New', monospace;
-    font-size: 9px;
-    color: rgba(255,255,255,0.25);
-    letter-spacing: 0.15em;
-  }
-
-  /* Glitch / tracking error effect */
-  .glitch-line {
-    position: absolute;
-    left: 0; right: 0;
-    height: 2px;
-    background: rgba(255,255,255,0.6);
-    pointer-events: none;
-    z-index: 15;
-    animation: glitchmove 0.1s linear forwards;
-  }
-  @keyframes glitchmove {
-    from { transform: translateX(-5px); opacity: 1; }
-    to { transform: translateX(5px); opacity: 0; }
-  }
-
-  /* ── MODE SELECTOR (top) ── */
-  #mode-bar {
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    z-index: 30;
-    display: flex;
-    justify-content: center;
-    gap: 20px;
-    padding: 10px 0 6px;
-    pointer-events: all;
-  }
-
-  .mode-btn {
-    background: none;
-    border: none;
-    color: rgba(255,255,255,0.55);
-    font-family: 'Courier New', monospace;
-    font-size: 12px;
-    font-weight: bold;
-    letter-spacing: 0.12em;
-    cursor: pointer;
-    padding: 2px 6px;
-    text-transform: uppercase;
-    transition: color 0.2s;
-  }
-
-  .mode-btn.active {
-    color: #fff;
-    border-bottom: 2px solid #f0c040;
-  }
-
-  /* ── BOTTOM CONTROLS ── */
-  #controls {
-    background: linear-gradient(to bottom, #111 0%, #0a0a0a 100%);
-    border-top: 1px solid #222;
-    padding: 14px 24px 28px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-  }
-
-  /* Aspect ratio selector */
-  #ratio-selector {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    align-items: center;
-    min-width: 44px;
-  }
-
-  .ratio-btn {
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 4px;
-    color: rgba(255,255,255,0.5);
-    font-family: 'Courier New', monospace;
-    font-size: 9px;
-    font-weight: bold;
-    padding: 3px 5px;
-    cursor: pointer;
-    letter-spacing: 0.05em;
-    transition: all 0.2s;
-    width: 36px;
-    text-align: center;
-  }
-
-  .ratio-btn.active {
-    background: #f0c040;
-    border-color: #f0c040;
-    color: #000;
-  }
-
-  /* Shutter button */
-  #shutter-wrap {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-  }
-
-  #shutter {
-    width: 72px; height: 72px;
-    border-radius: 50%;
-    border: 3px solid #fff;
-    background: transparent;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.1s;
-    position: relative;
-  }
-
-  #shutter:active { transform: scale(0.92); }
-
-  #shutter-inner {
-    width: 58px; height: 58px;
-    border-radius: 50%;
-    background: #fff;
-    transition: background 0.2s, border-radius 0.2s;
-  }
-
-  #shutter-inner.recording {
-    background: #f03030;
-    border-radius: 10px;
-    width: 28px; height: 28px;
-  }
-
-  #shutter-label {
-    font-family: 'Courier New', monospace;
-    font-size: 10px;
-    color: rgba(255,255,255,0.4);
-    letter-spacing: 0.1em;
-  }
-
-  /* Gallery button */
-  #gallery-btn {
-    width: 56px; height: 56px;
-    border-radius: 8px;
-    border: 1px solid rgba(255,255,255,0.3);
-    overflow: hidden;
-    cursor: pointer;
-    background: rgba(255,255,255,0.05);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    flex-shrink: 0;
-  }
-
-  #gallery-preview {
-    width: 100%; height: 100%;
-    object-fit: cover;
-    display: none;
-  }
-
-  #gallery-icon {
-    color: rgba(255,255,255,0.4);
-    font-size: 22px;
-  }
-
-  #gallery-count {
-    position: absolute;
-    top: 2px; right: 2px;
-    background: #f0c040;
-    color: #000;
-    font-size: 8px;
-    font-weight: bold;
-    font-family: 'Courier New', monospace;
-    border-radius: 3px;
-    padding: 1px 3px;
-    display: none;
-  }
-
-  /* ── GALLERY PANEL ── */
-  #gallery-panel {
-    position: fixed;
-    inset: 0;
-    background: #000;
-    z-index: 100;
-    display: none;
-    flex-direction: column;
-  }
-
-  #gallery-panel.open { display: flex; }
-
-  #gallery-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px 20px;
-    border-bottom: 1px solid #222;
-  }
-
-  #gallery-title {
-    font-family: 'Courier New', monospace;
-    font-size: 14px;
-    font-weight: bold;
-    letter-spacing: 0.15em;
-    color: #f0c040;
-  }
-
-  #gallery-close {
-    background: none;
-    border: 1px solid #333;
-    border-radius: 6px;
-    color: #fff;
-    font-family: 'Courier New', monospace;
-    font-size: 12px;
-    padding: 4px 10px;
-    cursor: pointer;
-    letter-spacing: 0.1em;
-  }
-
-  #gallery-grid {
-    flex: 1;
-    overflow-y: auto;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 2px;
-    padding: 2px;
-  }
-
-  .gallery-item {
-    aspect-ratio: 1;
-    overflow: hidden;
-    cursor: pointer;
-    background: #111;
-    position: relative;
-  }
-
-  .gallery-item img, .gallery-item video {
-    width: 100%; height: 100%;
-    object-fit: cover;
-    display: block;
-  }
-
-  .gallery-item-type {
-    position: absolute;
-    bottom: 4px; left: 4px;
-    font-size: 9px;
-    font-family: 'Courier New', monospace;
-    background: rgba(0,0,0,0.7);
-    color: #f0c040;
-    padding: 1px 4px;
-    border-radius: 2px;
-    letter-spacing: 0.05em;
-  }
-
-  #gallery-empty {
-    color: rgba(255,255,255,0.3);
-    font-family: 'Courier New', monospace;
-    font-size: 12px;
-    text-align: center;
-    padding: 60px 20px;
-    letter-spacing: 0.1em;
-  }
-
-  /* ── LIGHTBOX ── */
-  #lightbox {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.95);
-    z-index: 200;
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-  }
-
-  #lightbox.open { display: flex; }
-
-  #lightbox-media {
-    max-width: 100%;
-    max-height: 80dvh;
-    object-fit: contain;
-  }
-
-  #lightbox-controls {
-    display: flex;
-    gap: 16px;
-    margin-top: 20px;
-  }
-
-  .lb-btn {
-    background: rgba(255,255,255,0.1);
-    border: 1px solid #333;
-    border-radius: 6px;
-    color: #fff;
-    font-family: 'Courier New', monospace;
-    font-size: 11px;
-    padding: 6px 14px;
-    cursor: pointer;
-    letter-spacing: 0.1em;
-  }
-
-  /* Flash overlay */
-  #flash {
-    position: fixed;
-    inset: 0;
-    background: #fff;
-    opacity: 0;
-    pointer-events: none;
-    z-index: 50;
-    transition: opacity 0.05s;
-  }
-
-  #flash.flash-on { opacity: 0.85; }
-
-  /* Error / permission message */
-  #cam-error {
-    position: absolute;
-    inset: 0;
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    text-align: center;
-    padding: 40px;
-    z-index: 5;
-    background: #0a0a0a;
-  }
-
-  #cam-error p {
-    font-family: 'Courier New', monospace;
-    font-size: 13px;
-    color: rgba(255,255,255,0.6);
-    line-height: 1.6;
-    letter-spacing: 0.05em;
-  }
-
-  #cam-error .err-title {
-    font-size: 15px;
-    color: #f0c040;
-    font-weight: bold;
-    letter-spacing: 0.15em;
-  }
-
-  /* Recording timer */
-  #rec-time {
-    font-family: 'Courier New', monospace;
-    font-size: 13px;
-    color: #f03030;
-    font-weight: bold;
-    letter-spacing: 0.1em;
-    text-shadow: 0 0 8px rgba(240,48,48,0.7);
-    display: none;
-  }
-
-  /* ── EFFECT intensity slider ── */
-  #effect-panel {
-    position: absolute;
-    left: 0; right: 0;
-    bottom: 0;
-    pointer-events: none;
-    z-index: 22;
-    padding: 0 14px 10px;
-    display: flex;
-    justify-content: flex-end;
-    gap: 6px;
-    align-items: flex-end;
-  }
-
+#brand{position:absolute;top:50%;right:6px;transform:translateY(-50%) rotate(90deg);font-family:'Courier New',monospace;font-size:8px;font-weight:700;color:rgba(255,255,255,0.1);letter-spacing:0.3em;pointer-events:none;z-index:15;white-space:nowrap}
 </style>
 </head>
 <body>
 <div id="app">
+  <video id="src-video" autoplay playsinline muted></video>
 
-  <!-- Main viewfinder area -->
-  <div id="viewfinder">
-    <video id="cam-video" autoplay playsinline muted></video>
-    <canvas id="cam-canvas"></canvas>
-    <canvas id="noise-canvas"></canvas>
+  <div id="vf">
+    <canvas id="main-canvas"></canvas>
+    <div id="scanlines"></div>
+    <div id="vignette"></div>
+    <div id="brand">VIDEOCAM · HI8 · NTSC · SP</div>
 
-    <!-- VHS overlay (scanlines + vignette via CSS) -->
-    <div id="vhs-overlay"></div>
+    <!-- MODE TABS inside vf top -->
+    <div style="position:absolute;top:0;left:0;right:0;z-index:25;display:flex;justify-content:center;padding:8px 0 2px">
+      <div id="mode-tabs">
+        <button class="mtab active" data-m="photo" onclick="setMode('photo')">PHOTO</button>
+        <button class="mtab" data-m="video" onclick="setMode('video')">VIDEO</button>
+      </div>
+    </div>
 
     <!-- HUD -->
     <div id="hud">
-      <div id="hud-top">
-        <div style="display:flex;flex-direction:column;gap:5px;">
-          <div id="rec-indicator">
-            <div id="rec-dot"></div>
-            <span class="hud-label hud-red">REC</span>
-          </div>
-          <span id="rec-time"></span>
-          <span id="tape-counter" class="hud-label hud-white">SP ◼ T-120</span>
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
-          <div id="timecode">00:00:00:00</div>
-          <div id="date-stamp"></div>
-        </div>
+      <div id="hud-tl">
+        <div id="rec-row"><div id="rec-dot"></div><span class="vt md cr glow-r">REC</span></div>
+        <div id="rec-elapsed" class="vt md cr glow-r"></div>
+        <span class="vt sm cw glow-w">SP ◼ T-120</span>
+        <span class="vt sm cw glow-w" id="mode-lbl">■ CAMERA</span>
       </div>
-      <div id="hud-bottom">
-        <span class="hud-label hud-cyan" id="bat-indicator">▮▮▮▮ BATT</span>
-        <span class="hud-label hud-white" id="ratio-display">4:3</span>
+      <div id="hud-tr">
+        <div id="timecode">00:00:00:00</div>
+        <div id="datestamp"></div>
+        <div id="batt" class="vt sm cw glow-w">▮▮▮▮ BATT</div>
+      </div>
+      <div id="hud-bl">
+        <span class="vt sm cc" style="text-shadow:0 0 6px #30ddf088,1px 1px 0 #000">AUTO ▸ AWB</span>
+        <span class="vt sm cw glow-w" id="ratio-lbl">3:4</span>
+      </div>
+      <div id="hud-br">
+        <span class="vt sm cg" style="text-shadow:0 0 6px #30d06088,1px 1px 0 #000">▸▸ HI8</span>
       </div>
     </div>
 
-    <div id="cam-label">VIDEOCAM · VX1000</div>
-    <div id="effect-panel"></div>
-
-    <!-- Mode selector -->
-    <div id="mode-bar">
-      <button class="mode-btn active" data-mode="photo" onclick="setMode('photo')">PHOTO</button>
-      <button class="mode-btn" data-mode="video" onclick="setMode('video')">VIDEO</button>
-    </div>
-
-    <!-- Camera error -->
-    <div id="cam-error">
-      <p class="err-title">[ NO SIGNAL ]</p>
-      <p>カメラへのアクセスが必要です。<br>ブラウザの設定でカメラを許可してください。</p>
-      <p style="color:rgba(255,255,255,0.3);font-size:11px;">CAMERA ACCESS REQUIRED</p>
+    <div id="no-cam">
+      <p class="nc-t">[ NO SIGNAL ]</p>
+      <p>カメラへのアクセスが必要です<br>CAMERA ACCESS REQUIRED<br><br>ブラウザの設定でカメラを許可してください</p>
     </div>
   </div>
 
-  <!-- Bottom controls -->
-  <div id="controls">
-    <!-- Aspect ratio -->
-    <div id="ratio-selector">
-      <button class="ratio-btn" data-ratio="9:16" onclick="setRatio('9:16')">9:16</button>
-      <button class="ratio-btn active" data-ratio="3:4" onclick="setRatio('3:4')">3:4</button>
-      <button class="ratio-btn" data-ratio="1:1" onclick="setRatio('1:1')">1:1</button>
-      <button class="ratio-btn" data-ratio="4:3" onclick="setRatio('4:3')">4:3</button>
-    </div>
-
-    <!-- Shutter -->
-    <div id="shutter-wrap">
-      <button id="shutter" onclick="handleShutter()">
-        <div id="shutter-inner"></div>
+  <!-- BOTTOM -->
+  <div id="bottom-ui">
+    <div id="ctrl-row">
+      <div id="ratio-stack">
+        <button class="rbtn" data-r="9:16" onclick="setRatio('9:16')">9:16</button>
+        <button class="rbtn active" data-r="3:4" onclick="setRatio('3:4')">3:4</button>
+        <button class="rbtn" data-r="1:1" onclick="setRatio('1:1')">1:1</button>
+        <button class="rbtn" data-r="4:3" onclick="setRatio('4:3')">4:3</button>
+      </div>
+      <div id="shutter-wrap">
+        <button id="shutter" onclick="onShutter()"><div id="si"></div></button>
+        <span id="sl">SHUTTER</span>
+      </div>
+      <button id="gal-btn" onclick="openGal()">
+        <img id="gal-thumb" alt="">
+        <span id="gal-icon">⊞</span>
+        <span id="gal-count"></span>
       </button>
-      <span id="shutter-label">SHUTTER</span>
     </div>
-
-    <!-- Gallery -->
-    <button id="gallery-btn" onclick="openGallery()">
-      <img id="gallery-preview" alt="preview">
-      <span id="gallery-icon">⊞</span>
-      <span id="gallery-count"></span>
-    </button>
   </div>
 </div>
 
-<!-- Gallery panel -->
-<div id="gallery-panel">
-  <div id="gallery-header">
-    <span id="gallery-title">▶ VHS VAULT</span>
-    <button id="gallery-close" onclick="closeGallery()">CLOSE</button>
+<!-- Gallery -->
+<div id="gal-panel">
+  <div id="gal-hdr">
+    <span id="gal-title">▶ VHS VAULT</span>
+    <button id="gal-close" onclick="closeGal()">CLOSE ✕</button>
   </div>
-  <div id="gallery-grid">
-    <div id="gallery-empty">[ NO MEDIA RECORDED ]<br><br>撮影した写真・動画がここに表示されます</div>
-  </div>
+  <div id="gal-grid"><div id="gal-empty">[ NO MEDIA ]<br>撮影した写真・動画が<br>ここに表示されます</div></div>
 </div>
 
 <!-- Lightbox -->
-<div id="lightbox">
-  <img id="lightbox-img" class="lightbox-media" style="max-width:100%;max-height:75dvh;object-fit:contain;display:none;">
-  <video id="lightbox-vid" class="lightbox-media" style="max-width:100%;max-height:75dvh;object-fit:contain;display:none;" controls></video>
-  <div id="lightbox-controls">
-    <button class="lb-btn" onclick="downloadMedia()">↓ SAVE</button>
-    <button class="lb-btn" onclick="deleteMedia()">✕ DEL</button>
-    <button class="lb-btn" onclick="closeLightbox()">← BACK</button>
+<div id="lb">
+  <img id="lb-img" alt="">
+  <video id="lb-vid" controls playsinline></video>
+  <div id="lb-btns">
+    <button class="lbb" onclick="dlM()">↓ SAVE</button>
+    <button class="lbb" onclick="delM()">✕ DEL</button>
+    <button class="lbb" onclick="closeLB()">← BACK</button>
   </div>
 </div>
-
-<!-- Flash -->
 <div id="flash"></div>
 
 <script>
-// ── State ──
-let stream = null;
-let mediaRecorder = null;
-let recordedChunks = [];
-let mode = 'photo';
-let currentRatio = '3:4';
-let isRecording = false;
-let recordings = []; // {type, url, blob, date}
-let recStartTime = null;
-let recInterval = null;
-let timecodeInterval = null;
-let timecodeStart = Date.now();
-let currentLightboxIndex = -1;
-let noiseCtx = null;
-let vhsCtx = null;
-let animFrame = null;
-let glitchTimeout = null;
+// ════════════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════════════
+let stream=null, mode='photo', ratio='3:4';
+let isRec=false, mr=null, rChunks=[];
+let saved=[], lbIdx=-1;
+let tcStart=Date.now(), tcIv=null;
+let recStart=null, recIv=null;
+let prevData=null;
+let tracking=false, trackTimer=null;
+let glitchSeed=Math.random();
 
-// ── Elements ──
-const video = document.getElementById('cam-video');
-const canvas = document.getElementById('cam-canvas');
-const noiseCanvas = document.getElementById('noise-canvas');
-const recIndicator = document.getElementById('rec-indicator');
-const recTime = document.getElementById('rec-time');
-const timecodeEl = document.getElementById('timecode');
-const dateStamp = document.getElementById('date-stamp');
-const ratioDisplay = document.getElementById('ratio-display');
-const galleryGrid = document.getElementById('gallery-grid');
-const galleryPreview = document.getElementById('gallery-preview');
-const galleryIcon = document.getElementById('gallery-icon');
-const galleryCount = document.getElementById('gallery-count');
-const shutterInner = document.getElementById('shutter-inner');
-const shutterLabel = document.getElementById('shutter-label');
+const sv   = document.getElementById('src-video');
+const MC   = document.getElementById('main-canvas');
+const cx   = MC.getContext('2d',{willReadFrequently:true});
+const recRow= document.getElementById('rec-row');
+const recEl = document.getElementById('rec-elapsed');
+const tcEl  = document.getElementById('timecode');
+const dsEl  = document.getElementById('datestamp');
+const battEl= document.getElementById('batt');
+const mlbl  = document.getElementById('mode-lbl');
+const rlbl  = document.getElementById('ratio-lbl');
+const si    = document.getElementById('si');
+const sl    = document.getElementById('sl');
+const gThumb= document.getElementById('gal-thumb');
+const gIcon = document.getElementById('gal-icon');
+const gCnt  = document.getElementById('gal-count');
 const flash = document.getElementById('flash');
-const camError = document.getElementById('cam-error');
-const viewfinder = document.getElementById('viewfinder');
+const noCam = document.getElementById('no-cam');
+const vf    = document.getElementById('vf');
 
-// ── Init camera ──
-async function initCamera() {
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
-      audio: true
-    });
-    video.srcObject = stream;
-    await video.play();
-    camError.style.display = 'none';
-    startVHSRender();
-    startNoise();
-    startTimecode();
-    startGlitch();
-  } catch (e) {
-    // Try without audio
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      video.srcObject = stream;
-      await video.play();
-      camError.style.display = 'none';
-      startVHSRender();
-      startNoise();
-      startTimecode();
-      startGlitch();
-    } catch (e2) {
-      camError.style.display = 'flex';
+// ════════════════════════════════════════════════════════════════
+// CAMERA
+// ════════════════════════════════════════════════════════════════
+async function initCam(){
+  const opts=[
+    {video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}},audio:true},
+    {video:{facingMode:'environment'},audio:true},
+    {video:{facingMode:'environment'}},
+    {video:true}
+  ];
+  for(const o of opts){
+    try{ stream=await navigator.mediaDevices.getUserMedia(o); break; }catch{}
+  }
+  if(!stream){ noCam.style.display='flex'; return; }
+  sv.srcObject=stream;
+  await sv.play();
+  noCam.style.display='none';
+  startRender();
+  startHUD();
+  schedTrack();
+}
+
+// ════════════════════════════════════════════════════════════════
+// RENDER LOOP
+// ════════════════════════════════════════════════════════════════
+function startRender(){ requestAnimationFrame(renderFrame); }
+
+function renderFrame(){
+  requestAnimationFrame(renderFrame);
+  if(!sv.videoWidth||sv.readyState<2) return;
+
+  const W=MC.width=MC.offsetWidth, H=MC.height=MC.offsetHeight;
+  if(!W||!H) return;
+
+  // 1. Crop source to ratio
+  drawCropped(W,H);
+
+  // 2. Pixel-level VHS processing
+  let img=cx.getImageData(0,0,W,H);
+  processPixels(img.data,W,H);
+  cx.putImageData(img,0,0);
+
+  // 3. Chroma bleed (RGB channel offsets via compositing)
+  chromaBleed(W,H);
+
+  // 4. Ghosting / motion smear
+  if(prevData) ghosting(W,H);
+  prevData=cx.getImageData(0,0,W,H);
+
+  // 5. Tape wobble (per-row horizontal shift)
+  tapeWobble(W,H);
+
+  // 6. Interlace field flicker
+  interlace(W,H);
+
+  // 7. Tracking glitch
+  if(tracking) trackingGlitch(W,H);
+
+  // 8. Burn HUD into canvas (date stamp)
+  burnHUD(W,H);
+}
+
+function drawCropped(W,H){
+  const vw=sv.videoWidth,vh=sv.videoHeight,vAR=vw/vh,tAR=W/H;
+  let sw,sh,sx,sy;
+  if(vAR>tAR){sh=vh;sw=vh*tAR;sx=(vw-sw)/2;sy=0;}
+  else{sw=vw;sh=vw/tAR;sx=0;sy=(vh-sh)/2;}
+  cx.drawImage(sv,sx,sy,sw,sh,0,0,W,H);
+}
+
+// ════════════════════════════════════════════════════════════════
+// PIXEL PROCESSING — the heart of the VHS look
+// ════════════════════════════════════════════════════════════════
+function processPixels(d,W,H){
+  const t=Date.now()*0.001;
+
+  for(let i=0;i<d.length;i+=4){
+    let r=d[i],g=d[i+1],b=d[i+2];
+
+    // ── Contrast boost ──
+    r=(r-128)*1.18+128; g=(g-128)*1.18+128; b=(b-128)*1.18+128;
+
+    // ── Desaturate (VHS loses chroma resolution) ──
+    const lum=r*0.299+g*0.587+b*0.114;
+    r=lum+(r-lum)*0.62; g=lum+(g-lum)*0.62; b=lum+(b-lum)*0.62;
+
+    // ── VHS color grade: warm shadows, green midtones, crushed blues ──
+    r=r*1.10+12;       // red boost / warm
+    g=g*1.05+3;        // slight green
+    b=b*0.78-12;       // blue crush
+
+    // ── Luma noise (heavy) ──
+    const ln=(Math.random()-0.5)*38;
+    r+=ln; g+=ln; b+=ln;
+
+    // ── Chroma noise (color fringing) ──
+    r+=(Math.random()-0.5)*22;
+    b+=(Math.random()-0.5)*22;
+
+    // ── Horizontal luma banding (tape dropout) ──
+    const y=((i/4)/W)|0;
+    const band=Math.sin(y*0.4+t*3.1)*Math.sin(y*0.07+t*0.9)*8;
+    r+=band; g+=band; b+=band;
+
+    d[i]=cl(r); d[i+1]=cl(g); d[i+2]=cl(b);
+  }
+
+  // ── Horizontal chroma smear (per-row right-to-left bleed) ──
+  for(let y=0;y<H;y++){
+    let pr=0,pg=0,pb=0;
+    for(let x=0;x<W;x++){
+      const i=(y*W+x)*4;
+      pr=pr*0.88+d[i]*0.12;
+      pg=pg*0.88+d[i+1]*0.12;
+      pb=pb*0.88+d[i+2]*0.12;
+      // Only bleed chroma (cb/cr approximation)
+      d[i]  =cl(d[i]  *0.82+pr*0.18);
+      d[i+2]=cl(d[i+2]*0.82+pb*0.18);
     }
   }
 }
 
-// ── VHS render on canvas ──
-function startVHSRender() {
-  vhsCtx = canvas.getContext('2d');
-  renderVHS();
-}
+// ════════════════════════════════════════════════════════════════
+// CHROMA BLEED via canvas compositing
+// ════════════════════════════════════════════════════════════════
+function chromaBleed(W,H){
+  // Grab current
+  const snap=cx.getImageData(0,0,W,H);
 
-function renderVHS() {
-  if (!vhsCtx || !video.videoWidth) { animFrame = requestAnimationFrame(renderVHS); return; }
-
-  const W = canvas.width = viewfinder.clientWidth;
-  const H = canvas.height = viewfinder.clientHeight;
-
-  // Compute crop for aspect ratio
-  const { sw, sh, sx, sy } = getCropParams(video.videoWidth, video.videoHeight, W, H);
-
-  vhsCtx.clearRect(0, 0, W, H);
-  vhsCtx.drawImage(video, sx, sy, sw, sh, 0, 0, W, H);
-
-  // Color shift (VHS chroma)
-  applyVHSEffect(vhsCtx, W, H);
-
-  animFrame = requestAnimationFrame(renderVHS);
-}
-
-function getCropParams(vw, vh, tw, th) {
-  const vAR = vw / vh;
-  const tAR = tw / th;
-  let sw, sh, sx, sy;
-  if (vAR > tAR) {
-    sh = vh; sw = vh * tAR;
-    sx = (vw - sw) / 2; sy = 0;
-  } else {
-    sw = vw; sh = vw / tAR;
-    sx = 0; sy = (vh - sh) / 2;
+  // Offscreen for shifted red channel
+  const tmp=new OffscreenCanvas(W,H);
+  const tc=tmp.getContext('2d');
+  const ri=new ImageData(W,H);
+  for(let i=0;i<snap.data.length;i+=4){
+    ri.data[i]  =snap.data[i];   // R
+    ri.data[i+3]=snap.data[i+3]; // A
   }
-  return { sw, sh, sx, sy };
+  tc.putImageData(ri,0,0);
+
+  // Red right shift
+  cx.save();
+  cx.globalCompositeOperation='screen';
+  cx.globalAlpha=0.22;
+  cx.drawImage(tmp,5,0);
+
+  // Blue left shift  
+  const bi=new ImageData(W,H);
+  for(let i=0;i<snap.data.length;i+=4){
+    bi.data[i+2]=snap.data[i+2]; bi.data[i+3]=snap.data[i+3];
+  }
+  tc.putImageData(bi,0,0);
+  cx.drawImage(tmp,-3,0);
+  cx.restore();
 }
 
-function applyVHSEffect(ctx, W, H) {
-  const imgData = ctx.getImageData(0, 0, W, H);
-  const d = imgData.data;
+// ════════════════════════════════════════════════════════════════
+// GHOSTING — previous frame echo
+// ════════════════════════════════════════════════════════════════
+function ghosting(W,H){
+  const tmp=new OffscreenCanvas(W,H);
+  tmp.getContext('2d').putImageData(prevData,0,0);
+  cx.save();
+  cx.globalAlpha=0.22;
+  cx.globalCompositeOperation='screen';
+  cx.drawImage(tmp,3,0); // shifted right = motion trail
+  cx.restore();
+}
 
-  // Color bleed + desaturate slightly
-  for (let i = 0; i < d.length; i += 4) {
-    // Slight green boost + reduce saturation for VHS look
-    const r = d[i], g = d[i+1], b = d[i+2];
-    const gray = r * 0.299 + g * 0.587 + b * 0.114;
-    d[i]   = r * 0.85 + gray * 0.15 + 5;
-    d[i+1] = g * 0.88 + gray * 0.12;
-    d[i+2] = b * 0.75 + gray * 0.25 - 8;
-    // Clamp
-    if (d[i] > 255) d[i] = 255;
-    if (d[i+2] < 0) d[i+2] = 0;
+// ════════════════════════════════════════════════════════════════
+// TAPE WOBBLE — sinusoidal row shift
+// ════════════════════════════════════════════════════════════════
+function tapeWobble(W,H){
+  const t=Date.now()*0.001;
+  const img=cx.getImageData(0,0,W,H);
+  const out=new ImageData(W,H);
+  const s=img.data, d=out.data;
+  for(let y=0;y<H;y++){
+    // Multi-frequency wobble for organic feel
+    const w=Math.round(
+      Math.sin(y*0.06+t*2.1)*2.2
+     +Math.sin(y*0.18+t*0.8)*0.8
+     +Math.sin(y*0.9 +t*5.0)*0.3
+    );
+    for(let x=0;x<W;x++){
+      const sx=x-w; if(sx<0||sx>=W) continue;
+      const di=(y*W+x)*4, si=(y*W+sx)*4;
+      d[di]=s[si]; d[di+1]=s[si+1]; d[di+2]=s[si+2]; d[di+3]=s[si+3];
+    }
   }
+  cx.putImageData(out,0,0);
+}
 
-  // Horizontal color bleed (red channel shift)
-  const shift = 3;
-  for (let y = 0; y < H; y++) {
-    for (let x = shift; x < W; x++) {
-      const idx = (y * W + x) * 4;
-      const sIdx = (y * W + (x - shift)) * 4;
-      d[idx] = d[sIdx]; // red channel shifted
+// ════════════════════════════════════════════════════════════════
+// INTERLACE FIELD FLICKER
+// ════════════════════════════════════════════════════════════════
+function interlace(W,H){
+  const img=cx.getImageData(0,0,W,H);
+  const d=img.data;
+  const field=Math.floor(Date.now()/16.67)%2; // 60i
+  for(let y=field;y<H;y+=2){
+    for(let x=0;x<W;x++){
+      const i=(y*W+x)*4;
+      d[i]  =d[i]  *0.78|0;
+      d[i+1]=d[i+1]*0.78|0;
+      d[i+2]=d[i+2]*0.78|0;
+    }
+  }
+  cx.putImageData(img,0,0);
+}
+
+// ════════════════════════════════════════════════════════════════
+// TRACKING ERROR — the most VHS thing possible
+// ════════════════════════════════════════════════════════════════
+function trackingGlitch(W,H){
+  const img=cx.getImageData(0,0,W,H);
+  const out=new ImageData(new Uint8ClampedArray(img.data),W,H);
+  const s=img.data, d=out.data;
+
+  // Several horizontal bands shift sideways
+  const bands=3+Math.random()*5|0;
+  for(let b=0;b<bands;b++){
+    const y0=Math.random()*H|0;
+    const bh=4+Math.random()*30|0;
+    const shift=(Math.random()-0.5)*W*0.25|0;
+    for(let y=y0;y<Math.min(y0+bh,H);y++){
+      for(let x=0;x<W;x++){
+        const sx=((x-shift)%W+W)%W;
+        const di=(y*W+x)*4, si=(y*W+sx)*4;
+        d[di]=s[si]; d[di+1]=s[si+1]; d[di+2]=s[si+2];
+        if(Math.random()<0.12){ // white/black noise in band
+          const v=Math.random()<0.6?0:255;
+          d[di]=d[di+1]=d[di+2]=v;
+        }
+      }
     }
   }
 
-  ctx.putImageData(imgData, 0, 0);
-}
-
-// ── Noise canvas ──
-function startNoise() {
-  noiseCanvas.width = 160;
-  noiseCanvas.height = 120;
-  noiseCtx = noiseCanvas.getContext('2d');
-  drawNoise();
-}
-
-function drawNoise() {
-  if (!noiseCtx) return;
-  const id = noiseCtx.createImageData(160, 120);
-  const d = id.data;
-  for (let i = 0; i < d.length; i += 4) {
-    const v = Math.random() * 255 | 0;
-    d[i] = d[i+1] = d[i+2] = v;
-    d[i+3] = 255;
+  // Black/white bar at edge (classic tracking roll)
+  const barAt=Math.random()<0.5?0:H-(8+Math.random()*25|0);
+  const barH=6+Math.random()*20|0;
+  for(let y=barAt;y<Math.min(barAt+barH,H);y++){
+    for(let x=0;x<W;x++){
+      const i=(y*W+x)*4;
+      d[i]=d[i+1]=d[i+2]=Math.random()<0.5?0:Math.random()*200|0;
+    }
   }
-  noiseCtx.putImageData(id, 0, 0);
-  setTimeout(drawNoise, 50);
-}
 
-// ── Timecode ──
-function startTimecode() {
-  // Date stamp
-  const now = new Date();
-  const mo = String(now.getMonth()+1).padStart(2,'0');
-  const d = String(now.getDate()).padStart(2,'0');
-  const y = now.getFullYear();
-  dateStamp.textContent = `${mo}/${d}/${y}`;
-
-  timecodeInterval = setInterval(() => {
-    const elapsed = Date.now() - timecodeStart;
-    const h = Math.floor(elapsed / 3600000) % 24;
-    const m = Math.floor(elapsed / 60000) % 60;
-    const s = Math.floor(elapsed / 1000) % 60;
-    const f = Math.floor((elapsed % 1000) / 33.33) % 30;
-    timecodeEl.textContent =
-      String(h).padStart(2,'0') + ':' +
-      String(m).padStart(2,'0') + ':' +
-      String(s).padStart(2,'0') + ':' +
-      String(f).padStart(2,'0');
-  }, 33);
-}
-
-// ── Glitch effect ──
-function startGlitch() {
-  function spawnGlitch() {
-    const delay = 2000 + Math.random() * 6000;
-    glitchTimeout = setTimeout(() => {
-      const line = document.createElement('div');
-      line.className = 'glitch-line';
-      line.style.top = (Math.random() * 80 + 10) + '%';
-      line.style.opacity = '0.4';
-      line.style.height = (Math.random() * 4 + 1) + 'px';
-      viewfinder.appendChild(line);
-      setTimeout(() => line.remove(), 150);
-      spawnGlitch();
-    }, delay);
+  // Luminance flash stripe
+  const fy=Math.random()*H|0, fh=2+Math.random()*4|0;
+  for(let y=fy;y<Math.min(fy+fh,H);y++){
+    for(let x=0;x<W;x++){
+      const i=(y*W+x)*4;
+      d[i]=d[i+1]=d[i+2]=cl(d[i]+180);
+    }
   }
-  spawnGlitch();
+
+  cx.putImageData(out,0,0);
 }
 
-// ── Aspect ratio ──
-function setRatio(r) {
-  currentRatio = r;
-  document.querySelectorAll('.ratio-btn').forEach(b => b.classList.toggle('active', b.dataset.ratio === r));
-  ratioDisplay.textContent = r;
+// ════════════════════════════════════════════════════════════════
+// BURN HUD INTO CANVAS (date stamp always on image)
+// ════════════════════════════════════════════════════════════════
+function burnHUD(W,H){
+  const n=new Date();
+  const ds=`${p2(n.getMonth()+1)}/${p2(n.getDate())} ${n.getFullYear()}  ${p2(n.getHours())}:${p2(n.getMinutes())}`;
+  cx.save();
+  cx.font='bold 13px "Courier New"';
+  cx.textBaseline='bottom';
+  cx.fillStyle='rgba(0,0,0,0.7)';
+  cx.fillRect(W-188,H-26,186,22);
+  cx.fillStyle='#f0922a';
+  cx.shadowColor='#f0922a';
+  cx.shadowBlur=10;
+  cx.fillText(ds,W-183,H-6);
+  cx.restore();
 
-  // Adjust viewfinder aspect
-  const parts = r.split(':').map(Number);
-  const ar = parts[0] / parts[1];
-  const appEl = document.getElementById('app');
-
-  // Let CSS handle it — just update viewfinder max constraints
-  viewfinder.style.aspectRatio = r.replace(':', '/');
-
-  // Resize canvas on next frame
-  setTimeout(() => {
-    if (canvas) { canvas.width = viewfinder.clientWidth; canvas.height = viewfinder.clientHeight; }
-  }, 100);
-}
-
-// ── Mode ──
-function setMode(m) {
-  mode = m;
-  document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
-  if (m === 'photo') {
-    shutterLabel.textContent = 'SHUTTER';
-    shutterInner.classList.remove('recording');
-  } else {
-    shutterLabel.textContent = isRecording ? 'STOP' : 'REC';
+  // Occasional channel flicker
+  if(Math.random()<0.025){
+    cx.save();
+    cx.font='bold 10px "Courier New"';
+    cx.fillStyle='rgba(255,255,255,0.6)';
+    cx.shadowColor='#fff'; cx.shadowBlur=5;
+    cx.fillText('CH 03',10,H-10);
+    cx.restore();
   }
 }
 
-// ── Shutter ──
-function handleShutter() {
-  if (mode === 'photo') takePhoto();
-  else toggleRecording();
+// ════════════════════════════════════════════════════════════════
+// TRACKING SCHEDULE
+// ════════════════════════════════════════════════════════════════
+function schedTrack(){
+  clearTimeout(trackTimer);
+  const delay=3000+Math.random()*10000;
+  trackTimer=setTimeout(()=>{
+    tracking=true;
+    setTimeout(()=>{ tracking=false; schedTrack(); }, 60+Math.random()*400);
+  },delay);
 }
 
-// ── Take photo ──
-function takePhoto() {
-  // Flash
-  flash.classList.add('flash-on');
-  setTimeout(() => flash.classList.remove('flash-on'), 80);
+// ════════════════════════════════════════════════════════════════
+// HUD TIMECODE
+// ════════════════════════════════════════════════════════════════
+function startHUD(){
+  const n=new Date();
+  dsEl.textContent=`${p2(n.getMonth()+1)}/${p2(n.getDate())}/${n.getFullYear()}`;
 
-  // Capture from canvas
-  const out = document.createElement('canvas');
-  const parts = currentRatio.split(':').map(Number);
-  const ar = parts[0] / parts[1];
-  const W = canvas.width;
-  const H = canvas.height;
-  out.width = W;
-  out.height = H;
-  const ctx2 = out.getContext('2d');
-  ctx2.drawImage(canvas, 0, 0);
-  addHUDToCapture(ctx2, W, H);
+  tcIv=setInterval(()=>{
+    const e=Date.now()-tcStart;
+    tcEl.textContent=p2(Math.floor(e/3600000)%24)+':'+p2(Math.floor(e/60000)%60)+':'+p2(Math.floor(e/1000)%60)+':'+p2(Math.floor((e%1000)/33.33)%30);
+  },33);
 
-  out.toBlob(blob => {
-    const url = URL.createObjectURL(blob);
-    const now = new Date();
-    recordings.push({ type: 'photo', url, blob, date: now });
+  // Battery flicker
+  setInterval(()=>{
+    if(Math.random()<0.05){
+      battEl.textContent='▮▮▮░ BATT'; battEl.style.color='#ff4444';
+      setTimeout(()=>{ battEl.textContent='▮▮▮▮ BATT'; battEl.style.color=''; },200+Math.random()*600);
+    }
+  },2500);
+}
+
+// ════════════════════════════════════════════════════════════════
+// MODE / RATIO
+// ════════════════════════════════════════════════════════════════
+function setMode(m){
+  mode=m;
+  document.querySelectorAll('.mtab').forEach(b=>b.classList.toggle('active',b.dataset.m===m));
+  if(m==='photo'){ sl.textContent='SHUTTER'; mlbl.textContent='■ CAMERA'; si.classList.remove('rmode'); }
+  else { sl.textContent=isRec?'■ STOP':'● REC'; mlbl.textContent='▶ VIDEO'; }
+}
+
+function setRatio(r){
+  ratio=r;
+  document.querySelectorAll('.rbtn').forEach(b=>b.classList.toggle('active',b.dataset.r===r));
+  rlbl.textContent=r;
+}
+
+// ════════════════════════════════════════════════════════════════
+// SHUTTER
+// ════════════════════════════════════════════════════════════════
+function onShutter(){ mode==='photo'?capturePhoto():toggleRec(); }
+
+function capturePhoto(){
+  flash.classList.add('on'); setTimeout(()=>flash.classList.remove('on'),70);
+  const W=MC.width, H=MC.height;
+  const out=new OffscreenCanvas(W,H);
+  const oc=out.getContext('2d');
+  oc.drawImage(MC,0,0);
+  burnPhotoFX(oc,W,H);
+  out.convertToBlob({type:'image/jpeg',quality:0.91}).then(blob=>{
+    const url=URL.createObjectURL(blob);
+    saved.push({type:'photo',url,blob,date:new Date()});
     updateGallery();
-  }, 'image/jpeg', 0.92);
-}
-
-function addHUDToCapture(ctx, W, H) {
-  ctx.font = 'bold 14px Courier New';
-
-  // Date stamp bottom-right
-  const now = new Date();
-  const mo = String(now.getMonth()+1).padStart(2,'0');
-  const d = String(now.getDate()).padStart(2,'0');
-  const y = now.getFullYear();
-  const hrs = String(now.getHours()).padStart(2,'0');
-  const min = String(now.getMinutes()).padStart(2,'0');
-  const dateStr = `${mo}/${d}/${y}  ${hrs}:${min}`;
-
-  ctx.fillStyle = 'rgba(0,0,0,0.4)';
-  ctx.fillRect(W - 180, H - 36, 175, 26);
-  ctx.fillStyle = '#f0a040';
-  ctx.fillText(dateStr, W - 174, H - 16);
-
-  // Scanlines overlay (subtle)
-  ctx.fillStyle = 'rgba(0,0,0,0.06)';
-  for (let y2 = 0; y2 < H; y2 += 4) ctx.fillRect(0, y2, W, 2);
-
-  // Vignette
-  const vig = ctx.createRadialGradient(W/2, H/2, H*0.3, W/2, H/2, H*0.8);
-  vig.addColorStop(0, 'rgba(0,0,0,0)');
-  vig.addColorStop(1, 'rgba(0,0,0,0.6)');
-  ctx.fillStyle = vig;
-  ctx.fillRect(0, 0, W, H);
-}
-
-// ── Video recording ──
-function toggleRecording() {
-  if (!isRecording) startRecording();
-  else stopRecording();
-}
-
-function startRecording() {
-  if (!stream) return;
-  recordedChunks = [];
-
-  const opts = { mimeType: '' };
-  const types = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4'];
-  for (const t of types) {
-    if (MediaRecorder.isTypeSupported(t)) { opts.mimeType = t; break; }
-  }
-
-  try {
-    mediaRecorder = new MediaRecorder(stream, opts.mimeType ? opts : {});
-  } catch(e) {
-    mediaRecorder = new MediaRecorder(stream);
-  }
-
-  mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
-  mediaRecorder.onstop = finalizeVideo;
-  mediaRecorder.start(100);
-
-  isRecording = true;
-  recStartTime = Date.now();
-  recIndicator.classList.add('active');
-  recTime.style.display = 'block';
-  shutterInner.classList.add('recording');
-  shutterLabel.textContent = 'STOP';
-
-  recInterval = setInterval(() => {
-    const elapsed = Date.now() - recStartTime;
-    const m = Math.floor(elapsed / 60000);
-    const s = Math.floor((elapsed % 60000) / 1000);
-    recTime.textContent = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
-  }, 500);
-}
-
-function stopRecording() {
-  if (!mediaRecorder || mediaRecorder.state === 'inactive') return;
-  mediaRecorder.stop();
-  isRecording = false;
-  clearInterval(recInterval);
-  recIndicator.classList.remove('active');
-  recTime.style.display = 'none';
-  recTime.textContent = '00:00';
-  shutterInner.classList.remove('recording');
-  shutterLabel.textContent = 'REC';
-}
-
-function finalizeVideo() {
-  const mime = mediaRecorder.mimeType || 'video/webm';
-  const blob = new Blob(recordedChunks, { type: mime });
-  const url = URL.createObjectURL(blob);
-  recordings.push({ type: 'video', url, blob, date: new Date(), mime });
-  updateGallery();
-}
-
-// ── Gallery ──
-function updateGallery() {
-  const empty = document.getElementById('gallery-empty');
-  if (recordings.length === 0) {
-    empty.style.display = 'block';
-    galleryPreview.style.display = 'none';
-    galleryIcon.style.display = 'block';
-    galleryCount.style.display = 'none';
-    return;
-  }
-
-  empty.style.display = 'none';
-  galleryCount.textContent = recordings.length;
-  galleryCount.style.display = 'block';
-
-  // Update preview thumbnail
-  const last = recordings[recordings.length - 1];
-  if (last.type === 'photo') {
-    galleryPreview.src = last.url;
-    galleryPreview.style.display = 'block';
-    galleryIcon.style.display = 'none';
-  }
-
-  // Rebuild grid
-  galleryGrid.innerHTML = '';
-  recordings.slice().reverse().forEach((rec, i) => {
-    const realIdx = recordings.length - 1 - i;
-    const item = document.createElement('div');
-    item.className = 'gallery-item';
-    item.onclick = () => openLightbox(realIdx);
-
-    if (rec.type === 'photo') {
-      const img = document.createElement('img');
-      img.src = rec.url;
-      item.appendChild(img);
-    } else {
-      const vid = document.createElement('video');
-      vid.src = rec.url;
-      vid.muted = true;
-      vid.playsInline = true;
-      item.appendChild(vid);
-    }
-
-    const badge = document.createElement('div');
-    badge.className = 'gallery-item-type';
-    badge.textContent = rec.type === 'photo' ? '▶ PHT' : '▶ VID';
-    item.appendChild(badge);
-    galleryGrid.appendChild(item);
   });
 }
 
-function openGallery() {
-  document.getElementById('gallery-panel').classList.add('open');
-}
+function burnPhotoFX(ctx,W,H){
+  // Extra heavy scanlines on still
+  ctx.fillStyle='rgba(0,0,0,0.18)';
+  for(let y=0;y<H;y+=2) ctx.fillRect(0,y,W,1);
 
-function closeGallery() {
-  document.getElementById('gallery-panel').classList.remove('open');
-}
+  // Interlace artifact
+  ctx.fillStyle='rgba(0,0,0,0.1)';
+  for(let y=1;y<H;y+=4) ctx.fillRect(0,y,W,1);
 
-// ── Lightbox ──
-function openLightbox(idx) {
-  currentLightboxIndex = idx;
-  const rec = recordings[idx];
-  const lb = document.getElementById('lightbox');
-  const lbImg = document.getElementById('lightbox-img');
-  const lbVid = document.getElementById('lightbox-vid');
+  // Deep vignette
+  const vig=ctx.createRadialGradient(W/2,H/2,H*0.2,W/2,H/2,H*0.8);
+  vig.addColorStop(0,'rgba(0,0,0,0)');
+  vig.addColorStop(0.6,'rgba(0,0,0,0.2)');
+  vig.addColorStop(1,'rgba(0,0,0,0.82)');
+  ctx.fillStyle=vig; ctx.fillRect(0,0,W,H);
 
-  lbImg.style.display = 'none';
-  lbVid.style.display = 'none';
-
-  if (rec.type === 'photo') {
-    lbImg.src = rec.url;
-    lbImg.style.display = 'block';
-  } else {
-    lbVid.src = rec.url;
-    lbVid.style.display = 'block';
-    lbVid.controls = true;
+  // Random tracking line burned in
+  if(Math.random()<0.6){
+    const ly=Math.random()*H;
+    ctx.fillStyle=`rgba(255,255,255,${0.2+Math.random()*0.4})`;
+    ctx.fillRect(0,ly,W,1+Math.random()*3);
   }
-  lb.classList.add('open');
+
+  // Additional grain
+  const id=ctx.getImageData(0,0,W,H), d=id.data;
+  for(let i=0;i<d.length;i+=4){
+    const n=(Math.random()-0.5)*40;
+    d[i]=cl(d[i]+n); d[i+1]=cl(d[i+1]+n); d[i+2]=cl(d[i+2]+n);
+  }
+  ctx.putImageData(id,0,0);
+
+  // Burned-in date
+  const n=new Date();
+  const ds=`${p2(n.getMonth()+1)}/${p2(n.getDate())} ${n.getFullYear()}  ${p2(n.getHours())}:${p2(n.getMinutes())}`;
+  ctx.font='bold 14px "Courier New"';
+  ctx.textBaseline='bottom';
+  ctx.fillStyle='rgba(0,0,0,0.75)'; ctx.fillRect(W-195,H-28,193,24);
+  ctx.fillStyle='#f0922a'; ctx.shadowColor='#f0922a'; ctx.shadowBlur=10;
+  ctx.fillText(ds,W-190,H-7);
 }
 
-function closeLightbox() {
-  document.getElementById('lightbox').classList.remove('open');
-  document.getElementById('lightbox-vid').pause();
+// ════════════════════════════════════════════════════════════════
+// VIDEO RECORDING
+// ════════════════════════════════════════════════════════════════
+function toggleRec(){ isRec?stopRec():startRec(); }
+
+function startRec(){
+  if(!stream)return;
+  rChunks=[];
+  const types=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4'];
+  let mt=''; for(const t of types){ if(MediaRecorder.isTypeSupported(t)){mt=t;break;} }
+  try{ mr=new MediaRecorder(stream,mt?{mimeType:mt}:{}); }catch{ mr=new MediaRecorder(stream); }
+  mr.ondataavailable=e=>{ if(e.data.size>0)rChunks.push(e.data); };
+  mr.onstop=finalizeRec;
+  mr.start(100);
+  isRec=true; recStart=Date.now();
+  recRow.classList.add('on'); recEl.style.display='block';
+  si.classList.add('rmode'); sl.textContent='■ STOP';
+  recIv=setInterval(()=>{
+    const e=Date.now()-recStart;
+    recEl.textContent=p2(Math.floor(e/60000))+':'+p2(Math.floor(e/1000)%60);
+  },500);
 }
 
-function downloadMedia() {
-  if (currentLightboxIndex < 0) return;
-  const rec = recordings[currentLightboxIndex];
-  const a = document.createElement('a');
-  a.href = rec.url;
-  a.download = rec.type === 'photo'
-    ? `vhs_${Date.now()}.jpg`
-    : `vhs_${Date.now()}.webm`;
-  a.click();
+function stopRec(){
+  if(!mr||mr.state==='inactive')return;
+  mr.stop(); isRec=false;
+  clearInterval(recIv);
+  recRow.classList.remove('on'); recEl.style.display='none'; recEl.textContent='00:00';
+  si.classList.remove('rmode'); sl.textContent='● REC';
 }
 
-function deleteMedia() {
-  if (currentLightboxIndex < 0) return;
-  recordings.splice(currentLightboxIndex, 1);
-  closeLightbox();
+function finalizeRec(){
+  const mime=mr.mimeType||'video/webm';
+  const blob=new Blob(rChunks,{type:mime});
+  const url=URL.createObjectURL(blob);
+  saved.push({type:'video',url,blob,date:new Date(),mime});
   updateGallery();
 }
 
-// ── Battery simulation ──
-let batLevel = 4;
-setInterval(() => {
-  const icons = ['▮▮▮▮', '▮▮▮░', '▮▮░░', '▮░░░'];
-  const bat = document.getElementById('bat-indicator');
-  // Randomly flicker
-  if (Math.random() < 0.02) {
-    bat.style.color = '#f03030';
-    setTimeout(() => bat.style.color = '', 300);
-  }
-}, 5000);
+// ════════════════════════════════════════════════════════════════
+// GALLERY
+// ════════════════════════════════════════════════════════════════
+function updateGallery(){
+  const em=document.getElementById('gal-empty'),gr=document.getElementById('gal-grid');
+  if(!saved.length){ em.style.display='block'; gThumb.style.display='none'; gIcon.style.display='block'; gCnt.style.display='none'; return; }
+  em.style.display='none'; gCnt.textContent=saved.length; gCnt.style.display='block';
+  const last=saved[saved.length-1];
+  if(last.type==='photo'){ gThumb.src=last.url; gThumb.style.display='block'; gIcon.style.display='none'; }
+  gr.innerHTML='';
+  saved.slice().reverse().forEach((r,i)=>{
+    const ri=saved.length-1-i;
+    const el=document.createElement('div'); el.className='gi'; el.onclick=()=>openLB(ri);
+    if(r.type==='photo'){ const img=document.createElement('img'); img.src=r.url; el.appendChild(img); }
+    else{ const v=document.createElement('video'); v.src=r.url; v.muted=true; v.playsInline=true; el.appendChild(v); }
+    const b=document.createElement('div'); b.className='gbadge';
+    b.textContent=r.type==='photo'?'▶ PHT':'▶ VID'; el.appendChild(b);
+    gr.appendChild(el);
+  });
+}
 
-// ── Start ──
-initCamera();
+function openGal(){ document.getElementById('gal-panel').classList.add('open'); }
+function closeGal(){ document.getElementById('gal-panel').classList.remove('open'); }
+
+function openLB(idx){
+  lbIdx=idx; const r=saved[idx];
+  const lbEl=document.getElementById('lb');
+  const li=document.getElementById('lb-img'),lv=document.getElementById('lb-vid');
+  li.style.display='none'; lv.style.display='none';
+  if(r.type==='photo'){ li.src=r.url; li.style.display='block'; }
+  else{ lv.src=r.url; lv.style.display='block'; }
+  lbEl.classList.add('open');
+}
+function closeLB(){ document.getElementById('lb').classList.remove('open'); document.getElementById('lb-vid').pause(); }
+function dlM(){ if(lbIdx<0)return; const r=saved[lbIdx]; const a=document.createElement('a'); a.href=r.url; a.download=r.type==='photo'?`vhs_${Date.now()}.jpg`:`vhs_${Date.now()}.webm`; a.click(); }
+function delM(){ if(lbIdx<0)return; saved.splice(lbIdx,1); closeLB(); updateGallery(); }
+
+// ════════════════════════════════════════════════════════════════
+// UTILS
+// ════════════════════════════════════════════════════════════════
+function cl(v){ return v<0?0:v>255?255:v|0; }
+function p2(n){ return String(n).padStart(2,'0'); }
+
+// ════════════════════════════════════════════════════════════════
+// BOOT
+// ════════════════════════════════════════════════════════════════
+initCam();
 updateGallery();
-setRatio('3:4');
 </script>
 </body>
 </html>
