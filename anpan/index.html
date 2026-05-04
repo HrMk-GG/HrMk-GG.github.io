@@ -1,9 +1,859 @@
-<html>
+<!DOCTYPE html>
+<html lang="ja">
 <head>
-<title>Anpan</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>★☆★あんぱん最高！！！★☆★ - あんぱんの魅力を全力でお届け！！</title>
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kurenaido&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --blink-speed: 0.3s;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: #FF00FF;
+      background-image:
+        repeating-linear-gradient(45deg, #FF0000 0px, #FF0000 10px, #FFFF00 10px, #FFFF00 20px),
+        repeating-linear-gradient(-45deg, rgba(0,255,255,0.5) 0px, rgba(0,255,255,0.5) 10px, transparent 10px, transparent 20px);
+      font-family: 'Zen Kurenaido', 'Comic Sans MS', cursive;
+      cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Ctext y='28' font-size='28'%3E🥐%3C/text%3E%3C/svg%3E"), auto;
+      overflow-x: hidden;
+    }
+
+    /* ===== MARQUEE HELL ===== */
+    .marquee-top {
+      background: #00FF00;
+      color: #FF0000;
+      font-size: 28px;
+      font-weight: 900;
+      padding: 8px 0;
+      border: 5px solid #0000FF;
+      text-shadow: 3px 3px #FF00FF, -3px -3px #FFFF00;
+      animation: blink-bg 0.4s infinite;
+    }
+    .marquee-top2 {
+      background: #FF6600;
+      color: #00FFFF;
+      font-size: 22px;
+      font-weight: 900;
+      padding: 6px 0;
+      border: 5px solid #FF00FF;
+    }
+
+    /* ===== HEADER ===== */
+    #header {
+      background: linear-gradient(90deg, #FF0000, #FF7700, #FFFF00, #00FF00, #0000FF, #FF00FF, #FF0000);
+      background-size: 400% 100%;
+      animation: rainbow-bg 1s linear infinite, shake 0.2s infinite;
+      text-align: center;
+      padding: 20px;
+      border: 10px dashed #000000;
+      position: relative;
+    }
+
+    #header h1 {
+      font-size: clamp(32px, 6vw, 72px);
+      color: #FFFFFF;
+      text-shadow:
+        4px 4px 0 #FF0000,
+        8px 8px 0 #FF6600,
+        -4px -4px 0 #0000FF,
+        0 0 20px #FFFF00,
+        0 0 40px #FF00FF;
+      animation: spin-text 3s linear infinite, blink 0.5s step-start infinite;
+      display: inline-block;
+    }
+
+    #header-img {
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      border: 8px solid #FFFF00;
+      animation: spin 2s linear infinite;
+      box-shadow: 0 0 30px #FF00FF, 0 0 60px #00FFFF;
+    }
+
+    /* ===== VISITOR COUNTER ===== */
+    #counter {
+      background: #000000;
+      color: #00FF00;
+      font-size: 14px;
+      padding: 5px 10px;
+      border: 3px solid #00FF00;
+      display: inline-block;
+      font-family: 'Courier New', monospace;
+      animation: blink 1s step-start infinite;
+    }
+
+    /* ===== MAIN CONTENT ===== */
+    .main-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 10px;
+      justify-content: center;
+    }
+
+    .content-box {
+      background: #FFFF00;
+      border: 6px solid #FF0000;
+      border-radius: 0px;
+      padding: 15px;
+      width: 320px;
+      text-align: center;
+      box-shadow: 10px 10px 0 #FF00FF, -10px -10px 0 #00FFFF;
+      animation: wobble 1s ease-in-out infinite;
+    }
+    .content-box:nth-child(2) { animation: wobble-reverse 0.8s ease-in-out infinite; background: #00FFFF; border-color: #0000FF; }
+    .content-box:nth-child(3) { animation: wobble 1.2s ease-in-out infinite; background: #FF99CC; border-color: #FF00FF; }
+
+    .content-box h2 {
+      font-size: 28px;
+      color: #FF0000;
+      text-shadow: 2px 2px #0000FF;
+      margin-bottom: 10px;
+    }
+
+    .content-box p {
+      font-size: 16px;
+      color: #000080;
+      line-height: 1.4;
+      background: rgba(255,255,255,0.5);
+      padding: 5px;
+    }
+
+    .anpan-img {
+      width: 100%;
+      max-width: 250px;
+      border: 5px solid #FF6600;
+      animation: bounce 0.5s ease-in-out infinite alternate;
+      filter: drop-shadow(5px 5px 10px #FF00FF);
+    }
+
+    /* ===== FLOATING ELEMENTS ===== */
+    .floater {
+      position: fixed;
+      font-size: 40px;
+      animation: float-around 4s ease-in-out infinite;
+      pointer-events: none;
+      z-index: 999;
+    }
+    .floater:nth-child(1) { top: 10%; left: 5%; animation-delay: 0s; }
+    .floater:nth-child(2) { top: 30%; right: 5%; animation-delay: 0.5s; }
+    .floater:nth-child(3) { top: 60%; left: 3%; animation-delay: 1s; }
+    .floater:nth-child(4) { top: 70%; right: 8%; animation-delay: 1.5s; }
+    .floater:nth-child(5) { top: 85%; left: 15%; animation-delay: 2s; }
+
+    /* ===== POPUP STYLES ===== */
+    .popup-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(255, 0, 255, 0.3);
+      z-index: 9000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .popup {
+      background: linear-gradient(135deg, #FF0000, #FFFF00);
+      border: 8px solid #0000FF;
+      border-radius: 10px;
+      padding: 30px;
+      text-align: center;
+      max-width: 420px;
+      width: 90%;
+      box-shadow: 0 0 50px #FF00FF, 0 0 100px #00FFFF;
+      animation: popup-shake 0.3s infinite;
+      position: relative;
+    }
+
+    .popup h2 {
+      font-size: 32px;
+      color: #FFFFFF;
+      text-shadow: 3px 3px #000, -3px -3px #FF00FF;
+      margin-bottom: 15px;
+    }
+
+    .popup p {
+      font-size: 18px;
+      color: #000080;
+      font-weight: bold;
+      margin-bottom: 20px;
+      background: rgba(255,255,255,0.7);
+      padding: 8px;
+    }
+
+    .popup img {
+      width: 150px;
+      border: 5px solid #00FF00;
+      border-radius: 10px;
+      animation: spin 2s linear infinite;
+      margin: 10px auto;
+      display: block;
+    }
+
+    .popup-btn {
+      background: #00FF00;
+      color: #000000;
+      border: 4px solid #FF0000;
+      font-size: 22px;
+      font-weight: 900;
+      padding: 12px 30px;
+      cursor: pointer;
+      font-family: 'Zen Kurenaido', cursive;
+      animation: blink-btn 0.4s step-start infinite;
+      display: block;
+      width: 100%;
+      margin-top: 10px;
+    }
+
+    .popup-close {
+      position: absolute;
+      top: -15px;
+      right: -15px;
+      background: #FF0000;
+      color: white;
+      border: 3px solid #000;
+      border-radius: 50%;
+      width: 35px;
+      height: 35px;
+      font-size: 18px;
+      font-weight: 900;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ===== SOUND POPUP ===== */
+    #sound-popup {
+      background: linear-gradient(135deg, #0000FF, #FF00FF, #00FFFF);
+    }
+
+    /* ===== SUBSCRIBE POPUP ===== */
+    #subscribe-popup {
+      background: linear-gradient(135deg, #FFFF00, #FF6600, #FF0000);
+    }
+
+    /* ===== AGE VERIFY POPUP ===== */
+    #age-popup {
+      background: linear-gradient(135deg, #00FF00, #00FFFF, #0000FF);
+    }
+
+    /* ===== COOKIE POPUP ===== */
+    #cookie-popup {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(90deg, #FF0000, #FF7700, #FFFF00, #00FF00, #0000FF, #FF00FF);
+      background-size: 400%;
+      animation: rainbow-bg 1s linear infinite;
+      padding: 20px;
+      text-align: center;
+      z-index: 8000;
+      border-top: 8px solid #000;
+    }
+
+    #cookie-popup p {
+      font-size: 20px;
+      color: white;
+      font-weight: 900;
+      text-shadow: 2px 2px #000;
+    }
+
+    #cookie-popup button {
+      background: #000000;
+      color: #00FF00;
+      border: 4px solid #00FF00;
+      font-size: 18px;
+      padding: 10px 25px;
+      cursor: pointer;
+      font-family: 'Zen Kurenaido', cursive;
+      margin: 5px;
+      animation: blink-btn 0.5s step-start infinite;
+    }
+
+    /* ===== SCROLLING SIDE BANNERS ===== */
+    .side-banner {
+      position: fixed;
+      top: 50%;
+      transform: translateY(-50%);
+      background: #FFFF00;
+      border: 5px solid #FF0000;
+      padding: 15px 5px;
+      z-index: 500;
+      writing-mode: vertical-rl;
+      font-size: 20px;
+      font-weight: 900;
+      color: #FF0000;
+      text-shadow: 2px 2px #0000FF;
+      animation: blink-bg2 0.5s infinite;
+    }
+    .side-banner-left { left: 0; }
+    .side-banner-right { right: 0; transform: translateY(-50%) rotate(180deg); }
+
+    /* ===== MUSIC BAR ===== */
+    #music-bar {
+      background: #000000;
+      color: #00FF00;
+      text-align: center;
+      padding: 10px;
+      font-size: 16px;
+      font-family: 'Courier New', monospace;
+      border: 3px solid #00FF00;
+      animation: blink 1s step-start infinite;
+    }
+
+    /* ===== FOOTER ===== */
+    footer {
+      background: #000000;
+      color: #FF00FF;
+      text-align: center;
+      padding: 20px;
+      font-size: 14px;
+      border-top: 8px solid #FF0000;
+      text-shadow: 2px 2px #00FFFF;
+    }
+
+    /* ===== ANIMATIONS ===== */
+    @keyframes rainbow-bg {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 400% 50%; }
+    }
+    @keyframes blink {
+      0%, 49% { opacity: 1; }
+      50%, 100% { opacity: 0; }
+    }
+    @keyframes blink-bg {
+      0%, 49% { background-color: #00FF00; }
+      50%, 100% { background-color: #FF0000; color: #FFFF00; }
+    }
+    @keyframes blink-bg2 {
+      0%, 49% { background-color: #FFFF00; }
+      50%, 100% { background-color: #FF00FF; color: #FFFF00; }
+    }
+    @keyframes blink-btn {
+      0%, 49% { background-color: #00FF00; color: #000; }
+      50%, 100% { background-color: #FF0000; color: #FFFF00; }
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-3px) rotate(-1deg); }
+      75% { transform: translateX(3px) rotate(1deg); }
+    }
+    @keyframes popup-shake {
+      0%, 100% { transform: rotate(-1deg) scale(1.01); }
+      50% { transform: rotate(1deg) scale(0.99); }
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    @keyframes spin-text {
+      0% { transform: skewX(0deg) scaleY(1); }
+      25% { transform: skewX(5deg) scaleY(1.05); }
+      75% { transform: skewX(-5deg) scaleY(0.95); }
+      100% { transform: skewX(0deg) scaleY(1); }
+    }
+    @keyframes bounce {
+      from { transform: translateY(0); }
+      to { transform: translateY(-15px); }
+    }
+    @keyframes wobble {
+      0%, 100% { transform: rotate(-2deg) translateX(-3px); }
+      50% { transform: rotate(2deg) translateX(3px); }
+    }
+    @keyframes wobble-reverse {
+      0%, 100% { transform: rotate(2deg) translateX(3px); }
+      50% { transform: rotate(-2deg) translateX(-3px); }
+    }
+    @keyframes float-around {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      25% { transform: translateY(-30px) rotate(15deg); }
+      75% { transform: translateY(20px) rotate(-15deg); }
+    }
+
+    /* ===== STAR DECORATIONS ===== */
+    .stars-row {
+      text-align: center;
+      font-size: 28px;
+      animation: blink 0.4s step-start infinite;
+      background: #FF0000;
+      padding: 5px;
+      letter-spacing: 5px;
+    }
+
+    /* ===== RATING SECTION ===== */
+    #rating-section {
+      background: linear-gradient(135deg, #FF6600, #FF0000, #FF00FF);
+      text-align: center;
+      padding: 20px;
+      margin: 10px;
+      border: 8px double #FFFF00;
+      animation: shake 0.5s infinite;
+    }
+    #rating-section h2 {
+      font-size: 36px;
+      color: #FFFF00;
+      text-shadow: 3px 3px #000;
+    }
+    .star-rating {
+      font-size: 50px;
+      animation: blink 0.3s step-start infinite;
+    }
+
+    /* ===== POPUP CHAIN LOGIC ===== */
+    .hidden { display: none; }
+
+    /* ===== TINY PRINT ===== */
+    .tiny-print {
+      font-size: 6px;
+      color: #FF00FF;
+      background: #FF0000;
+      text-align: center;
+      padding: 2px;
+    }
+
+    /* ===== SCROLLING IMAGES ===== */
+    .image-scroll-container {
+      overflow: hidden;
+      background: #0000FF;
+      border: 5px solid #FFFF00;
+      padding: 10px 0;
+    }
+    .image-scroll-track {
+      display: flex;
+      gap: 20px;
+      animation: scroll-images 5s linear infinite;
+      width: max-content;
+    }
+    .image-scroll-track img {
+      height: 100px;
+      width: 100px;
+      object-fit: cover;
+      border: 4px solid #FF0000;
+      animation: spin 3s linear infinite;
+    }
+    @keyframes scroll-images {
+      from { transform: translateX(0); }
+      to { transform: translateX(-50%); }
+    }
+
+    /* ===== NEWSLETTER ===== */
+    #newsletter {
+      background: #FF00FF;
+      border: 8px solid #FFFF00;
+      padding: 20px;
+      margin: 10px;
+      text-align: center;
+      animation: wobble 1s ease-in-out infinite;
+    }
+    #newsletter h2 { font-size: 30px; color: #FFFF00; text-shadow: 2px 2px #000; }
+    #newsletter input {
+      font-size: 18px;
+      padding: 10px;
+      border: 5px solid #FF0000;
+      background: #FFFF00;
+      width: 80%;
+      font-family: 'Zen Kurenaido', cursive;
+    }
+    #newsletter button {
+      background: #00FF00;
+      color: #000;
+      border: 5px solid #FF0000;
+      font-size: 20px;
+      padding: 10px 20px;
+      cursor: pointer;
+      font-family: 'Zen Kurenaido', cursive;
+      animation: blink-btn 0.5s step-start infinite;
+      width: 80%;
+      margin-top: 8px;
+    }
+
+    /* ===== MOVING POPUP ===== */
+    #moving-popup {
+      position: fixed;
+      background: #FFFF00;
+      border: 6px solid #FF0000;
+      border-radius: 10px;
+      padding: 15px 25px;
+      font-size: 20px;
+      font-weight: 900;
+      color: #FF0000;
+      text-shadow: 1px 1px #000;
+      z-index: 8500;
+      cursor: pointer;
+      box-shadow: 5px 5px 20px #FF00FF;
+      animation: blink-btn 0.4s step-start infinite;
+    }
+
+    /* ===== BACKGROUND IMAGES ===== */
+    .bg-anpan {
+      position: fixed;
+      width: 80px;
+      height: 80px;
+      opacity: 0.2;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 0;
+    }
+  </style>
 </head>
 <body>
-<h1>This is an Anpan page.</h1>
-<p>Delicious red bean paste-filled bread.</p>
+
+<!-- FLOATING EMOJI -->
+<div class="floater">🍞</div>
+<div class="floater">⭐</div>
+<div class="floater">🎉</div>
+<div class="floater">💛</div>
+<div class="floater">🥐</div>
+
+<!-- SIDE BANNERS -->
+<div class="side-banner side-banner-left">🌟あんぱん最高🌟今すぐ食べろ🌟</div>
+<div class="side-banner side-banner-right">🌟うまい！うまい！うまい！🌟</div>
+
+<!-- MOVING POPUP -->
+<div id="moving-popup" onclick="this.style.display='none'">
+  ❗ あんぱんセール中！❗ クリックするな！
+</div>
+
+<!-- COOKIE POPUP -->
+<div id="cookie-popup">
+  <p>🍪 このサイトはあんぱんCookieを使用しています！あんぱんを愛することに同意しますか？🍪</p>
+  <button onclick="document.getElementById('cookie-popup').style.display='none'; openNextPopup()">
+    はい！あんぱんを愛します！💛
+  </button>
+  <button onclick="document.getElementById('cookie-popup').style.display='none'; openNextPopup()">
+    いいえ（でも同意したことになります）
+  </button>
+</div>
+
+<!-- POPUP 1: Welcome -->
+<div class="popup-overlay hidden" id="popup1-overlay">
+  <div class="popup" id="popup1">
+    <div class="popup-close" onclick="closePopup('popup1-overlay'); openNextPopup('popup2-overlay')">×</div>
+    <h2>🎉 ようこそ！！！🎉</h2>
+    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Anpan.jpg/640px-Anpan.jpg" alt="あんぱん" onerror="this.src='https://via.placeholder.com/150/FF6600/FFFFFF?text=あんぱん'">
+    <p>世界最高のあんぱんサイトへようこそ！！<br>まず音楽を再生してください！！</p>
+    <button class="popup-btn" onclick="closePopup('popup1-overlay'); openNextPopup('popup2-overlay')">
+      🔊 音楽を再生する（必須）
+    </button>
+  </div>
+</div>
+
+<!-- POPUP 2: Age Verify -->
+<div class="popup-overlay hidden" id="popup2-overlay">
+  <div class="popup" id="age-popup">
+    <h2>⚠️ 年齢確認 ⚠️</h2>
+    <p>このサイトはあんぱん愛好家のみ閲覧できます。<br><br>あなたはあんぱんが好きですか？</p>
+    <button class="popup-btn" onclick="closePopup('popup2-overlay'); openNextPopup('popup3-overlay')">
+      はい！大好きです！🍞
+    </button>
+    <button class="popup-btn" style="background:#FF0000; color:#FFF; margin-top:5px;" onclick="closePopup('popup2-overlay'); openNextPopup('popup3-overlay')">
+      いいえ（でも好きになります）
+    </button>
+  </div>
+</div>
+
+<!-- POPUP 3: Subscribe -->
+<div class="popup-overlay hidden" id="popup3-overlay">
+  <div class="popup" id="subscribe-popup">
+    <div class="popup-close" onclick="closePopup('popup3-overlay'); openNextPopup('popup4-overlay')">×</div>
+    <h2>📧 メルマガ登録！！📧</h2>
+    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Anpan.jpg/640px-Anpan.jpg" alt="あんぱん" onerror="this.src='https://via.placeholder.com/150/FFFF00/FF0000?text=あんぱん'">
+    <p>あんぱん最新情報を1日100回お届け！！<br>登録しないと見られないページがあります！！</p>
+    <input type="email" placeholder="メールアドレスを入力" style="width:100%; padding:10px; font-size:16px; border:4px solid #FF0000; margin-bottom:10px; font-family:'Zen Kurenaido',cursive;">
+    <button class="popup-btn" onclick="closePopup('popup3-overlay'); openNextPopup('popup4-overlay')">
+      登録する（無料！でも解除不可！）
+    </button>
+    <button style="background:transparent; border:none; font-size:8px; color:#888; cursor:pointer; margin-top:5px; display:block;" onclick="closePopup('popup3-overlay'); openNextPopup('popup4-overlay')">
+      登録しない（後悔します）
+    </button>
+  </div>
+</div>
+
+<!-- POPUP 4: Survey -->
+<div class="popup-overlay hidden" id="popup4-overlay">
+  <div class="popup" style="background: linear-gradient(135deg, #00FF00, #00FFFF, #0000FF);">
+    <div class="popup-close" onclick="closePopup('popup4-overlay'); openNextPopup('popup5-overlay')">×</div>
+    <h2>📊 アンケート！！📊</h2>
+    <p>あんぱんは好きですか？<br>（正直に答えてください！）</p>
+    <button class="popup-btn" onclick="alert('正解！！！あんぱん最高！！'); closePopup('popup4-overlay'); openNextPopup('popup5-overlay')">
+      ✅ 好き！！！大好き！！！
+    </button>
+    <button class="popup-btn" style="margin-top:5px;" onclick="alert('え？？本当に？？もう一度考えてください！！'); ">
+      ❌ 嫌い（あり得ない）
+    </button>
+  </div>
+</div>
+
+<!-- POPUP 5: Final -->
+<div class="popup-overlay hidden" id="popup5-overlay">
+  <div class="popup" style="background: linear-gradient(135deg, #FF0000, #FF7700, #FFFF00);">
+    <div class="popup-close" onclick="closePopup('popup5-overlay')">×</div>
+    <h2>🎊 ありがとう！！🎊</h2>
+    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Anpan.jpg/640px-Anpan.jpg" alt="あんぱん" onerror="this.src='https://via.placeholder.com/150/FF0000/FFFF00?text=あんぱん'">
+    <p>サイトへのアクセスが<br>許可されました！！<br><br>でも5秒後にまたポップアップ出ます</p>
+    <button class="popup-btn" onclick="closePopup('popup5-overlay'); startRepeatingPopup()">
+      OK！！！わかりました！！
+    </button>
+  </div>
+</div>
+
+<!-- POPUP REPEAT -->
+<div class="popup-overlay hidden" id="repeat-popup-overlay">
+  <div class="popup" style="background: linear-gradient(135deg, #FF00FF, #0000FF);">
+    <div class="popup-close" onclick="closePopup('repeat-popup-overlay'); scheduleRepeat()">×</div>
+    <h2>💛 あんぱんを食べましたか？💛</h2>
+    <p>今すぐ食べてください！！<br>健康に良いです！！（当社比）</p>
+    <button class="popup-btn" onclick="closePopup('repeat-popup-overlay'); scheduleRepeat()">
+      今すぐ食べに行く！！🏃
+    </button>
+  </div>
+</div>
+
+<!-- MUSIC BAR -->
+<div id="music-bar">
+  🎵 ♪♫ あんぱんのうた ♫♪ 🎵　▶ 再生中... ｜ ████████████████░░░░ 80% ｜ 音量: ████████████ MAX
+</div>
+
+<!-- MARQUEE TOP -->
+<marquee class="marquee-top" scrollamount="12">
+  🍞 あんぱん最高！！！ ⭐ 世界一うまい！！ 🎉 今すぐ食べろ！！ 💛 あんぱん万歳！！ 🍞 あんぱん最高！！！ ⭐ 世界一うまい！！ 🎉
+</marquee>
+<marquee class="marquee-top2" scrollamount="8" direction="right">
+  ★ LIMITED TIME OFFER ★ あんぱん50%OFF ★ 嘘です ★ でも美味しいのは本当 ★ LIMITED TIME OFFER ★
+</marquee>
+
+<!-- HEADER -->
+<div id="header">
+  <img id="header-img"
+    src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Anpan.jpg/640px-Anpan.jpg"
+    alt="あんぱん"
+    onerror="this.style.background='#FF6600'; this.style.borderRadius='50%';">
+  <h1>🍞 あんぱん最高！！！ 🍞</h1>
+  <p style="color:#FFFF00; font-size:20px; text-shadow:2px 2px #000; animation: blink 0.5s step-start infinite;">
+    ～世界で一番大切なパンを紹介するサイト～
+  </p>
+  <div id="counter">訪問者数: <span id="visit-count">00000001</span> 人目！！</div>
+</div>
+
+<div class="stars-row">★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★</div>
+
+<!-- SCROLLING IMAGES -->
+<div class="image-scroll-container">
+  <div class="image-scroll-track">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Anpan.jpg/640px-Anpan.jpg" alt="あんぱん" onerror="this.style.background='#FF6600';">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Anpan.jpg/640px-Anpan.jpg" alt="あんぱん" onerror="this.style.background='#FF6600';">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Anpan.jpg/640px-Anpan.jpg" alt="あんぱん" onerror="this.style.background='#FF6600';">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Anpan.jpg/640px-Anpan.jpg" alt="あんぱん" onerror="this.style.background='#FF6600';">
+    <!-- duplicate for seamless scroll -->
+    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Anpan.jpg/640px-Anpan.jpg" alt="あんぱん" onerror="this.style.background='#FF6600';">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Anpan.jpg/640px-Anpan.jpg" alt="あんぱん" onerror="this.style.background='#FF6600';">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Anpan.jpg/640px-Anpan.jpg" alt="あんぱん" onerror="this.style.background='#FF6600';">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Anpan.jpg/640px-Anpan.jpg" alt="あんぱん" onerror="this.style.background='#FF6600';">
+  </div>
+</div>
+
+<div class="stars-row">☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆</div>
+
+<!-- MAIN CONTENT -->
+<div class="main-container">
+  <div class="content-box">
+    <h2>🍞 あんぱんとは？</h2>
+    <img class="anpan-img"
+      src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Anpan.jpg/640px-Anpan.jpg"
+      alt="あんぱん" onerror="this.style.background='#FF6600'; this.style.height='150px';">
+    <p>あんぱんは小麦粉で作った生地に<br><b style="color:#FF0000; font-size:20px;">あんこ</b>を包んだ日本のパン！<br>1874年に木村屋が開発した伝統の味！！</p>
+  </div>
+
+  <div class="content-box">
+    <h2>⭐ 魅力ベスト3！</h2>
+    <p>
+      <b style="color:#FF0000;">第1位：</b> もちもちの生地！<br><br>
+      <b style="color:#FF0000;">第2位：</b> 甘い餡の最高の味！<br><br>
+      <b style="color:#FF0000;">第3位：</b> 見た目がかわいい！！
+    </p>
+    <div class="star-rating">⭐⭐⭐⭐⭐</div>
+    <p style="font-size:24px; color:#FF0000; font-weight:900;">★★★★★ 5億点！！★★★★★</p>
+  </div>
+
+  <div class="content-box">
+    <h2>🎉 食べ方講座！！</h2>
+    <img class="anpan-img"
+      src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Anpan.jpg/640px-Anpan.jpg"
+      alt="あんぱん" onerror="this.style.background='#FF6600'; this.style.height='150px';">
+    <p>
+      1. 両手で持つ<br>
+      2. においを嗅ぐ<br>
+      3. 目を閉じる<br>
+      4. <b style="color:#FF0000;">食べる！！！！！</b><br>
+      5. 幸せになる！！
+    </p>
+  </div>
+</div>
+
+<!-- RATING SECTION -->
+<div id="rating-section">
+  <h2>🌟 あんぱん評価 🌟</h2>
+  <div class="star-rating">⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐</div>
+  <p style="font-size:28px; color:#FFFF00; font-weight:900; text-shadow:3px 3px #000; animation: blink 0.5s step-start infinite;">
+    総合評価：宇宙一！！！∞点／10点
+  </p>
+  <p style="font-size:16px; color:#FFFFFF;">※この評価は科学的根拠に基づいています（嘘）</p>
+</div>
+
+<!-- NEWSLETTER -->
+<div id="newsletter">
+  <h2>📧 あんぱんニュース登録！！📧</h2>
+  <p style="color:#FFFF00; font-size:18px; font-weight:900; text-shadow:2px 2px #000;">
+    1日100通のあんぱんメールを受け取ろう！！
+  </p>
+  <br>
+  <input type="email" placeholder="あなたのメールアドレス（必須）">
+  <br>
+  <button onclick="alert('登録完了！！！これで毎日100通のあんぱんメールが届きます！！解除方法はありません！！')">
+    今すぐ登録する！！！📩
+  </button>
+  <p style="font-size:10px; color:#FF0000; margin-top:5px;">※登録解除不可。あんぱんへの愛は永遠です</p>
+</div>
+
+<marquee scrollamount="15" style="background:#00FF00; color:#FF0000; font-size:24px; font-weight:900; border:5px solid #FF00FF; padding:8px;">
+  🚨 緊急速報：あんぱんが美味しいことが判明！！！ 🚨 詳細はこのサイトの全ページをご覧ください 🚨 ページ数：∞ 🚨
+</marquee>
+
+<!-- TINY PRINT -->
+<div class="tiny-print">
+  このサイトの利用規約：あんぱんを愛すること。個人情報はあんぱん製造に使用されます。このサイトは1秒間に100回更新されます。プライバシーポリシー：ありません。Cookieを削除すると呪われます。このサイトは1997年にGeoCitiesで作成されました。Internet Explorer 4.0以上を推奨します。最適解像度：640x480。BGMが聞こえない方はスピーカーを確認してください。あんぱんの栄養成分：幸せ100%。このサイトの著作権はあんぱんが持っています。
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <p style="animation: blink 0.4s step-start infinite; font-size:20px;">
+    ★★★ Copyright © 2024 あんぱん最高委員会 All Rights Reserved ★★★
+  </p>
+  <p style="font-size:14px; margin-top:10px;">
+    最終更新：今 ｜ 作成者：あんぱん ｜ 推奨ブラウザ：Netscape Navigator
+  </p>
+  <p style="font-size:12px; margin-top:5px; color:#FF00FF; animation: blink 0.5s step-start infinite;">
+    🌟 このサイトはあんぱん愛で動いています 🌟
+  </p>
+  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Anpan.jpg/640px-Anpan.jpg"
+    style="width:80px; height:80px; border-radius:50%; border:4px solid #FF0000; animation: spin 2s linear infinite; margin-top:10px;"
+    alt="あんぱん">
+  <br><br>
+  <a href="https://github.com" style="color:#00FF00; font-size:18px; text-shadow:1px 1px #FF00FF;">
+    📂 GitHubで見る（クリックしないでください）
+  </a>
+</footer>
+
+<script>
+  // Visit counter animation
+  let count = Math.floor(Math.random() * 99999) + 1;
+  const countEl = document.getElementById('visit-count');
+  countEl.textContent = String(count).padStart(8, '0');
+  setInterval(() => {
+    count++;
+    countEl.textContent = String(count).padStart(8, '0');
+  }, 1337);
+
+  // Moving popup
+  const movingPopup = document.getElementById('moving-popup');
+  let posX = Math.random() * (window.innerWidth - 250);
+  let posY = Math.random() * (window.innerHeight - 80);
+  let velX = 3, velY = 2;
+  movingPopup.style.left = posX + 'px';
+  movingPopup.style.top = posY + 'px';
+  setInterval(() => {
+    posX += velX;
+    posY += velY;
+    if (posX <= 0 || posX >= window.innerWidth - 250) velX *= -1;
+    if (posY <= 0 || posY >= window.innerHeight - 80) velY *= -1;
+    movingPopup.style.left = posX + 'px';
+    movingPopup.style.top = posY + 'px';
+  }, 16);
+
+  // Popup chain
+  let currentPopup = 0;
+  const popupOrder = ['popup1-overlay', 'popup2-overlay', 'popup3-overlay', 'popup4-overlay', 'popup5-overlay'];
+
+  function closePopup(id) {
+    document.getElementById(id).classList.add('hidden');
+  }
+
+  function openNextPopup(id) {
+    if (id) {
+      setTimeout(() => {
+        document.getElementById(id).classList.remove('hidden');
+      }, 300);
+    }
+  }
+
+  function startRepeatingPopup() {
+    scheduleRepeat();
+  }
+
+  function scheduleRepeat() {
+    setTimeout(() => {
+      document.getElementById('repeat-popup-overlay').classList.remove('hidden');
+    }, 5000);
+  }
+
+  // Start the popup chain after 0.5 seconds
+  setTimeout(() => {
+    document.getElementById('popup1-overlay').classList.remove('hidden');
+  }, 500);
+
+  // Random color change on click
+  document.addEventListener('click', (e) => {
+    const colors = ['#FF0000','#FF6600','#FFFF00','#00FF00','#00FFFF','#0000FF','#FF00FF'];
+    if (Math.random() > 0.7) {
+      document.body.style.cursor = ['🥐','🍞','⭐','💛','🎉'][Math.floor(Math.random()*5)];
+    }
+  });
+
+  // Alert on right click
+  document.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    alert('右クリック禁止！！！\nあんぱんを盗もうとしましたか！？\n\nセキュリティ部門に報告されました。');
+  });
+
+  // Random alert
+  const alerts = [
+    '🍞 今日のあんぱん情報：あんぱんは美味しいです！',
+    '⭐ おめでとうございます！あんぱんが当たりました！（嘘）',
+    '🎉 あなたは今日1000万人目の訪問者です！賞品：あんぱんの写真',
+    '⚠️ 警告：あんぱんを食べないと後悔します',
+    '💛 お知らせ：あんぱんは最高のパンです'
+  ];
+  let alertIndex = 0;
+  setInterval(() => {
+    if (document.querySelectorAll('.popup-overlay:not(.hidden)').length === 0) {
+      // Only alert when no popups
+    }
+  }, 30000);
+
+  // Page title blink
+  const titles = ['🍞 あんぱん！！！', '⭐ 最高！！！', '🎉 食べろ！！！', '💛 うまい！！！'];
+  let titleIdx = 0;
+  setInterval(() => {
+    document.title = titles[titleIdx % titles.length];
+    titleIdx++;
+  }, 400);
+
+  // Scroll warning
+  let scrollWarned = false;
+  window.addEventListener('scroll', () => {
+    if (!scrollWarned && window.scrollY > 200) {
+      scrollWarned = true;
+      alert('スクロールを検知しました！！\nあんぱん情報を読んでいただき、ありがとうございます！！\n\nスクロールを続けてください！！');
+    }
+  });
+</script>
+
 </body>
 </html>
