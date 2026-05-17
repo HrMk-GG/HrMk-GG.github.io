@@ -1,0 +1,1475 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NIHON — The Soul of Japan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Noto+Serif+JP:wght@200;400;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollToPlugin.min.js"></script>
+<style>
+:root {
+  --sakura: #ff6b9d;
+  --gold: #c9a84c;
+  --neon-blue: #00d4ff;
+  --neon-green: #00ff9f;
+  --ink: #050508;
+  --ink-mid: #0d0d18;
+  --ink-light: #141428;
+  --paper: #f0e8d8;
+  --smoke: rgba(255,255,255,0.05);
+  --font-display: 'Cinzel', serif;
+  --font-jp: 'Noto Serif JP', serif;
+  --font-mono: 'Space Mono', monospace;
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--ink);
+  color: #e8e0d0;
+  font-family: var(--font-jp);
+  overflow-x: hidden;
+  cursor: none;
+}
+
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: var(--ink); }
+::-webkit-scrollbar-thumb { background: var(--sakura); }
+
+/* CURSOR */
+#cursor {
+  position: fixed;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--sakura);
+  pointer-events: none;
+  z-index: 99999;
+  transform: translate(-50%, -50%);
+  transition: width 0.3s, height 0.3s, background 0.3s;
+  mix-blend-mode: screen;
+}
+
+#cursor-ring {
+  position: fixed;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,107,157,0.5);
+  pointer-events: none;
+  z-index: 99998;
+  transform: translate(-50%, -50%);
+  transition: all 0.15s ease;
+}
+
+body:has(a:hover) #cursor,
+body:has(button:hover) #cursor { width: 20px; height: 20px; background: var(--gold); }
+body:has(a:hover) #cursor-ring,
+body:has(button:hover) #cursor-ring { width: 60px; height: 60px; border-color: var(--gold); }
+
+/* PARTICLES */
+#particle-canvas {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* LOADER */
+#loader {
+  position: fixed;
+  inset: 0;
+  background: var(--ink);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+}
+
+.loader-kanji {
+  font-family: var(--font-jp);
+  font-size: clamp(4rem, 15vw, 10rem);
+  font-weight: 700;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(255,107,157,0.6);
+  opacity: 0;
+}
+
+.loader-bar-wrap {
+  width: 200px;
+  height: 1px;
+  background: rgba(255,255,255,0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.loader-bar {
+  position: absolute;
+  top: 0; left: 0;
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--sakura), var(--gold));
+  box-shadow: 0 0 20px var(--sakura);
+}
+
+.loader-text {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.4em;
+  color: rgba(255,255,255,0.3);
+  text-transform: uppercase;
+}
+
+/* NAV */
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 1000;
+  padding: 1.5rem 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  mix-blend-mode: normal;
+}
+
+nav::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(5,5,8,0.9) 0%, transparent 100%);
+  backdrop-filter: blur(0px);
+  pointer-events: none;
+}
+
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 900;
+  letter-spacing: 0.3em;
+  color: var(--paper);
+  text-decoration: none;
+  position: relative;
+  z-index: 1;
+}
+
+.nav-logo span { color: var(--sakura); }
+
+.nav-links {
+  display: flex;
+  gap: 2.5rem;
+  list-style: none;
+  position: relative;
+  z-index: 1;
+}
+
+.nav-links a {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.25em;
+  color: rgba(255,255,255,0.5);
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: color 0.3s;
+  position: relative;
+}
+
+.nav-links a::after {
+  content: '';
+  position: absolute;
+  bottom: -4px; left: 0;
+  width: 0; height: 1px;
+  background: var(--sakura);
+  transition: width 0.3s;
+}
+
+.nav-links a:hover { color: var(--paper); }
+.nav-links a:hover::after { width: 100%; }
+
+/* HERO */
+#hero {
+  position: relative;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 60%, rgba(255,107,157,0.07) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 40% at 80% 20%, rgba(0,212,255,0.05) 0%, transparent 60%);
+}
+
+.hero-img {
+  position: absolute;
+  inset: 0;
+  background: url('https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=1920&q=80') center/cover no-repeat;
+  opacity: 0.15;
+  transform: scale(1.1);
+}
+
+.hero-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,107,157,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,107,157,0.04) 1px, transparent 1px);
+  background-size: 80px 80px;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  padding: 0 2rem;
+}
+
+.hero-overline {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.6em;
+  color: var(--sakura);
+  text-transform: uppercase;
+  margin-bottom: 2rem;
+  opacity: 0;
+}
+
+.hero-jp {
+  font-family: var(--font-jp);
+  font-size: clamp(1rem, 3vw, 1.5rem);
+  font-weight: 200;
+  letter-spacing: 0.8em;
+  color: rgba(255,255,255,0.4);
+  margin-bottom: 1.5rem;
+  opacity: 0;
+}
+
+.hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(4rem, 14vw, 12rem);
+  font-weight: 900;
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+}
+
+.hero-title-line {
+  display: block;
+  opacity: 0;
+  transform: translateY(100%);
+}
+
+.hero-title-line.accent { color: var(--sakura); text-shadow: 0 0 60px rgba(255,107,157,0.5); }
+
+.hero-sub {
+  font-family: var(--font-jp);
+  font-size: clamp(0.9rem, 2vw, 1.1rem);
+  font-weight: 200;
+  color: rgba(255,255,255,0.5);
+  max-width: 500px;
+  margin: 0 auto 3rem;
+  line-height: 1.8;
+  opacity: 0;
+}
+
+.hero-scroll {
+  position: absolute;
+  bottom: 3rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  opacity: 0;
+}
+
+.hero-scroll span {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.3em;
+  color: rgba(255,255,255,0.3);
+  text-transform: uppercase;
+}
+
+.scroll-line {
+  width: 1px;
+  height: 60px;
+  background: linear-gradient(180deg, var(--sakura), transparent);
+  animation: scrollPulse 2s ease-in-out infinite;
+}
+
+@keyframes scrollPulse {
+  0%, 100% { opacity: 0.3; transform: scaleY(1); }
+  50% { opacity: 1; transform: scaleY(0.7); }
+}
+
+/* SECTIONS COMMON */
+section { position: relative; z-index: 2; }
+
+.section-num {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.4em;
+  color: rgba(255,255,255,0.2);
+  margin-bottom: 1rem;
+}
+
+/* TRADITION */
+#tradition {
+  min-height: 100vh;
+  padding: 10rem 0;
+  background: var(--ink);
+  overflow: hidden;
+}
+
+.tradition-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 3rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6rem;
+  align-items: center;
+}
+
+.tradition-visual {
+  position: relative;
+}
+
+.tradition-img-main {
+  width: 100%;
+  aspect-ratio: 3/4;
+  object-fit: cover;
+  display: block;
+  clip-path: polygon(0 0, 85% 0, 100% 15%, 100% 100%, 15% 100%, 0 85%);
+  filter: brightness(0.8) saturate(1.2);
+}
+
+.tradition-img-float {
+  position: absolute;
+  bottom: -3rem;
+  right: -3rem;
+  width: 45%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  border: 1px solid rgba(201,168,76,0.3);
+  filter: brightness(0.7) sepia(0.3) saturate(1.5);
+}
+
+.tradition-deco {
+  position: absolute;
+  top: -2rem;
+  left: -2rem;
+  width: 8rem;
+  height: 8rem;
+  border: 1px solid rgba(255,107,157,0.2);
+  transform: rotate(45deg);
+}
+
+.section-tag {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.4em;
+  color: var(--gold);
+  text-transform: uppercase;
+  border: 1px solid rgba(201,168,76,0.3);
+  padding: 0.4rem 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.section-title-en {
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 6vw, 5.5rem);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.5rem;
+}
+
+.section-title-jp {
+  font-family: var(--font-jp);
+  font-size: clamp(1.5rem, 3vw, 2.5rem);
+  font-weight: 200;
+  color: rgba(255,255,255,0.3);
+  letter-spacing: 0.3em;
+  margin-bottom: 2rem;
+}
+
+.section-body {
+  font-family: var(--font-jp);
+  font-size: 0.95rem;
+  line-height: 2;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 2.5rem;
+  max-width: 45ch;
+}
+
+.cta-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.3em;
+  color: var(--paper);
+  text-decoration: none;
+  text-transform: uppercase;
+  position: relative;
+  padding-bottom: 0.5rem;
+}
+
+.cta-link::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0;
+  width: 100%; height: 1px;
+  background: linear-gradient(90deg, var(--sakura), var(--gold));
+  transform: scaleX(0.3);
+  transform-origin: left;
+  transition: transform 0.4s ease;
+}
+
+.cta-link:hover::after { transform: scaleX(1); }
+
+.cta-arrow {
+  display: inline-block;
+  width: 30px; height: 1px;
+  background: var(--sakura);
+  position: relative;
+  transition: width 0.4s;
+}
+
+.cta-arrow::after {
+  content: '';
+  position: absolute;
+  right: 0; top: 50%;
+  transform: translateY(-50%) rotate(45deg);
+  width: 6px; height: 6px;
+  border-right: 1px solid var(--sakura);
+  border-top: 1px solid var(--sakura);
+}
+
+.cta-link:hover .cta-arrow { width: 50px; }
+
+/* NATURE */
+#nature {
+  min-height: 100vh;
+  padding: 10rem 0;
+  background: var(--ink-mid);
+  overflow: hidden;
+  position: relative;
+}
+
+#nature::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 70% 50% at 30% 50%, rgba(0,255,159,0.04) 0%, transparent 70%);
+}
+
+.nature-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 3rem;
+}
+
+.nature-header {
+  text-align: center;
+  margin-bottom: 6rem;
+}
+
+.nature-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+}
+
+.nature-card {
+  position: relative;
+  overflow: hidden;
+  background: var(--smoke);
+  border: 1px solid rgba(255,255,255,0.06);
+  cursor: pointer;
+  transition: border-color 0.4s;
+}
+
+.nature-card:hover { border-color: rgba(0,255,159,0.3); }
+
+.nature-card-img {
+  width: 100%;
+  aspect-ratio: 2/3;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94), filter 0.4s;
+  filter: brightness(0.6) saturate(0.8);
+}
+
+.nature-card:hover .nature-card-img {
+  transform: scale(1.08);
+  filter: brightness(0.8) saturate(1.2);
+}
+
+.nature-card-body {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  padding: 2rem;
+  background: linear-gradient(0deg, rgba(5,5,8,0.95) 0%, transparent 100%);
+  transform: translateY(1rem);
+  transition: transform 0.4s;
+}
+
+.nature-card:hover .nature-card-body { transform: translateY(0); }
+
+.nature-card-num {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.3em;
+  color: var(--neon-green);
+  margin-bottom: 0.5rem;
+}
+
+.nature-card-title {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 0.3rem;
+}
+
+.nature-card-jp {
+  font-family: var(--font-jp);
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.4);
+  letter-spacing: 0.2em;
+}
+
+.nature-card-desc {
+  font-family: var(--font-jp);
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.5);
+  line-height: 1.8;
+  margin-top: 0.8rem;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease;
+}
+
+.nature-card:hover .nature-card-desc { max-height: 100px; }
+
+/* TILT EFFECT */
+.tilt {
+  transform-style: preserve-3d;
+  transform: perspective(1000px);
+}
+
+/* NEON CITY */
+#neoncity {
+  min-height: 100vh;
+  padding: 10rem 0;
+  background: var(--ink-light);
+  overflow: hidden;
+  position: relative;
+}
+
+.city-bg {
+  position: absolute;
+  inset: 0;
+  background: url('https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=1920&q=80') center/cover no-repeat;
+  opacity: 0.08;
+}
+
+.city-inner {
+  position: relative;
+  z-index: 2;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 3rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6rem;
+  align-items: center;
+}
+
+.city-text { order: 2; }
+.city-visual { order: 1; }
+
+.city-stack {
+  position: relative;
+  height: 600px;
+}
+
+.city-img {
+  position: absolute;
+  object-fit: cover;
+  filter: saturate(1.5) brightness(0.7);
+}
+
+.city-img-1 {
+  width: 65%;
+  height: 70%;
+  top: 0; right: 0;
+  border-top: 2px solid var(--neon-blue);
+  box-shadow: 0 0 30px rgba(0,212,255,0.2);
+}
+
+.city-img-2 {
+  width: 55%;
+  height: 55%;
+  bottom: 0; left: 0;
+  border-bottom: 2px solid var(--sakura);
+  box-shadow: 0 0 30px rgba(255,107,157,0.2);
+}
+
+.city-stat {
+  position: absolute;
+  top: 50%; right: 10%;
+  transform: translateY(-50%);
+  background: rgba(5,5,8,0.9);
+  border: 1px solid rgba(0,212,255,0.3);
+  padding: 1.5rem;
+  text-align: center;
+  backdrop-filter: blur(10px);
+}
+
+.city-stat-num {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: var(--neon-blue);
+  text-shadow: 0 0 20px rgba(0,212,255,0.8);
+  display: block;
+}
+
+.city-stat-label {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.3em;
+  color: rgba(255,255,255,0.3);
+  text-transform: uppercase;
+}
+
+.neon-text { color: var(--neon-blue); text-shadow: 0 0 30px rgba(0,212,255,0.6); }
+
+.city-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  margin-top: 2rem;
+}
+
+.city-tag {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  padding: 0.4rem 1rem;
+  border: 1px solid rgba(0,212,255,0.2);
+  color: rgba(0,212,255,0.7);
+  text-transform: uppercase;
+  transition: all 0.3s;
+  cursor: default;
+}
+
+.city-tag:hover {
+  background: rgba(0,212,255,0.1);
+  border-color: var(--neon-blue);
+  box-shadow: 0 0 15px rgba(0,212,255,0.2);
+}
+
+/* POP CULTURE */
+#popculture {
+  min-height: 100vh;
+  padding: 10rem 0;
+  background: var(--ink);
+  overflow: hidden;
+}
+
+.pop-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 3rem;
+}
+
+.pop-header {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4rem;
+  align-items: end;
+  margin-bottom: 5rem;
+}
+
+.pop-title .section-title-en { color: var(--sakura); }
+
+.pop-intro {
+  font-family: var(--font-jp);
+  font-size: 0.95rem;
+  line-height: 2;
+  color: rgba(255,255,255,0.5);
+  align-self: center;
+}
+
+.pop-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  grid-template-rows: auto;
+  gap: 1.5rem;
+}
+
+.pop-item {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.pop-item:nth-child(1) { grid-column: span 7; }
+.pop-item:nth-child(2) { grid-column: span 5; }
+.pop-item:nth-child(3) { grid-column: span 4; }
+.pop-item:nth-child(4) { grid-column: span 8; }
+
+.pop-item img {
+  width: 100%;
+  height: 100%;
+  min-height: 280px;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94), filter 0.4s;
+  filter: brightness(0.5) saturate(0.7);
+}
+
+.pop-item:hover img {
+  transform: scale(1.06);
+  filter: brightness(0.7) saturate(1.5);
+}
+
+.pop-item-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,107,157,0.4) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+
+.pop-item:hover .pop-item-overlay { opacity: 1; }
+
+.pop-item-label {
+  position: absolute;
+  bottom: 1.5rem; left: 1.5rem;
+  right: 1.5rem;
+}
+
+.pop-item-en {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.pop-item-jp {
+  font-family: var(--font-jp);
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.5);
+  letter-spacing: 0.2em;
+}
+
+/* MARQUEE */
+.marquee-wrap {
+  overflow: hidden;
+  padding: 2rem 0;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  margin: 8rem 0 0;
+}
+
+.marquee-track {
+  display: flex;
+  gap: 3rem;
+  white-space: nowrap;
+  animation: marquee 20s linear infinite;
+}
+
+.marquee-track:hover { animation-play-state: paused; }
+
+.marquee-item {
+  font-family: var(--font-display);
+  font-size: 4rem;
+  font-weight: 900;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(255,255,255,0.1);
+  flex-shrink: 0;
+  transition: -webkit-text-stroke 0.3s, color 0.3s;
+}
+
+.marquee-item:hover {
+  color: rgba(255,107,157,0.3);
+  -webkit-text-stroke: 1px var(--sakura);
+}
+
+.marquee-dot {
+  color: var(--sakura);
+  -webkit-text-stroke: 0;
+  flex-shrink: 0;
+  align-self: center;
+  font-size: 1rem;
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+/* FOOTER */
+footer {
+  position: relative;
+  z-index: 2;
+  padding: 6rem 3rem 3rem;
+  background: var(--ink);
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+.footer-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.footer-big {
+  font-family: var(--font-display);
+  font-size: clamp(4rem, 12vw, 9rem);
+  font-weight: 900;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(255,255,255,0.08);
+  line-height: 1;
+  margin-bottom: 4rem;
+  letter-spacing: -0.02em;
+}
+
+.footer-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+.footer-copy {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  color: rgba(255,255,255,0.2);
+}
+
+.footer-copy span { color: var(--sakura); }
+
+/* PARALLAX */
+.parallax-layer { will-change: transform; }
+
+/* NOISE OVERLAY */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  opacity: 0.02;
+  pointer-events: none;
+  z-index: 9997;
+}
+
+/* GLOW ORBS */
+.glow-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+}
+
+/* HORIZONTAL LINE DECO */
+.h-line {
+  width: 60px; height: 1px;
+  background: linear-gradient(90deg, var(--sakura), var(--gold));
+  margin-bottom: 2rem;
+}
+
+/* RESPONSIVE */
+@media (max-width: 1024px) {
+  nav { padding: 1.5rem 2rem; }
+  .nav-links { display: none; }
+  .tradition-inner, .city-inner { grid-template-columns: 1fr; gap: 4rem; }
+  .city-text { order: 1; }
+  .city-visual { order: 2; }
+  .pop-header { grid-template-columns: 1fr; }
+  .pop-item:nth-child(1) { grid-column: span 12; }
+  .pop-item:nth-child(2) { grid-column: span 12; }
+  .pop-item:nth-child(3) { grid-column: span 12; }
+  .pop-item:nth-child(4) { grid-column: span 12; }
+  .nature-cards { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+  #cursor, #cursor-ring { display: none; }
+  body { cursor: auto; }
+  .tradition-inner, .city-inner { padding: 0 1.5rem; }
+  .nature-inner, .pop-inner, .city-inner { padding: 0 1.5rem; }
+  footer { padding: 4rem 1.5rem 2rem; }
+  .footer-bottom { flex-direction: column; gap: 1rem; text-align: center; }
+  .city-stack { height: 400px; }
+  .nature-cards { gap: 1.5rem; }
+}
+
+/* SECTION REVEAL */
+.reveal { opacity: 0; }
+
+/* SHIMMER */
+@keyframes shimmer {
+  from { background-position: -200% center; }
+  to { background-position: 200% center; }
+}
+
+.shimmer-text {
+  background: linear-gradient(90deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,1) 40%, rgba(255,255,255,0.3) 60%, rgba(255,255,255,0.3) 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 4s linear infinite;
+}
+</style>
+</head>
+<body>
+
+<canvas id="particle-canvas"></canvas>
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+
+<div id="loader">
+  <div class="loader-kanji">日本</div>
+  <div class="loader-bar-wrap"><div class="loader-bar" id="loader-bar"></div></div>
+  <div class="loader-text" id="loader-text">Initializing...</div>
+</div>
+
+<nav id="nav">
+  <a href="#" class="nav-logo">NIH<span>O</span>N</a>
+  <ul class="nav-links">
+    <li><a href="#tradition">Tradition</a></li>
+    <li><a href="#nature">Nature</a></li>
+    <li><a href="#neoncity">Neon City</a></li>
+    <li><a href="#popculture">Culture</a></li>
+  </ul>
+</nav>
+
+<section id="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-img parallax-layer" data-speed="-0.3"></div>
+  <div class="hero-grid"></div>
+  <div class="hero-content">
+    <div class="hero-overline" id="hero-overline">東洋の魂 — Soul of the East</div>
+    <div class="hero-jp" id="hero-jp">ようこそ、日本へ</div>
+    <h1 class="hero-title">
+      <span class="hero-title-line">DISCOVER</span>
+      <span class="hero-title-line accent shimmer-text">JAPAN</span>
+    </h1>
+    <p class="hero-sub" id="hero-sub">
+      Where ancient traditions meet neon-lit futures.<br>
+      伝統と革新が交差する、唯一無二の国へ。
+    </p>
+  </div>
+  <div class="hero-scroll" id="hero-scroll">
+    <span>Scroll</span>
+    <div class="scroll-line"></div>
+  </div>
+</section>
+
+<section id="tradition">
+  <div class="glow-orb" style="width:600px;height:600px;background:rgba(201,168,76,0.06);top:-200px;right:-200px;"></div>
+  <div class="tradition-inner">
+    <div class="tradition-visual reveal" data-direction="left">
+      <div class="tradition-deco"></div>
+      <img class="tradition-img-main tilt" src="https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=800&q=80" alt="Kyoto Temple">
+      <img class="tradition-img-float" src="https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=400&q=80" alt="Geisha">
+    </div>
+    <div class="tradition-text">
+      <div class="section-num reveal" data-delay="0.1">01 / 04</div>
+      <div class="section-tag reveal" data-delay="0.2">Tradition</div>
+      <div class="h-line reveal" data-delay="0.25"></div>
+      <h2 class="section-title-en reveal" data-delay="0.3">TRADI<br>TION</h2>
+      <p class="section-title-jp reveal" data-delay="0.4">伝 統</p>
+      <p class="section-body reveal" data-delay="0.5">
+        From the hushed stone corridors of Kyoto's thousand-year temples to the rustling silk of a geisha's kimono — Japan's traditions are living poetry. Every gesture, every ceremony, every sip of matcha carries the weight and beauty of centuries.
+      </p>
+      <p class="section-body reveal" data-delay="0.6" style="font-size:0.85rem; color:rgba(255,255,255,0.3);">
+        京都の古刹、舞妓の舞、茶の湯。日本の伝統は、今もなお息づいている。
+      </p>
+      <a href="#" class="cta-link reveal" data-delay="0.7">
+        Explore Tradition
+        <span class="cta-arrow"></span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section id="nature">
+  <div class="glow-orb" style="width:500px;height:500px;background:rgba(0,255,159,0.04);bottom:-100px;left:-100px;"></div>
+  <div class="nature-inner">
+    <div class="nature-header">
+      <div class="section-num reveal" data-delay="0.0">02 / 04</div>
+      <div class="section-tag reveal" data-delay="0.1" style="color:var(--neon-green);border-color:rgba(0,255,159,0.3);">Nature</div>
+      <h2 class="section-title-en reveal" data-delay="0.2">NATURE</h2>
+      <p class="section-title-jp reveal" data-delay="0.3">自 然</p>
+      <p class="section-body reveal" data-delay="0.4" style="max-width:60ch;margin:0 auto;">
+        Japan's landscape is a canvas of breathtaking contrasts — cherry blossoms drifting in spring, towering Mount Fuji reflected in still waters, ancient forests where time stands still.
+        四季が彩る日本の大自然は、見る者の心を震わせる。
+      </p>
+    </div>
+    <div class="nature-cards">
+      <div class="nature-card tilt reveal" data-delay="0.1">
+        <img class="nature-card-img" src="https://images.unsplash.com/photo-1522383225653-ed111181a951?w=600&q=80" alt="Mount Fuji">
+        <div class="nature-card-body">
+          <div class="nature-card-num">01</div>
+          <div class="nature-card-title">Mount Fuji</div>
+          <div class="nature-card-jp">富士山</div>
+          <div class="nature-card-desc">Japan's sacred peak, an icon that has inspired poets and painters for millennia.</div>
+        </div>
+      </div>
+      <div class="nature-card tilt reveal" data-delay="0.2">
+        <img class="nature-card-img" src="https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?w=600&q=80" alt="Cherry Blossoms">
+        <div class="nature-card-body">
+          <div class="nature-card-num">02</div>
+          <div class="nature-card-title">Sakura Season</div>
+          <div class="nature-card-jp">桜の季節</div>
+          <div class="nature-card-desc">For two fleeting weeks each spring, Japan transforms into a dreamscape of pink and white.</div>
+        </div>
+      </div>
+      <div class="nature-card tilt reveal" data-delay="0.3">
+        <img class="nature-card-img" src="https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=600&q=80" alt="Forest">
+        <div class="nature-card-body">
+          <div class="nature-card-num">03</div>
+          <div class="nature-card-title">Ancient Forests</div>
+          <div class="nature-card-jp">古代の森</div>
+          <div class="nature-card-desc">Yakushima's cedar forests are among the oldest living things on Earth — alive for 7,000 years.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="neoncity">
+  <div class="city-bg parallax-layer" data-speed="0.2"></div>
+  <div class="city-inner">
+    <div class="city-visual">
+      <div class="city-stack">
+        <img class="city-img city-img-1 tilt" src="https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=800&q=80" alt="Tokyo Neon">
+        <img class="city-img city-img-2 tilt" src="https://images.unsplash.com/photo-1536098561742-ca998e48cbcc?w=800&q=80" alt="Shibuya">
+        <div class="city-stat reveal" data-delay="0.4">
+          <span class="city-stat-num" id="pop-counter">0</span>
+          <span class="city-stat-label">Million People<br>Tokyo Metro</span>
+        </div>
+      </div>
+    </div>
+    <div class="city-text">
+      <div class="section-num reveal" data-delay="0.0">03 / 04</div>
+      <div class="section-tag reveal" data-delay="0.1" style="color:var(--neon-blue);border-color:rgba(0,212,255,0.3);">Neon City</div>
+      <div class="h-line reveal" data-delay="0.15" style="background:linear-gradient(90deg,var(--neon-blue),var(--neon-green));"></div>
+      <h2 class="section-title-en neon-text reveal" data-delay="0.2">NEON<br>CITY</h2>
+      <p class="section-title-jp reveal" data-delay="0.3">現代都市</p>
+      <p class="section-body reveal" data-delay="0.4">
+        Tokyo never sleeps. A city of 37 million dreams, buzzing with neon kanji, bullet trains blurring past at 320km/h, and convenience stores open every second of every day. The future lives here — already.
+      </p>
+      <p class="section-body reveal" data-delay="0.5" style="font-size:0.85rem;color:rgba(255,255,255,0.3);">
+        眠らない街、東京。ネオンと喧騒の中に、未来がある。
+      </p>
+      <div class="city-tags reveal" data-delay="0.6">
+        <span class="city-tag">Shinjuku</span>
+        <span class="city-tag">Shibuya</span>
+        <span class="city-tag">Akihabara</span>
+        <span class="city-tag">Harajuku</span>
+        <span class="city-tag">Roppongi</span>
+        <span class="city-tag">Asakusa</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="popculture">
+  <div class="glow-orb" style="width:400px;height:400px;background:rgba(255,107,157,0.06);top:0;right:0;"></div>
+  <div class="pop-inner">
+    <div class="pop-header">
+      <div class="pop-title">
+        <div class="section-num reveal" data-delay="0.0">04 / 04</div>
+        <div class="section-tag reveal" data-delay="0.1">Pop Culture</div>
+        <h2 class="section-title-en reveal" data-delay="0.2">POP<br>CULTURE</h2>
+        <p class="section-title-jp reveal" data-delay="0.3">ポップカルチャー</p>
+      </div>
+      <div class="pop-intro reveal" data-delay="0.2">
+        Anime, manga, Harajuku fashion, J-pop, video games, street food culture — Japan's pop culture is a global force, a creative explosion that rewired how the world imagines art and entertainment.
+        <br><br>
+        <span style="color:rgba(255,255,255,0.3);font-size:0.85rem;">世界を席巻する日本のポップカルチャー。アニメ、漫画、ファッション——その創造性に終わりはない。</span>
+      </div>
+    </div>
+    <div class="pop-grid">
+      <div class="pop-item reveal" data-delay="0.1">
+        <img src="https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=900&q=80" alt="Tokyo Street">
+        <div class="pop-item-overlay"></div>
+        <div class="pop-item-label">
+          <div class="pop-item-en">Tokyo Street Fashion</div>
+          <div class="pop-item-jp">原宿ファッション</div>
+        </div>
+      </div>
+      <div class="pop-item reveal" data-delay="0.2">
+        <img src="https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=600&q=80" alt="Gaming Culture">
+        <div class="pop-item-overlay" style="background:linear-gradient(135deg,rgba(0,212,255,0.4) 0%,transparent 60%)"></div>
+        <div class="pop-item-label">
+          <div class="pop-item-en">Game & Anime</div>
+          <div class="pop-item-jp">ゲーム・アニメ</div>
+        </div>
+      </div>
+      <div class="pop-item reveal" data-delay="0.3">
+        <img src="https://images.unsplash.com/photo-1551524559-8af4e6624178?w=600&q=80" alt="Ramen">
+        <div class="pop-item-overlay" style="background:linear-gradient(135deg,rgba(201,168,76,0.4) 0%,transparent 60%)"></div>
+        <div class="pop-item-label">
+          <div class="pop-item-en">Food Culture</div>
+          <div class="pop-item-jp">食文化</div>
+        </div>
+      </div>
+      <div class="pop-item reveal" data-delay="0.4">
+        <img src="https://images.unsplash.com/photo-1480796927426-f609979314bd?w=900&q=80" alt="Music">
+        <div class="pop-item-overlay" style="background:linear-gradient(135deg,rgba(0,255,159,0.3) 0%,transparent 60%)"></div>
+        <div class="pop-item-label">
+          <div class="pop-item-en">Music & Performance</div>
+          <div class="pop-item-jp">音楽・パフォーマンス</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="marquee-wrap">
+    <div class="marquee-track" id="marquee">
+      <span class="marquee-item">JAPAN</span>
+      <span class="marquee-dot">✦</span>
+      <span class="marquee-item">日本</span>
+      <span class="marquee-dot">✦</span>
+      <span class="marquee-item">NIHON</span>
+      <span class="marquee-dot">✦</span>
+      <span class="marquee-item">東京</span>
+      <span class="marquee-dot">✦</span>
+      <span class="marquee-item">TOKYO</span>
+      <span class="marquee-dot">✦</span>
+      <span class="marquee-item">KYOTO</span>
+      <span class="marquee-dot">✦</span>
+      <span class="marquee-item">京都</span>
+      <span class="marquee-dot">✦</span>
+      <span class="marquee-item">JAPAN</span>
+      <span class="marquee-dot">✦</span>
+      <span class="marquee-item">日本</span>
+      <span class="marquee-dot">✦</span>
+      <span class="marquee-item">NIHON</span>
+      <span class="marquee-dot">✦</span>
+      <span class="marquee-item">東京</span>
+      <span class="marquee-dot">✦</span>
+      <span class="marquee-item">TOKYO</span>
+      <span class="marquee-dot">✦</span>
+      <span class="marquee-item">KYOTO</span>
+      <span class="marquee-dot">✦</span>
+      <span class="marquee-item">京都</span>
+      <span class="marquee-dot">✦</span>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-big">日本</div>
+    <div class="footer-bottom">
+      <div class="footer-copy">© 2025 NIHON — Designed with <span>愛</span></div>
+      <div class="footer-copy">The Soul of Japan — 日本の魂</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
+
+// CURSOR
+const cursor = document.getElementById('cursor');
+const cursorRing = document.getElementById('cursor-ring');
+let mx = 0, my = 0, rx = 0, ry = 0;
+
+window.addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  gsap.to(cursor, { x: mx, y: my, duration: 0.1 });
+});
+
+function animateRing() {
+  rx += (mx - rx) * 0.12;
+  ry += (my - ry) * 0.12;
+  cursorRing.style.left = rx + 'px';
+  cursorRing.style.top = ry + 'px';
+  requestAnimationFrame(animateRing);
+}
+animateRing();
+
+// PARTICLES
+const canvas = document.getElementById('particle-canvas');
+const ctx = canvas.getContext('2d');
+let W, H, particles = [];
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+class Particle {
+  constructor() { this.reset(); }
+  reset() {
+    this.x = Math.random() * W;
+    this.y = Math.random() * H;
+    this.vx = (Math.random() - 0.5) * 0.3;
+    this.vy = -Math.random() * 0.5 - 0.1;
+    this.alpha = Math.random() * 0.4;
+    this.size = Math.random() * 2 + 0.5;
+    this.color = Math.random() > 0.5 ? '#ff6b9d' : '#c9a84c';
+    this.life = Math.random();
+    this.maxLife = Math.random() * 0.008 + 0.002;
+  }
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.life -= this.maxLife;
+    this.alpha = Math.sin(this.life * Math.PI) * 0.3;
+    if (this.life <= 0 || this.y < -10) this.reset();
+  }
+  draw() {
+    ctx.save();
+    ctx.globalAlpha = this.alpha;
+    ctx.fillStyle = this.color;
+    ctx.shadowBlur = 6;
+    ctx.shadowColor = this.color;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+for (let i = 0; i < 120; i++) particles.push(new Particle());
+
+let mouseTrail = [];
+window.addEventListener('mousemove', e => {
+  mouseTrail.push({ x: e.clientX, y: e.clientY, life: 1 });
+  if (mouseTrail.length > 20) mouseTrail.shift();
+});
+
+function drawParticles() {
+  ctx.clearRect(0, 0, W, H);
+  particles.forEach(p => { p.update(); p.draw(); });
+
+  mouseTrail.forEach((pt, i) => {
+    pt.life -= 0.05;
+    if (pt.life <= 0) return;
+    ctx.save();
+    ctx.globalAlpha = pt.life * 0.4;
+    ctx.fillStyle = '#ff6b9d';
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = '#ff6b9d';
+    ctx.beginPath();
+    ctx.arc(pt.x, pt.y, pt.life * 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  });
+  mouseTrail = mouseTrail.filter(p => p.life > 0);
+
+  requestAnimationFrame(drawParticles);
+}
+drawParticles();
+
+// LOADER
+const loaderTexts = ['Loading Japan...', 'Preparing Experience...', '日本へようこそ...', 'Ready.'];
+let ltIdx = 0;
+const ltInterval = setInterval(() => {
+  ltIdx = (ltIdx + 1) % loaderTexts.length;
+  document.getElementById('loader-text').textContent = loaderTexts[ltIdx];
+}, 400);
+
+gsap.to('#loader-kanji', { opacity: 1, duration: 0.8, ease: 'power2.out' });
+gsap.to('#loader-bar', {
+  width: '100%',
+  duration: 2,
+  ease: 'power2.inOut',
+  onComplete: () => {
+    clearInterval(ltInterval);
+    gsap.to('#loader', {
+      opacity: 0,
+      scale: 1.05,
+      duration: 0.6,
+      ease: 'power2.in',
+      onComplete: () => {
+        document.getElementById('loader').style.display = 'none';
+        startHeroAnim();
+      }
+    });
+  }
+});
+
+// HERO
+function startHeroAnim() {
+  const tl = gsap.timeline({ defaults: { ease: 'power4.out' } });
+  tl.to('#hero-overline', { opacity: 1, y: 0, duration: 0.8, delay: 0.2 })
+    .to('#hero-jp', { opacity: 1, y: 0, duration: 0.8 }, '-=0.4')
+    .to('.hero-title-line', {
+      opacity: 1,
+      y: '0%',
+      duration: 1,
+      stagger: 0.15,
+    }, '-=0.4')
+    .to('#hero-sub', { opacity: 1, y: 0, duration: 0.8 }, '-=0.4')
+    .to('#hero-scroll', { opacity: 1, duration: 0.6 }, '-=0.2');
+}
+
+// SCROLL REVEALS
+document.querySelectorAll('.reveal').forEach(el => {
+  const delay = parseFloat(el.dataset.delay || 0);
+  const dir = el.dataset.direction;
+  let fromProps = { opacity: 0, y: 40 };
+  if (dir === 'left') fromProps = { opacity: 0, x: -60 };
+  if (dir === 'right') fromProps = { opacity: 0, x: 60 };
+
+  gsap.fromTo(el, fromProps, {
+    opacity: 1, x: 0, y: 0,
+    duration: 0.9,
+    delay,
+    ease: 'power3.out',
+    scrollTrigger: {
+      trigger: el,
+      start: 'top 85%',
+      toggleActions: 'play none none none',
+    }
+  });
+});
+
+// PARALLAX
+document.querySelectorAll('.parallax-layer').forEach(el => {
+  const speed = parseFloat(el.dataset.speed || 0);
+  gsap.to(el, {
+    y: () => speed * window.innerHeight,
+    ease: 'none',
+    scrollTrigger: {
+      trigger: el.closest('section') || el,
+      start: 'top bottom',
+      end: 'bottom top',
+      scrub: true
+    }
+  });
+});
+
+// NAV SCROLL EFFECT
+ScrollTrigger.create({
+  start: '200px top',
+  onEnter: () => gsap.to('nav', { backdropFilter: 'blur(20px)', duration: 0.3 }),
+  onLeaveBack: () => gsap.to('nav', { backdropFilter: 'blur(0px)', duration: 0.3 })
+});
+
+// SECTION BG COLOR TRANSITIONS
+gsap.to('body', {
+  backgroundColor: '#0d0d18',
+  scrollTrigger: { trigger: '#nature', start: 'top 60%', end: 'bottom 60%', scrub: true }
+});
+gsap.to('body', {
+  backgroundColor: '#141428',
+  scrollTrigger: { trigger: '#neoncity', start: 'top 60%', end: 'bottom 60%', scrub: true }
+});
+gsap.to('body', {
+  backgroundColor: '#050508',
+  scrollTrigger: { trigger: '#popculture', start: 'top 60%', end: 'bottom 60%', scrub: true }
+});
+
+// COUNTER ANIMATION
+let counterDone = false;
+ScrollTrigger.create({
+  trigger: '#neoncity',
+  start: 'top 70%',
+  onEnter: () => {
+    if (counterDone) return;
+    counterDone = true;
+    const el = document.getElementById('pop-counter');
+    gsap.fromTo({ val: 0 }, { val: 37 }, {
+      duration: 2,
+      ease: 'power2.out',
+      onUpdate: function () {
+        el.textContent = Math.round(this.targets()[0].val);
+      }
+    });
+  }
+});
+
+// TILT EFFECT
+document.querySelectorAll('.tilt').forEach(el => {
+  el.addEventListener('mousemove', e => {
+    const rect = el.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+    gsap.to(el, {
+      rotateY: x * 12,
+      rotateX: -y * 12,
+      transformPerspective: 800,
+      transformOrigin: 'center',
+      ease: 'power2.out',
+      duration: 0.4
+    });
+  });
+  el.addEventListener('mouseleave', () => {
+    gsap.to(el, {
+      rotateY: 0, rotateX: 0,
+      ease: 'elastic.out(1, 0.5)',
+      duration: 1.2
+    });
+  });
+});
+
+// CITY IMAGES PARALLAX INNER
+gsap.to('.city-img-1', {
+  y: -40,
+  ease: 'none',
+  scrollTrigger: { trigger: '#neoncity', start: 'top bottom', end: 'bottom top', scrub: true }
+});
+gsap.to('.city-img-2', {
+  y: 40,
+  ease: 'none',
+  scrollTrigger: { trigger: '#neoncity', start: 'top bottom', end: 'bottom top', scrub: true }
+});
+
+// HERO IMAGE PARALLAX
+gsap.to('.hero-img', {
+  scale: 1,
+  ease: 'none',
+  scrollTrigger: { trigger: '#hero', start: 'top top', end: 'bottom top', scrub: true }
+});
+
+// HERO CONTENT PARALLAX
+gsap.to('.hero-content', {
+  y: 100,
+  opacity: 0,
+  ease: 'none',
+  scrollTrigger: { trigger: '#hero', start: '40% top', end: 'bottom top', scrub: true }
+});
+
+// SCROLL PROGRESS LINE
+const progressLine = document.createElement('div');
+progressLine.style.cssText = 'position:fixed;top:0;left:0;height:2px;background:linear-gradient(90deg,#ff6b9d,#c9a84c);z-index:99999;transform-origin:left;transform:scaleX(0);';
+document.body.appendChild(progressLine);
+
+window.addEventListener('scroll', () => {
+  const p = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+  progressLine.style.transform = `scaleX(${p})`;
+});
+</script>
+</body>
+</html>
