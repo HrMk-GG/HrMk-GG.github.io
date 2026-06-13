@@ -1,0 +1,462 @@
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+#app{font-family:'Zen Maru Gothic',var(--font-sans),sans-serif;min-height:580px;overflow:hidden;}
+.screen{display:none;flex-direction:column;}
+.screen.active{display:flex;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes bounce{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-14px) scale(1.08)}}
+@keyframes pop{0%{transform:scale(0) rotate(-15deg);opacity:0}60%{transform:scale(1.2) rotate(3deg)}100%{transform:scale(1) rotate(0);opacity:1}}
+@keyframes float{0%,100%{transform:translateY(0) rotate(0)}33%{transform:translateY(-8px) rotate(3deg)}66%{transform:translateY(-4px) rotate(-2deg)}}
+@keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(83,74,183,0.4)}50%{box-shadow:0 0 0 10px rgba(83,74,183,0)}}
+@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.3)}}
+@keyframes slideL{from{transform:translateX(-50px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes slideR{from{transform:translateX(50px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
+@keyframes rain{0%{transform:translateY(-20px) rotate(0);opacity:1}100%{transform:translateY(280px) rotate(720deg);opacity:0}}
+.btn{border:none;cursor:pointer;border-radius:999px;font-family:inherit;font-weight:700;font-size:15px;padding:12px 28px;transition:transform .15s,box-shadow .15s;display:inline-flex;align-items:center;gap:8px;}
+.btn:hover{transform:translateY(-3px) scale(1.04);}
+.btn:active{transform:scale(.96);}
+.btn-p{background:#534AB7;color:white;box-shadow:0 4px 0 #3C3489;}
+.btn-p:hover{box-shadow:0 7px 0 #3C3489;}
+.btn-s{background:var(--color-background-secondary);color:var(--color-text-primary);border:1px solid var(--color-border-secondary);}
+.hand-btn{width:88px;height:88px;border-radius:20px;border:2px solid var(--color-border-secondary);font-size:46px;cursor:pointer;background:var(--color-background-secondary);transition:all .2s;display:flex;align-items:center;justify-content:center;animation:float 3s ease-in-out infinite;}
+.hand-btn:nth-child(2){animation-delay:.4s;}
+.hand-btn:nth-child(3){animation-delay:.8s;}
+.hand-btn:hover{transform:translateY(-10px) scale(1.18) rotate(-5deg)!important;border-color:#534AB7;background:#EEEDFE;animation:none!important;}
+.hand-btn.sel{border-color:#534AB7;background:#EEEDFE;animation:glow 1.5s infinite!important;}
+.hand-btn:disabled{opacity:.5;cursor:default;animation:none!important;}
+.room-code{font-size:36px;font-weight:900;letter-spacing:10px;padding:16px 28px;border-radius:16px;background:#EEEDFE;color:#3C3489;border:3px dashed #AFA9EC;text-align:center;animation:bounce 2.5s ease-in-out infinite;display:inline-block;}
+.vs-spin{width:48px;height:48px;border-radius:50%;background:#534AB7;color:white;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;animation:spin 4s linear infinite;flex-shrink:0;}
+.pcard{flex:1;padding:16px;border-radius:18px;background:var(--color-background-secondary);border:2px solid var(--color-border-tertiary);text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:140px;}
+.pcard.you{animation:slideL .5s ease;}
+.pcard.opp{animation:slideR .5s ease;}
+.sdot{width:14px;height:14px;border-radius:50%;transition:all .4s;}
+.sdot.w{background:#1D9E75;animation:pop .4s ease;}
+.sdot.l{background:#D85A30;animation:pop .4s ease;}
+.sdot.e{background:var(--color-border-tertiary);}
+.dot-online{width:9px;height:9px;border-radius:50%;background:#1D9E75;display:inline-block;animation:glow 1.5s infinite;}
+.dot-wait{width:9px;height:9px;border-radius:50%;background:#EF9F27;display:inline-block;}
+.conn{display:flex;gap:8px;justify-content:center;margin:16px 0;}
+.conn span{width:11px;height:11px;border-radius:50%;background:#534AB7;animation:bounce 1s ease-in-out infinite;}
+.conn span:nth-child(2){animation-delay:.15s;}
+.conn span:nth-child(3){animation-delay:.3s;}
+input.code-in{font-family:inherit;font-size:26px;font-weight:900;letter-spacing:8px;text-align:center;text-transform:uppercase;border:3px solid var(--color-border-secondary);border-radius:14px;padding:14px 20px;width:220px;background:var(--color-background-primary);color:var(--color-text-primary);outline:none;transition:border-color .2s,box-shadow .2s;}
+input.code-in:focus{border-color:#534AB7;box-shadow:0 0 0 4px rgba(83,74,183,.2);}
+.tab-row{display:flex;background:var(--color-background-secondary);border-radius:999px;padding:4px;gap:4px;}
+.tab{flex:1;padding:9px;border:none;border-radius:999px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;background:transparent;color:var(--color-text-secondary);transition:all .2s;}
+.tab.on{background:#534AB7;color:white;}
+.err{color:#E24B4A;font-size:13px;font-weight:700;min-height:20px;text-align:center;}
+</style>
+
+<div id="app">
+
+<div id="s-home" class="screen active" style="padding:36px 20px;align-items:center;gap:18px;text-align:center;">
+  <div style="font-size:60px;animation:float 2s ease-in-out infinite;">✊</div>
+  <h1 style="font-size:28px;font-weight:900;color:var(--color-text-primary);line-height:1.2;">友達とじゃんけん<br><span style="color:#534AB7;">リアルタイム</span></h1>
+  <div class="tab-row" style="width:100%;max-width:300px;">
+    <button class="tab on" id="t-create" onclick="swTab('create')">ルームを作る</button>
+    <button class="tab" id="t-join" onclick="swTab('join')">参加する</button>
+  </div>
+  <div id="p-create" style="width:100%;max-width:300px;display:flex;flex-direction:column;gap:12px;align-items:center;">
+    <input id="name-c" type="text" placeholder="あなたの名前" maxlength="10"
+      style="width:100%;padding:11px 16px;border-radius:12px;border:2px solid var(--color-border-secondary);font-family:inherit;font-size:15px;background:var(--color-background-primary);color:var(--color-text-primary);outline:none;"
+      onfocus="this.style.borderColor='#534AB7'" onblur="this.style.borderColor=''"/>
+    <button class="btn btn-p" style="width:100%;" onclick="createRoom()">🎮 ルームを作る</button>
+    <div class="err" id="err-c"></div>
+  </div>
+  <div id="p-join" style="width:100%;max-width:300px;display:none;flex-direction:column;gap:12px;align-items:center;">
+    <input id="name-j" type="text" placeholder="あなたの名前" maxlength="10"
+      style="width:100%;padding:11px 16px;border-radius:12px;border:2px solid var(--color-border-secondary);font-family:inherit;font-size:15px;background:var(--color-background-primary);color:var(--color-text-primary);outline:none;"
+      onfocus="this.style.borderColor='#534AB7'" onblur="this.style.borderColor=''"/>
+    <input class="code-in" id="code-j" maxlength="4" placeholder="XXXX" oninput="this.value=this.value.toUpperCase()"/>
+    <button class="btn btn-p" style="width:100%;" onclick="joinRoom()">🚪 参加する</button>
+    <div class="err" id="err-j"></div>
+  </div>
+</div>
+
+<div id="s-wait" class="screen" style="padding:24px 20px;align-items:center;gap:20px;text-align:center;position:relative;">
+  <div style="width:100%;display:flex;justify-content:flex-end;">
+    <button class="btn btn-s" style="font-size:12px;padding:6px 16px;" onclick="leave()">退出</button>
+  </div>
+  <p style="font-size:13px;color:var(--color-text-secondary);">ルームコードを友達に送ろう！</p>
+  <div class="room-code" id="disp-code">----</div>
+  <div class="conn"><span></span><span></span><span></span></div>
+  <p style="font-weight:700;color:var(--color-text-secondary);" id="wait-msg">友達を待っています...</p>
+  <button class="btn btn-s" onclick="copyCode()"><i class="ti ti-copy" aria-hidden="true"></i> コピー</button>
+</div>
+
+<div id="s-game" class="screen" style="padding:0;position:relative;overflow:hidden;">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:0.5px solid var(--color-border-tertiary);">
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span class="dot-online"></span>
+      <span style="font-size:13px;font-weight:700;" id="g-room">----</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span style="font-size:12px;color:var(--color-text-secondary);">ベスト <span id="g-bestof" style="font-weight:700;color:#534AB7;"></span></span>
+      <button class="btn btn-s" style="font-size:12px;padding:6px 14px;" onclick="leave()">退出</button>
+    </div>
+  </div>
+
+  <div style="padding:14px 16px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+      <div class="pcard you">
+        <div id="g-you-av" style="font-size:28px;animation:float 2s ease-in-out infinite;">😎</div>
+        <div style="font-weight:700;font-size:13px;" id="g-you-name">あなた</div>
+        <div style="display:flex;gap:6px;" id="sc-you"></div>
+      </div>
+      <div class="vs-spin">VS</div>
+      <div class="pcard opp">
+        <div id="g-opp-av" style="font-size:28px;animation:float 2.5s ease-in-out infinite .3s;">🤔</div>
+        <div style="font-weight:700;font-size:13px;" id="g-opp-name">相手</div>
+        <div style="display:flex;gap:6px;" id="sc-opp"></div>
+      </div>
+    </div>
+
+    <div id="ph-choose" style="text-align:center;">
+      <p style="font-size:14px;font-weight:700;color:var(--color-text-secondary);margin-bottom:2px;" id="g-round">ラウンド 1</p>
+      <p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:10px;">手を選んでね！</p>
+      <div style="display:flex;justify-content:center;gap:16px;">
+        <button class="hand-btn" id="h-rock" onclick="pick('rock')">✊</button>
+        <button class="hand-btn" id="h-scissors" onclick="pick('scissors')">✌️</button>
+        <button class="hand-btn" id="h-paper" onclick="pick('paper')">🖐️</button>
+      </div>
+      <div id="pick-status" style="min-height:24px;margin-top:10px;font-size:13px;color:#534AB7;font-weight:700;"></div>
+      <div id="opp-status" style="min-height:20px;font-size:12px;color:var(--color-text-secondary);"></div>
+    </div>
+
+    <div id="ph-countdown" style="display:none;text-align:center;padding:16px 0;">
+      <p style="font-size:15px;font-weight:700;color:var(--color-text-secondary);">じゃんけん...</p>
+      <div id="cd-num" style="font-size:100px;font-weight:900;color:#534AB7;animation:pulse 1s ease-in-out;line-height:1.1;">3</div>
+    </div>
+
+    <div id="ph-result" style="display:none;text-align:center;padding:8px 0;position:relative;overflow:hidden;">
+      <div id="rain" style="position:absolute;pointer-events:none;width:100%;height:100%;top:0;left:0;overflow:hidden;"></div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:28px;margin-bottom:14px;">
+        <div style="animation:slideL .5s ease;">
+          <div id="r-you-h" style="font-size:64px;animation:pop .5s ease;display:block;"></div>
+          <div style="font-size:12px;color:var(--color-text-secondary);" id="r-you-n"></div>
+        </div>
+        <div style="font-size:18px;font-weight:900;color:var(--color-text-secondary);">vs</div>
+        <div style="animation:slideR .5s ease;">
+          <div id="r-opp-h" style="font-size:64px;animation:pop .6s ease;display:block;"></div>
+          <div style="font-size:12px;color:var(--color-text-secondary);" id="r-opp-n"></div>
+        </div>
+      </div>
+      <div id="r-label" style="font-size:32px;font-weight:900;margin-bottom:14px;animation:pop .6s ease;"></div>
+      <button id="next-btn" class="btn btn-p" style="animation:glow 1.5s infinite;" onclick="nextRound()"></button>
+    </div>
+  </div>
+</div>
+
+<div id="s-final" class="screen" style="padding:32px 20px;align-items:center;text-align:center;gap:16px;position:relative;overflow:hidden;">
+  <div id="final-rain" style="position:absolute;pointer-events:none;width:100%;height:100%;top:0;left:0;overflow:hidden;"></div>
+  <div id="f-emoji" style="font-size:72px;animation:bounce 1s ease-in-out infinite;"></div>
+  <div id="f-title" style="font-size:32px;font-weight:900;line-height:1.2;"></div>
+  <div id="f-score" style="font-size:18px;color:var(--color-text-secondary);"></div>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:8px;">
+    <button class="btn btn-p" onclick="playAgain()">🔄 もう一回！</button>
+    <button class="btn btn-s" onclick="leave()">🏠 ホームへ</button>
+  </div>
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+const SUPA_URL = 'https://lazynclslwavlwnxxcfw.supabase.co';
+const SUPA_KEY = 'sb_publishable_R9JioCLljUineFNqzudr1g_nOIkPW5b';
+const { createClient } = supabase;
+const db = createClient(SUPA_URL, SUPA_KEY);
+
+const HANDS = {rock:'✊',scissors:'✌️',paper:'🖐️'};
+const HNAME = {rock:'グー',scissors:'チョキ',paper:'パー'};
+const WINS  = {rock:'scissors',scissors:'paper',paper:'rock'};
+const AVATARS_YOU = ['😎','🤩','😄','🥳'];
+const AVATARS_OPP = ['🤔','😤','😏','🦊'];
+
+let G = {
+  roomId: null, myRole: null, myName: '', oppName: '',
+  bestOf: 3, round: 1, myScore: 0, oppScore: 0,
+  myHand: null, oppHand: null, channel: null, polling: null
+};
+
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('s-' + id).classList.add('active');
+}
+
+function swTab(t) {
+  document.getElementById('t-create').classList.toggle('on', t==='create');
+  document.getElementById('t-join').classList.toggle('on', t==='join');
+  document.getElementById('p-create').style.display = t==='create' ? 'flex' : 'none';
+  document.getElementById('p-join').style.display = t==='join' ? 'flex' : 'none';
+}
+
+function genCode() {
+  return Math.random().toString(36).substr(2,4).toUpperCase();
+}
+
+async function createRoom() {
+  const name = document.getElementById('name-c').value.trim() || 'ホスト';
+  const id = genCode();
+  document.getElementById('err-c').textContent = '';
+  const { error } = await db.from('janken_rooms').insert({
+    id, host_name: name, status: 'waiting',
+    host_score: 0, guest_score: 0, round: 1,
+    host_hand: null, guest_hand: null
+  });
+  if (error) { document.getElementById('err-c').textContent = 'エラー: ' + error.message; return; }
+  G.roomId = id; G.myRole = 'host'; G.myName = name;
+  document.getElementById('disp-code').textContent = id;
+  document.getElementById('wait-msg').textContent = name + ' が待っています...';
+  show('wait');
+  subscribeRoom();
+}
+
+async function joinRoom() {
+  const name = document.getElementById('name-j').value.trim() || 'ゲスト';
+  const code = document.getElementById('code-j').value.trim().toUpperCase();
+  document.getElementById('err-j').textContent = '';
+  if (code.length !== 4) {
+    document.getElementById('code-j').style.animation = 'shake .4s ease';
+    setTimeout(() => document.getElementById('code-j').style.animation = '', 500);
+    document.getElementById('err-j').textContent = '4文字のコードを入力してね';
+    return;
+  }
+  const { data, error } = await db.from('janken_rooms').select('*').eq('id', code).single();
+  if (error || !data) { document.getElementById('err-j').textContent = 'ルームが見つかりません'; return; }
+  if (data.status !== 'waiting') { document.getElementById('err-j').textContent = 'このルームはすでに始まっています'; return; }
+  G.roomId = code; G.myRole = 'guest'; G.myName = name; G.oppName = data.host_name;
+  await db.from('janken_rooms').update({ guest_name: name, status: 'ready' }).eq('id', code);
+  document.getElementById('disp-code').textContent = code;
+  show('wait');
+  subscribeRoom();
+}
+
+function subscribeRoom() {
+  if (G.channel) G.channel.unsubscribe();
+  G.channel = db.channel('room-' + G.roomId)
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'janken_rooms', filter: 'id=eq.' + G.roomId }, payload => {
+      handleRoomUpdate(payload.new);
+    })
+    .subscribe();
+  pollRoom();
+}
+
+async function pollRoom() {
+  if (G.polling) clearInterval(G.polling);
+  G.polling = setInterval(async () => {
+    const { data } = await db.from('janken_rooms').select('*').eq('id', G.roomId).single();
+    if (data) handleRoomUpdate(data);
+  }, 1500);
+}
+
+function handleRoomUpdate(room) {
+  if (!room) return;
+  if (room.status === 'ready' && G.myRole === 'host' && document.getElementById('s-wait').classList.contains('active')) {
+    G.oppName = room.guest_name || 'ゲスト';
+    startGame(room);
+  }
+  if (room.status === 'playing' && document.getElementById('s-game').classList.contains('active')) {
+    syncGameState(room);
+  }
+}
+
+function startGame(room) {
+  G.myScore = 0; G.oppScore = 0; G.round = 1; G.myHand = null; G.oppHand = null;
+  db.from('janken_rooms').update({ status: 'playing', round: 1, host_score: 0, guest_score: 0, host_hand: null, guest_hand: null }).eq('id', G.roomId);
+  document.getElementById('g-room').textContent = G.roomId;
+  document.getElementById('g-bestof').textContent = G.bestOf;
+  document.getElementById('g-you-name').textContent = G.myName;
+  document.getElementById('g-opp-name').textContent = G.oppName;
+  document.getElementById('g-you-av').textContent = AVATARS_YOU[Math.floor(Math.random()*4)];
+  document.getElementById('g-opp-av').textContent = AVATARS_OPP[Math.floor(Math.random()*4)];
+  updateScore();
+  updateRound();
+  showPhase('choose');
+  show('game');
+}
+
+function syncGameState(room) {
+  const myHand = G.myRole === 'host' ? room.host_hand : room.guest_hand;
+  const oppHand = G.myRole === 'host' ? room.guest_hand : room.host_hand;
+  G.myScore = G.myRole === 'host' ? room.host_score : room.guest_score;
+  G.oppScore = G.myRole === 'host' ? room.guest_score : room.host_score;
+  G.round = room.round;
+
+  if (myHand && oppHand && document.getElementById('ph-choose').style.display !== 'none') {
+    G.oppHand = oppHand;
+    startCountdown();
+  } else if (myHand && !oppHand) {
+    document.getElementById('opp-status').textContent = '相手が考えています...';
+  }
+  updateScore();
+  updateRound();
+}
+
+async function pick(hand) {
+  if (G.myHand) return;
+  G.myHand = hand;
+  document.querySelectorAll('.hand-btn').forEach((b, i) => {
+    const h = ['rock','scissors','paper'][i];
+    b.classList.toggle('sel', h === hand);
+    b.style.opacity = h === hand ? '1' : '0.4';
+    b.disabled = true;
+  });
+  document.getElementById('pick-status').textContent = HNAME[hand] + ' を選んだ！';
+  const col = G.myRole === 'host' ? 'host_hand' : 'guest_hand';
+  await db.from('janken_rooms').update({ [col]: hand }).eq('id', G.roomId);
+  const { data } = await db.from('janken_rooms').select('*').eq('id', G.roomId).single();
+  if (data) {
+    const oppHand = G.myRole === 'host' ? data.guest_hand : data.host_hand;
+    if (oppHand) { G.oppHand = oppHand; startCountdown(); }
+    else document.getElementById('opp-status').textContent = '相手が考えています...';
+  }
+}
+
+function startCountdown() {
+  showPhase('countdown');
+  let c = 3;
+  const el = document.getElementById('cd-num');
+  el.textContent = c;
+  const iv = setInterval(() => {
+    c--;
+    el.style.animation = 'none';
+    void el.offsetWidth;
+    el.style.animation = 'pulse .5s ease';
+    if (c === 0) {
+      clearInterval(iv);
+      el.textContent = 'ポン！';
+      el.style.color = '#D85A30';
+      setTimeout(showResult, 600);
+    } else {
+      el.textContent = c;
+    }
+  }, 800);
+}
+
+function showResult() {
+  showPhase('result');
+  const my = G.myHand, opp = G.oppHand;
+  document.getElementById('r-you-h').textContent = HANDS[my];
+  document.getElementById('r-opp-h').textContent = HANDS[opp];
+  document.getElementById('r-you-n').textContent = G.myName;
+  document.getElementById('r-opp-n').textContent = G.oppName;
+  let txt, col, won = false, drew = false;
+  if (my === opp) { txt = 'あいこ！ 🔄'; col = '#534AB7'; drew = true; }
+  else if (WINS[my] === opp) { txt = '勝ち！ 🎉'; col = '#0F6E56'; won = true; G.myScore++; }
+  else { txt = '負け... 😢'; col = '#993C1D'; G.oppScore++; }
+  const rl = document.getElementById('r-label');
+  rl.textContent = txt; rl.style.color = col;
+  if (won) spawnRain('rain', ['🎉','⭐','✨','🎊'], 12);
+  if (!won && !drew) spawnRain('rain', ['💔','😢','💧'], 8);
+  updateScore();
+  const needed = Math.ceil(G.bestOf / 2);
+  const nb = document.getElementById('next-btn');
+  if (!drew) {
+    const hScore = G.myRole === 'host' ? G.myScore : G.oppScore;
+    const gScore = G.myRole === 'host' ? G.oppScore : G.myScore;
+    db.from('janken_rooms').update({ host_score: hScore, guest_score: gScore }).eq('id', G.roomId);
+  }
+  if (G.myScore >= needed || G.oppScore >= needed) nb.textContent = '結果を見る 🏆';
+  else if (drew) nb.textContent = '引き分け！もう一回 🔄';
+  else nb.textContent = '次のラウンドへ →';
+}
+
+async function nextRound() {
+  const needed = Math.ceil(G.bestOf / 2);
+  if (G.myScore >= needed || G.oppScore >= needed) { showFinal(); return; }
+  if (!drew_flag()) G.round++;
+  G.myHand = null; G.oppHand = null;
+  document.querySelectorAll('.hand-btn').forEach(b => { b.style.opacity = '1'; b.classList.remove('sel'); b.disabled = false; });
+  document.getElementById('pick-status').textContent = '';
+  document.getElementById('opp-status').textContent = '';
+  await db.from('janken_rooms').update({ host_hand: null, guest_hand: null, round: G.round }).eq('id', G.roomId);
+  updateRound();
+  showPhase('choose');
+}
+
+function drew_flag() {
+  return document.getElementById('r-label').textContent.includes('あいこ');
+}
+
+function showFinal() {
+  const needed = Math.ceil(G.bestOf / 2);
+  const won = G.myScore >= needed;
+  document.getElementById('f-emoji').textContent = won ? '🏆' : '😢';
+  const ft = document.getElementById('f-title');
+  ft.textContent = won ? G.myName + 'の勝利！' : G.oppName + 'の勝利...';
+  ft.style.color = won ? '#0F6E56' : '#993C1D';
+  document.getElementById('f-score').textContent = G.myScore + ' 勝 ' + G.oppScore + ' 敗';
+  if (won) spawnRain('final-rain', ['🏆','🎉','⭐','✨','🥳'], 24);
+  show('final');
+}
+
+async function playAgain() {
+  G.myScore = 0; G.oppScore = 0; G.round = 1; G.myHand = null; G.oppHand = null;
+  document.querySelectorAll('.hand-btn').forEach(b => { b.style.opacity = '1'; b.classList.remove('sel'); b.disabled = false; });
+  await db.from('janken_rooms').update({ host_hand: null, guest_hand: null, host_score: 0, guest_score: 0, round: 1, status: 'playing' }).eq('id', G.roomId);
+  updateScore(); updateRound(); showPhase('choose'); show('game');
+}
+
+async function leave() {
+  if (G.polling) clearInterval(G.polling);
+  if (G.channel) G.channel.unsubscribe();
+  if (G.roomId) await db.from('janken_rooms').delete().eq('id', G.roomId);
+  G = { roomId:null, myRole:null, myName:'', oppName:'', bestOf:3, round:1, myScore:0, oppScore:0, myHand:null, oppHand:null, channel:null, polling:null };
+  show('home');
+}
+
+function updateScore() {
+  const needed = Math.ceil(G.bestOf / 2);
+  function dots(el, wins) {
+    el.innerHTML = '';
+    for (let i = 0; i < needed; i++) {
+      const d = document.createElement('div');
+      d.className = 'sdot ' + (i < wins ? 'w' : 'e');
+      el.appendChild(d);
+    }
+  }
+  dots(document.getElementById('sc-you'), G.myScore);
+  dots(document.getElementById('sc-opp'), G.oppScore);
+}
+
+function updateRound() {
+  document.getElementById('g-round').textContent = 'ラウンド ' + G.round + ' / ' + G.bestOf;
+}
+
+function showPhase(p) {
+  ['choose','countdown','result'].forEach(ph => {
+    document.getElementById('ph-' + ph).style.display = ph === p ? 'block' : 'none';
+  });
+}
+
+function spawnRain(id, items, n) {
+  const c = document.getElementById(id);
+  c.innerHTML = '';
+  for (let i = 0; i < n; i++) {
+    const el = document.createElement('div');
+    el.style.cssText = 'position:absolute;left:' + (Math.random()*100) + '%;top:-20px;font-size:' + (14+Math.random()*18) + 'px;animation:rain ' + (1+Math.random()*2) + 's ' + (Math.random()*.8) + 's linear forwards;pointer-events:none;user-select:none;';
+    el.textContent = items[Math.floor(Math.random()*items.length)];
+    c.appendChild(el);
+  }
+  setTimeout(() => c.innerHTML = '', 4000);
+}
+
+function copyCode() {
+  if (navigator.clipboard && G.roomId) {
+    navigator.clipboard.writeText(G.roomId).then(() => {
+      const btn = event.target.closest('button');
+      const orig = btn.innerHTML;
+      btn.innerHTML = '<i class="ti ti-check"></i> コピーした！';
+      btn.style.color = '#0F6E56';
+      setTimeout(() => { btn.innerHTML = orig; btn.style.color = ''; }, 2000);
+    });
+  }
+}
+
+swTab('create');
+</script>
