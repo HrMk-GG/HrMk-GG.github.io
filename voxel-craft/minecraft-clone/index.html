@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voxel Craft - Minecraft風ゲーム</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="blocker">
+    <div id="menu">
+      <h1>VOXEL CRAFT</h1>
+      <p>クリックしてゲームを開始</p>
+      <ul class="help">
+        <li>WASD : 移動</li>
+        <li>Space : ジャンプ</li>
+        <li>Shift : ダッシュ</li>
+        <li>左クリック : ブロックを壊す</li>
+        <li>右クリック : ブロックを置く</li>
+        <li>1〜7 : ブロック選択</li>
+        <li>Esc : メニューに戻る</li>
+      </ul>
+    </div>
+  </div>
+
+  <div id="crosshair">+</div>
+
+  <div id="hotbar"></div>
+
+  <div id="fps">FPS: --</div>
+
+  <canvas id="game-canvas"></canvas>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
