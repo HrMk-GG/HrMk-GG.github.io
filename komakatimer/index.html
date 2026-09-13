@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>細かすぎタイマー &amp; ストップウォッチ</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --base:#ffffff;
+    --surface:#f5f6f8;
+    --surface-2:#eef0f3;
+    --ink:#14151a;
+    --muted:#80838c;
+    --muted-2:#aeb1b8;
+    --line:#e4e6eb;
+    --accent:#2453ff;
+    --accent-ink:#ffffff;
+    --accent-soft:#e8edff;
+    --alert:#ff3d57;
+    --alert-soft:#ffe7ea;
+    --radius-lg:28px;
+    --radius-md:18px;
+    --radius-sm:12px;
+    --shadow-1: 0 1px 2px rgba(20,21,26,0.04), 0 8px 24px rgba(20,21,26,0.06);
+    --shadow-2: 0 2px 6px rgba(20,21,26,0.06), 0 16px 40px rgba(20,21,26,0.10);
+  }
+
+  *{ box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    background:var(--base);
+    color:var(--ink);
+    font-family:'Space Grotesk', -apple-system, sans-serif;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height:100vh;
+    padding:24px;
+    overflow-x:hidden;
+  }
+
+  .app{
+    width:100%;
+    max-width:420px;
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+  }
+
+  /* ---- Mode switch ---- */
+  .switch{
+    position:relative;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    background:var(--surface);
+    border-radius:999px;
+    padding:4px;
+    height:48px;
+  }
+  .switch .thumb{
+    position:absolute;
+    top:4px; bottom:4px; left:4px;
+    width:calc(50% - 4px);
+    background:var(--ink);
+    border-radius:999px;
+    transition:transform .38s cubic-bezier(.65,0,.35,1);
+  }
+  .switch.timer .thumb{ transform:translateX(100%); }
+  .switch button{
+    position:relative;
+    z-index:1;
+    background:none;
+    border:none;
+    font-family:inherit;
+    font-size:14px;
+    font-weight:600;
+    letter-spacing:.01em;
+    color:var(--muted);
+    cursor:pointer;
+    border-radius:999px;
+    transition:color .35s ease;
+  }
+  .switch button.active{ color:#fff; }
+
+  /* ---- Face card ---- */
+  .face{
+    background:var(--surface);
+    border-radius:var(--radius-lg);
+    padding:36px 22px 28px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:6px;
+    box-shadow:var(--shadow-1);
+    position:relative;
+    overflow:hidden;
+  }
+
+  .status-dot{
+    position:absolute;
+    top:20px; left:22px;
+    width:8px; height:8px;
+    border-radius:50%;
+    background:var(--muted-2);
+    transition:background .25s ease, box-shadow .25s ease;
+  }
+  .status-dot.running{
+    background:var(--accent);
+    box-shadow:0 0 0 0 rgba(36,83,255,.5);
+    animation:pulse-dot 1.6s ease-out infinite;
+  }
+  .status-dot.finished{
+    background:var(--alert);
+    animation:pulse-dot-alert 1s ease-out infinite;
+  }
+  @keyframes pulse-dot{
+    0%{ box-shadow:0 0 0 0 rgba(36,83,255,.45); }
+    70%{ box-shadow:0 0 0 9px rgba(36,83,255,0); }
+    100%{ box-shadow:0 0 0 0 rgba(36,83,255,0); }
+  }
+  @keyframes pulse-dot-alert{
+    0%{ box-shadow:0 0 0 0 rgba(255,61,87,.5); }
+    70%{ box-shadow:0 0 0 12px rgba(255,61,87,0); }
+    100%{ box-shadow:0 0 0 0 rgba(255,61,87,0); }
+  }
+
+  .precision-toggle{
+    position:absolute;
+    top:16px; right:16px;
+    width:28px; height:28px;
+    border-radius:50%;
+    border:1px solid var(--line);
+    background:var(--base);
+    color:var(--muted);
+    font-size:12px;
+    font-weight:600;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    font-family:'IBM Plex Mono', monospace;
+    transition:transform .15s ease, background .15s ease, color .15s ease;
+  }
+  .precision-toggle:hover{ color:var(--ink); border-color:var(--muted-2); }
+  .precision-toggle:active{ transform:scale(.88); }
+
+  .readout{
+    font-family:'IBM Plex Mono', monospace;
+    display:flex;
+    align-items:baseline;
+    justify-content:center;
+    flex-wrap:wrap;
+    line-height:1;
+    margin-top:10px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .readout .grp{ display:flex; align-items:baseline; }
+  .readout .digit-main{
+    font-size:clamp(40px, 11vw, 54px);
+    font-weight:600;
+    font-variant-numeric:tabular-nums;
+    letter-spacing:-0.01em;
+  }
+  .readout .sep{
+    font-size:clamp(40px, 11vw, 54px);
+    font-weight:500;
+    color:var(--muted-2);
+    margin:0 1px;
+  }
+  .readout .dot{
+    font-size:clamp(28px, 7vw, 34px);
+    color:var(--muted-2);
+    margin:0 2px;
+    align-self:flex-end;
+  }
+  .readout .digit-fine{
+    font-size:clamp(22px, 6vw, 27px);
+    font-weight:500;
+    color:var(--muted);
+    font-variant-numeric:tabular-nums;
+  }
+  .readout .digit-finer{
+    font-size:clamp(16px, 4.4vw, 19px);
+    font-weight:500;
+    color:var(--muted-2);
+    font-variant-numeric:tabular-nums;
+  }
+
+  .unit-labels{
+    display:flex;
+    justify-content:center;
+    gap:0;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px;
+    color:var(--muted-2);
+    letter-spacing:.06em;
+    margin-top:6px;
+    min-height:14px;
+  }
+  .unit-labels span{ text-align:center; }
+
+  .precision-note{
+    max-height:0;
+    overflow:hidden;
+    transition:max-height .3s ease, margin-top .3s ease, opacity .3s ease;
+    opacity:0;
+    font-size:11.5px;
+    color:var(--muted);
+    text-align:center;
+    line-height:1.5;
+    padding:0 6px;
+  }
+  .precision-note.open{
+    max-height:80px;
+    margin-top:12px;
+    opacity:1;
+  }
+
+  /* ---- Timer set panel ---- */
+  .set-panel{
+    display:flex;
+    justify-content:center;
+    gap:18px;
+    margin-top:6px;
+  }
+  .set-col{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:2px;
+  }
+  .set-btn{
+    width:34px; height:26px;
+    border:none;
+    background:none;
+    color:var(--muted-2);
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transition:color .15s ease, transform .1s ease;
+  }
+  .set-btn:hover{ color:var(--ink); }
+  .set-btn:active{ transform:scale(.8); }
+  .set-btn svg{ width:14px; height:14px; }
+  .set-label{
+    font-size:9px;
+    color:var(--muted-2);
+    letter-spacing:.08em;
+    margin-top:2px;
+  }
+
+  /* ---- Controls ---- */
+  .controls{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+  }
+
+  .btn{
+    position:relative;
+    overflow:hidden;
+    border:none;
+    border-radius:var(--radius-md);
+    height:60px;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:15px;
+    font-weight:600;
+    letter-spacing:.01em;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    transition:transform .16s cubic-bezier(.34,1.56,.64,1), box-shadow .2s ease, background .2s ease;
+    -webkit-user-select:none; user-select:none;
+  }
+  .btn:active{ transform:scale(.96); }
+
+  .btn-primary{
+    background:var(--ink);
+    color:#fff;
+    box-shadow:var(--shadow-1);
+  }
+  .btn-primary:hover{ box-shadow:var(--shadow-2); transform:translateY(-1px); }
+  .btn-primary:active{ transform:scale(.96); }
+  .btn-primary.is-running{ background:var(--accent); }
+  .btn-primary.is-danger{ background:var(--alert); }
+
+  .btn-secondary{
+    background:var(--surface);
+    color:var(--ink);
+    border:1px solid var(--line);
+  }
+  .btn-secondary:hover{ background:var(--surface-2); }
+  .btn-secondary:disabled{
+    color:var(--muted-2);
+    cursor:default;
+    background:var(--surface);
+  }
+  .btn-secondary:disabled:hover{ background:var(--surface); }
+
+  .ripple{
+    position:absolute;
+    border-radius:50%;
+    background:rgba(255,255,255,.5);
+    transform:scale(0);
+    animation:ripple-anim .55s ease-out forwards;
+    pointer-events:none;
+  }
+  .btn-secondary .ripple{ background:rgba(20,21,26,.08); }
+  @keyframes ripple-anim{
+    to{ transform:scale(2.6); opacity:0; }
+  }
+
+  /* ---- Laps ---- */
+  .laps{
+    background:var(--surface);
+    border-radius:var(--radius-md);
+    max-height:0;
+    overflow:hidden;
+    transition:max-height .4s cubic-bezier(.65,0,.35,1), padding .4s ease;
+  }
+  .laps.open{
+    max-height:260px;
+    padding:6px 0;
+  }
+  .laps-scroll{
+    max-height:248px;
+    overflow-y:auto;
+    padding:0 6px;
+  }
+  .lap-row{
+    display:grid;
+    grid-template-columns:auto 1fr auto;
+    gap:14px;
+    align-items:baseline;
+    padding:12px 14px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    border-bottom:1px solid var(--line);
+    animation:lap-in .3s cubic-bezier(.34,1.56,.64,1);
+  }
+  .lap-row:last-child{ border-bottom:none; }
+  .lap-row .lap-idx{ color:var(--muted-2); font-size:11px; }
+  .lap-row .lap-delta{ color:var(--muted); text-align:right; font-size:12px; }
+  .lap-row.best .lap-total{ color:var(--accent); }
+  .lap-row.worst .lap-total{ color:var(--alert); }
+  @keyframes lap-in{
+    from{ opacity:0; transform:translateY(-6px); }
+    to{ opacity:1; transform:translateY(0); }
+  }
+
+  /* Desktop layout: widen and place laps beside face */
+  @media (min-width:860px){
+    body{ padding:40px; }
+    .app{
+      max-width:880px;
+      display:grid;
+      grid-template-columns:400px 1fr;
+      grid-template-rows:auto auto 1fr;
+      gap:18px 22px;
+    }
+    .switch{ grid-column:1 / 2; }
+    .face{ grid-column:1 / 2; grid-row:2; }
+    .controls{ grid-column:1 / 2; grid-row:3; align-self:start; }
+    .laps{
+      grid-column:2 / 3;
+      grid-row:1 / 4;
+      max-height:none !important;
+      height:100%;
+      display:flex;
+      flex-direction:column;
+      padding:20px 0 !important;
+    }
+    .laps-scroll{ max-height:none; flex:1; }
+    .laps-title{
+      display:block !important;
+      padding:0 20px 14px;
+    }
+    .laps.open{ padding:20px 0; }
+  }
+
+  .laps-title{
+    display:none;
+    font-size:12px;
+    font-weight:600;
+    letter-spacing:.03em;
+    color:var(--muted);
+  }
+  .laps-empty{
+    padding:28px 20px;
+    text-align:center;
+    color:var(--muted-2);
+    font-size:13px;
+  }
+
+  ::-webkit-scrollbar{ width:6px; }
+  ::-webkit-scrollbar-thumb{ background:var(--line); border-radius:3px; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:.001ms !important; transition-duration:.001ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <div class="switch" id="modeSwitch">
+    <div class="thumb"></div>
+    <button class="active" data-mode="stopwatch">ストップウォッチ</button>
+    <button data-mode="timer">タイマー</button>
+  </div>
+
+  <div class="face">
+    <div class="status-dot" id="statusDot"></div>
+    <button class="precision-toggle" id="precisionToggle" aria-label="精度について">i</button>
+
+    <div class="readout" id="readout">
+      <!-- filled by JS -->
+    </div>
+
+    <div class="unit-labels" id="unitLabels"></div>
+
+    <div class="precision-note" id="precisionNote">
+実測できるのは ms(ミリ秒)までです。ブラウザはセキュリティ上の理由でそれより細かい時間を意図的に丸めてしまうため、µs以降(*印)は本物の計測値ではなく、フレームごとに必ず進む演出用の数字です。時計が止まっている間はこれらの桁も止まります。
+    </div>
+
+    <div class="set-panel" id="setPanel" style="display:none;"></div>
+  </div>
+
+  <div class="controls" id="controls"></div>
+
+  <div class="laps" id="lapsPanel">
+    <div class="laps-title">ラップ</div>
+    <div class="laps-scroll" id="lapsScroll">
+      <div class="laps-empty" id="lapsEmpty">ラップはまだありません</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  const readout   = document.getElementById('readout');
+  const unitLabelsEl = document.getElementById('unitLabels');
+  const controlsEl = document.getElementById('controls');
+  const statusDot = document.getElementById('statusDot');
+  const lapsPanel = document.getElementById('lapsPanel');
+  const lapsScroll = document.getElementById('lapsScroll');
+  const lapsEmpty = document.getElementById('lapsEmpty');
+  const precisionToggle = document.getElementById('precisionToggle');
+  const precisionNote = document.getElementById('precisionNote');
+  const modeSwitch = document.getElementById('modeSwitch');
+  const setPanel = document.getElementById('setPanel');
+
+  let mode = 'stopwatch'; // 'stopwatch' | 'timer'
+
+  /* ---------------- Ripple helper ---------------- */
+  function attachRipple(btn){
+    btn.addEventListener('pointerdown', (e)=>{
+      const rect = btn.getBoundingClientRect();
+      const size = Math.max(rect.width, rect.height) * 1.2;
+      const span = document.createElement('span');
+      span.className = 'ripple';
+      span.style.width = span.style.height = size+'px';
+      span.style.left = (e.clientX - rect.left - size/2)+'px';
+      span.style.top  = (e.clientY - rect.top  - size/2)+'px';
+      btn.appendChild(span);
+      span.addEventListener('animationend', ()=>span.remove());
+    });
+  }
+
+  function pad(n, len){ return String(Math.trunc(n)).padStart(len,'0'); }
+
+  // Some browsers/embedded contexts clamp performance.now() to whole
+  // milliseconds for security reasons, which makes any *real* sub-millisecond
+  // fraction come back as exactly 0 every single frame — that's what was
+  // causing the µs/ns/... digits to look permanently frozen at "000...".
+  // We can't get real measurement finer than the browser allows, so instead
+  // of pretending, the digits past "ms" are driven by a frame counter using
+  // a low-discrepancy step (golden ratio conjugate) — guaranteed to change
+  // every rendered frame regardless of clock precision. It's explicitly
+  // labelled with "*" and explained in the info note, not passed off as a
+  // real measurement.
+  let frameSeedCounter = 0;
+  function nextSeed(){
+    frameSeedCounter += 1;
+    return (frameSeedCounter * 0.6180339887498949) % 1;
+  }
+
+  /* ---------------- Number formatting into the readout ---------------- */
+  // totalMs: float milliseconds. Renders H:MM:SS.mmm uuu nnn
+  function renderTime(totalMs, opts){
+    opts = opts || {};
+    totalMs = Math.max(0, totalMs);
+    const totalWholeMs = Math.floor(totalMs);
+    const h = Math.floor(totalWholeMs / 3600000);
+    const m = Math.floor((totalWholeMs % 3600000) / 60000);
+    const s = Math.floor((totalWholeMs % 60000) / 1000);
+    const ms = totalWholeMs % 1000;
+
+    // Sub-millisecond digits: always cascade from a *fraction in [0,1)*, never from
+    // the raw (ever-growing) totalMs. Multiplying a huge running total directly
+    // eats away the float's significant digits and makes the low digits freeze
+    // for long stretches. Peeling the fraction off step by step keeps every
+    // group working with a fresh 0..1 value, so it stays full precision and
+    // genuinely keeps moving no matter how long the clock has been running.
+    let frac = totalMs - totalWholeMs; // 0..1 ms, real sub-millisecond remainder (often 0 — see note above)
+    if (typeof opts.seed === 'number'){
+      frac = (frac + opts.seed) % 1; // guarantees visible motion even when the real remainder is stuck at 0
+    }
+    const groups = []; // [micro, nano, pico, femto, atto] — 3 digits each
+    for (let i = 0; i < 5; i++){
+      frac *= 1000;
+      const digits = Math.floor(frac);
+      groups.push(digits % 1000);
+      frac -= Math.floor(frac);
+    }
+    const [micros, nanos, picos, femtos, attos] = groups;
+
+    readout.innerHTML = '';
+
+    const frag = document.createDocumentFragment();
+
+    function addGroup(text, cls){
+      const s = document.createElement('span');
+      s.className = cls;
+      s.textContent = text;
+      frag.appendChild(s);
+    }
+
+    if (h > 0 || opts.showHours){
+      addGroup(pad(h,2), 'digit-main');
+      addGroup(':', 'sep');
+    }
+    addGroup(pad(m,2), 'digit-main');
+    addGroup(':', 'sep');
+    addGroup(pad(s,2), 'digit-main');
+    addGroup('.', 'dot');
+    addGroup(pad(ms,3), 'digit-fine');
+    addGroup(pad(micros,3), 'digit-finer');
+    addGroup(pad(nanos,3), 'digit-finer');
+    addGroup(pad(picos,3), 'digit-finer');
+    addGroup(pad(femtos,3), 'digit-finer');
+    addGroup(pad(attos,3), 'digit-finer');
+
+    readout.appendChild(frag);
+
+    // unit labels beneath, aligned loosely
+    const showH = (h>0 || opts.showHours);
+    unitLabelsEl.innerHTML =
+      (showH ? '<span style="width:38px">時</span><span style="width:8px"></span>' : '') +
+      '<span style="width:38px">分</span><span style="width:8px"></span>' +
+      '<span style="width:38px">秒</span><span style="width:14px"></span>' +
+      '<span style="width:34px">ms</span>' +
+      '<span style="width:30px">µs*</span>' +
+      '<span style="width:30px">ns*</span>' +
+      '<span style="width:30px">ps*</span>' +
+      '<span style="width:30px">fs*</span>' +
+      '<span style="width:30px">as*</span>';
+  }
+
+  precisionToggle.addEventListener('click', ()=>{
+    precisionNote.classList.toggle('open');
+  });
+
+  /* =====================================================================
+     STOPWATCH
+  ===================================================================== */
+  const Stopwatch = (function(){
+    let running = false;
+    let startTime = 0;       // performance.now() at (re)start
+    let accumulated = 0;     // ms accumulated before current run
+    let rafId = null;
+    let laps = [];           // {totalMs}
+
+    function elapsed(){
+      return accumulated + (running ? (performance.now() - startTime) : 0);
+    }
+
+    function tick(){
+      renderTime(elapsed(), {showHours:false, seed: nextSeed()});
+      rafId = requestAnimationFrame(tick);
+    }
+
+    function start(){
+      running = true;
+      startTime = performance.now();
+      statusDot.classList.add('running');
+      statusDot.classList.remove('finished');
+      rafId = requestAnimationFrame(tick);
+      renderControls();
+    }
+    function stop(){
+      const finalElapsed = elapsed(); // compute BEFORE flipping `running` — elapsed() only counts this run's time while running is true
+      running = false;
+      accumulated = finalElapsed;
+      cancelAnimationFrame(rafId);
+      statusDot.classList.remove('running');
+      renderTime(accumulated, {showHours:false});
+      renderControls();
+    }
+    function reset(){
+      running = false;
+      accumulated = 0;
+      laps = [];
+      cancelAnimationFrame(rafId);
+      statusDot.classList.remove('running');
+      renderTime(0, {showHours:false});
+      renderLaps();
+      renderControls();
+    }
+    function lap(){
+      if (!running) return;
+      const t = elapsed();
+      laps.unshift({ totalMs: t, deltaMs: laps.length ? t - laps[0].totalMs : t });
+      renderLaps();
+    }
+
+    function renderLaps(){
+      lapsScroll.innerHTML = '';
+      if (laps.length === 0){
+        lapsScroll.appendChild(lapsEmpty);
+        lapsPanel.classList.remove('open');
+        return;
+      }
+      lapsPanel.classList.add('open');
+
+      // find best/worst delta among laps that have a delta
+      const deltas = laps.map(l=>l.deltaMs);
+      const minD = Math.min(...deltas), maxD = Math.max(...deltas);
+
+      laps.forEach((l, i)=>{
+        const idx = laps.length - i;
+        const row = document.createElement('div');
+        row.className = 'lap-row';
+        if (laps.length > 1 && l.deltaMs === minD) row.classList.add('best');
+        if (laps.length > 1 && l.deltaMs === maxD) row.classList.add('worst');
+
+        const totalWholeMs = Math.floor(l.totalMs);
+        const hh = Math.floor(totalWholeMs/3600000);
+        const mm = Math.floor((totalWholeMs%3600000)/60000);
+        const ss = Math.floor((totalWholeMs%60000)/1000);
+        const msms = totalWholeMs%1000;
+        const totalStr = (hh>0? pad(hh,2)+':':'') + pad(mm,2)+':'+pad(ss,2)+'.'+pad(msms,3);
+
+        const dWholeMs = Math.floor(l.deltaMs);
+        const dss = Math.floor(dWholeMs/1000);
+        const dmsms = dWholeMs%1000;
+        const deltaStr = '+' + pad(dss,2)+'.'+pad(dmsms,3);
+
+        row.innerHTML =
+          '<span class="lap-idx">#'+idx+'</span>'+
+          '<span class="lap-total">'+totalStr+'</span>'+
+          '<span class="lap-delta">'+deltaStr+'</span>';
+        lapsScroll.appendChild(row);
+      });
+    }
+
+    function renderControls(){
+      controlsEl.innerHTML = '';
+
+      const lapBtn = document.createElement('button');
+      lapBtn.className = 'btn btn-secondary';
+      lapBtn.textContent = 'ラップ';
+      lapBtn.disabled = !running;
+      lapBtn.addEventListener('click', lap);
+      attachRipple(lapBtn);
+
+      const mainBtn = document.createElement('button');
+      mainBtn.className = 'btn btn-primary' + (running ? ' is-running' : '');
+      mainBtn.textContent = running ? 'ストップ' : (accumulated>0 ? '再開' : 'スタート');
+      mainBtn.addEventListener('click', ()=> running ? stop() : start());
+      attachRipple(mainBtn);
+
+      const resetBtn = document.createElement('button');
+      resetBtn.className = 'btn btn-secondary';
+      resetBtn.textContent = 'リセット';
+      resetBtn.disabled = running && accumulated===0 && !running; // never actually disable except when nothing to reset
+      resetBtn.disabled = (accumulated===0 && !running);
+      resetBtn.addEventListener('click', reset);
+      attachRipple(resetBtn);
+
+      if (running){
+        controlsEl.appendChild(lapBtn);
+        controlsEl.appendChild(mainBtn);
+      } else {
+        controlsEl.appendChild(resetBtn);
+        controlsEl.appendChild(mainBtn);
+      }
+    }
+
+    function activate(){
+      setPanel.style.display = 'none';
+      renderTime(accumulated, {showHours:false});
+      renderLaps();
+      renderControls();
+      if (running){
+        statusDot.classList.add('running');
+      }
+    }
+    function deactivate(){
+      cancelAnimationFrame(rafId);
+    }
+
+    return { activate, deactivate, get running(){return running;} };
+  })();
+
+  /* =====================================================================
+     TIMER
+  ===================================================================== */
+  const Timer = (function(){
+    let running = false;
+    let finished = false;
+    let targetDuration = 5*60*1000; // ms, default 5 min
+    let remainingAtStop = targetDuration;
+    let startTime = 0;
+    let rafId = null;
+
+    let setH = 0, setM = 5, setS = 0;
+
+    function clampSet(){
+      setH = Math.max(0, Math.min(23, setH));
+      setM = Math.max(0, Math.min(59, setM));
+      setS = Math.max(0, Math.min(59, setS));
+    }
+
+    function durationFromSet(){
+      return ((setH*3600) + (setM*60) + setS) * 1000;
+    }
+
+    function remaining(){
+      if (!running) return remainingAtStop;
+      const r = remainingAtStop - (performance.now() - startTime);
+      return r;
+    }
+
+    function tick(){
+      const r = remaining();
+      if (r <= 0){
+        renderTime(0, {showHours: setH>0});
+        finish();
+        return;
+      }
+      renderTime(r, {showHours: setH>0, seed: nextSeed()});
+      rafId = requestAnimationFrame(tick);
+    }
+
+    function finish(){
+      running = false;
+      finished = true;
+      remainingAtStop = 0;
+      cancelAnimationFrame(rafId);
+      statusDot.classList.remove('running');
+      statusDot.classList.add('finished');
+      renderControls();
+      if (navigator.vibrate) { try{ navigator.vibrate([160,80,160,80,220]); }catch(e){} }
+    }
+
+    function start(){
+      if (finished){ resetToSet(); }
+      if (remainingAtStop <= 0){
+        remainingAtStop = durationFromSet();
+        if (remainingAtStop <= 0) return; // nothing to run
+      }
+      running = true;
+      finished = false;
+      startTime = performance.now();
+      statusDot.classList.add('running');
+      statusDot.classList.remove('finished');
+      rafId = requestAnimationFrame(tick);
+      renderControls();
+    }
+    function pause(){
+      const finalRemaining = remaining(); // compute BEFORE flipping `running`, same class of bug as stop()
+      running = false;
+      remainingAtStop = finalRemaining;
+      cancelAnimationFrame(rafId);
+      statusDot.classList.remove('running');
+      renderTime(remainingAtStop, {showHours:setH>0});
+      renderControls();
+    }
+    function resetToSet(){
+      running = false;
+      finished = false;
+      clampSet();
+      targetDuration = durationFromSet();
+      remainingAtStop = targetDuration;
+      cancelAnimationFrame(rafId);
+      statusDot.classList.remove('running');
+      statusDot.classList.remove('finished');
+      renderTime(remainingAtStop, {showHours:setH>0});
+      renderControls();
+    }
+
+    function adjust(unit, delta){
+      if (running) return;
+      finished = false;
+      statusDot.classList.remove('finished');
+      if (unit==='h') setH += delta;
+      if (unit==='m') setM += delta;
+      if (unit==='s') setS += delta;
+      clampSet();
+      remainingAtStop = durationFromSet();
+      renderTime(remainingAtStop, {showHours:setH>0});
+      renderSetPanel();
+    }
+
+    function renderSetPanel(){
+      setPanel.style.display = running ? 'none' : 'flex';
+      setPanel.innerHTML = '';
+      const cols = [
+        {key:'h', label:'時間'},
+        {key:'m', label:'分'},
+        {key:'s', label:'秒'},
+      ];
+      cols.forEach(c=>{
+        const col = document.createElement('div');
+        col.className = 'set-col';
+
+        const up = document.createElement('button');
+        up.className = 'set-btn';
+        up.innerHTML = chevronSvg('up');
+        up.addEventListener('click', ()=>adjust(c.key, c.key==='h'?1:5));
+
+        const down = document.createElement('button');
+        down.className = 'set-btn';
+        down.innerHTML = chevronSvg('down');
+        down.addEventListener('click', ()=>adjust(c.key, c.key==='h'?-1:-5));
+
+        const label = document.createElement('div');
+        label.className = 'set-label';
+        label.textContent = c.label;
+
+        col.appendChild(up);
+        col.appendChild(label);
+        col.appendChild(down);
+        setPanel.appendChild(col);
+      });
+    }
+
+    function chevronSvg(dir){
+      const d = dir==='up' ? 'M4 10l6-6 6 6' : 'M4 6l6 6 6-6';
+      return '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="'+d+'"/></svg>';
+    }
+
+    function renderControls(){
+      controlsEl.innerHTML = '';
+
+      const resetBtn = document.createElement('button');
+      resetBtn.className = 'btn btn-secondary';
+      resetBtn.textContent = 'リセット';
+      resetBtn.disabled = (!running && !finished && remainingAtStop === durationFromSet());
+      resetBtn.addEventListener('click', resetToSet);
+      attachRipple(resetBtn);
+
+      const mainBtn = document.createElement('button');
+      mainBtn.className = 'btn btn-primary' + (running ? ' is-running' : (finished ? ' is-danger' : ''));
+      mainBtn.textContent = finished ? 'もう一度' : (running ? '一時停止' : (remainingAtStop < durationFromSet() && remainingAtStop>0 ? '再開' : 'スタート'));
+      mainBtn.addEventListener('click', ()=>{
+        if (finished){ resetToSet(); start(); return; }
+        running ? pause() : start();
+      });
+      attachRipple(mainBtn);
+
+      controlsEl.appendChild(resetBtn);
+      controlsEl.appendChild(mainBtn);
+    }
+
+    function activate(){
+      clampSet();
+      if (!running){
+        remainingAtStop = finished ? 0 : (remainingAtStop || durationFromSet());
+      }
+      renderSetPanel();
+      renderTime(remaining(), {showHours:setH>0});
+      renderControls();
+      lapsPanel.classList.remove('open');
+      if (finished) statusDot.classList.add('finished');
+    }
+    function deactivate(){
+      cancelAnimationFrame(rafId);
+    }
+
+    return { activate, deactivate, get running(){return running;} };
+  })();
+
+  /* ---------------- Mode switching ---------------- */
+  const switchBtns = modeSwitch.querySelectorAll('button');
+  switchBtns.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const newMode = btn.dataset.mode;
+      if (newMode === mode) return;
+      switchBtns.forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      modeSwitch.classList.toggle('timer', newMode==='timer');
+
+      if (mode==='stopwatch') Stopwatch.deactivate(); else Timer.deactivate();
+      mode = newMode;
+      statusDot.classList.remove('running','finished');
+
+      if (mode==='stopwatch'){
+        lapsPanel.classList.toggle('open', false);
+        Stopwatch.activate();
+      } else {
+        Timer.activate();
+      }
+    });
+  });
+
+  // initial
+  renderTime(0, {showHours:false});
+  Stopwatch.activate();
+
+})();
+</script>
+</body>
+</html>
