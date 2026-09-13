@@ -490,9 +490,11 @@
   // labelled with "*" and explained in the info note, not passed off as a
   // real measurement.
   let frameSeedCounter = 0;
+  let lastSeed = 0;
   function nextSeed(){
     frameSeedCounter += 1;
-    return (frameSeedCounter * 0.6180339887498949) % 1;
+    lastSeed = (frameSeedCounter * 0.6180339887498949) % 1;
+    return lastSeed;
   }
 
   /* ---------------- Number formatting into the readout ---------------- */
@@ -604,7 +606,7 @@
       accumulated = finalElapsed;
       cancelAnimationFrame(rafId);
       statusDot.classList.remove('running');
-      renderTime(accumulated, {showHours:false});
+      renderTime(accumulated, {showHours:false, seed: lastSeed});
       renderControls();
     }
     function reset(){
@@ -699,8 +701,7 @@
 
     function activate(){
       setPanel.style.display = 'none';
-      renderTime(accumulated, {showHours:false});
-      renderLaps();
+      renderTime(accumulated, {showHours:false, seed: lastSeed});
       renderControls();
       if (running){
         statusDot.classList.add('running');
@@ -784,7 +785,7 @@
       remainingAtStop = finalRemaining;
       cancelAnimationFrame(rafId);
       statusDot.classList.remove('running');
-      renderTime(remainingAtStop, {showHours:setH>0});
+      renderTime(remainingAtStop, {showHours:setH>0, seed: lastSeed});
       renderControls();
     }
     function resetToSet(){
@@ -880,7 +881,7 @@
         remainingAtStop = finished ? 0 : (remainingAtStop || durationFromSet());
       }
       renderSetPanel();
-      renderTime(remaining(), {showHours:setH>0});
+      renderTime(remaining(), {showHours:setH>0, seed: lastSeed});
       renderControls();
       lapsPanel.classList.remove('open');
       if (finished) statusDot.classList.add('finished');
